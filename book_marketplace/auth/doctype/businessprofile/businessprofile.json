@@ -1,0 +1,231 @@
+{
+ "actions": [],
+ "autoname": "format:{profile_type}-{###}",
+ "creation": "2026-07-15 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+  "field_order": [
+   "user",
+   "profile_type",
+   "business_name",
+   "status",
+   "parent_publisher",
+   "accepted_terms",
+   "enable_fbr",
+   "fbr_section",
+   "fbr_ntn",
+   "fbr_cnic",
+   "fbr_registered_name",
+   "fbr_sale_type",
+   "fbr_settings",
+   "contact_section",
+   "phone",
+   "email",
+   "address",
+   "city",
+   "country",
+   "approval_section",
+   "approved_by",
+   "approved_on"
+  ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "profile_type",
+   "fieldtype": "Select",
+   "label": "Profile Type",
+   "options": "Publisher\nBookseller\nDistributor\nAgent",
+   "reqd": 1
+  },
+  {
+   "fieldname": "business_name",
+   "fieldtype": "Data",
+   "label": "Business Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending\nApproved\nRejected",
+   "default": "Pending"
+  },
+  {
+   "fieldname": "parent_publisher",
+   "fieldtype": "Link",
+   "label": "Parent Publisher",
+   "options": "BusinessProfile",
+   "description": "Set when this distributor/agent belongs to a publisher"
+  },
+   {
+    "fieldname": "accepted_terms",
+    "fieldtype": "Data",
+    "label": "Accepted Terms",
+    "read_only": 1,
+    "description": "Signup terms version accepted during registration"
+   },
+   {
+    "fieldname": "enable_fbr",
+    "fieldtype": "Check",
+    "label": "Enable FBR Integration",
+    "default": 0
+   },
+   {
+    "depends_on": "eval:doc.enable_fbr",
+    "fieldname": "fbr_section",
+    "fieldtype": "Section Break",
+    "label": "FBR Integration"
+   },
+   {
+    "fieldname": "fbr_ntn",
+    "fieldtype": "Data",
+    "label": "Seller NTN"
+   },
+   {
+    "fieldname": "fbr_cnic",
+    "fieldtype": "Data",
+    "label": "Seller CNIC"
+   },
+   {
+    "fieldname": "fbr_registered_name",
+    "fieldtype": "Data",
+    "label": "FBR Registered Name",
+    "description": "Legal business name as registered with FBR"
+   },
+   {
+    "fieldname": "fbr_sale_type",
+    "fieldtype": "Link",
+    "label": "FBR Sale Type",
+    "options": "FBR Sale Type"
+   },
+   {
+    "fieldname": "fbr_settings",
+    "fieldtype": "Link",
+    "label": "FBR Settings",
+    "options": "FBR Settings"
+   },
+   {
+    "fieldname": "contact_section",
+    "fieldtype": "Section Break",
+    "label": "Contact"
+   },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email"
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Small Text",
+   "label": "Address"
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "options": "Country"
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "Approval"
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved By",
+   "options": "User"
+  },
+  {
+   "fieldname": "approved_on",
+   "fieldtype": "Date",
+   "label": "Approved On"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "link_doctype": "InternalOrder",
+   "link_fieldname": "buyer_profile"
+  },
+  {
+   "link_doctype": "InternalOrder",
+   "link_fieldname": "seller_profile"
+  },
+  {
+   "link_doctype": "StockLedger",
+   "link_fieldname": "business_profile"
+  },
+  {
+   "link_doctype": "BranchLocation",
+   "link_fieldname": "business_profile"
+  },
+  {
+   "link_doctype": "PricePolicy",
+   "link_fieldname": "publisher_profile"
+  }
+ ],
+ "modified": "2026-07-15 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Auth",
+ "name": "BusinessProfile",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Publisher",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Bookseller",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 0
+}

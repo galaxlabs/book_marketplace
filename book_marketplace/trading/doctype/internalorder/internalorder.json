@@ -1,0 +1,212 @@
+{
+ "actions": [],
+ "autoname": "format:ORD-{buyer_profile}-{YYYY}-{######}",
+ "creation": "2026-07-15 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+   "order_type",
+   "buyer_profile",
+   "seller_profile",
+   "status",
+   "order_date",
+   "total_amount",
+   "delivery_method",
+   "transport_section",
+   "transporter_name",
+   "transporter_phone",
+   "vehicle_number",
+   "builty_no",
+   "builty_date",
+   "pickup_address",
+   "delivery_address",
+   "expected_delivery_date",
+   "freight_charge",
+   "delivery_receipt_slip",
+   "delivery_receipt_ref",
+   "transport_notes",
+   "notes",
+   "items_section",
+   "items"
+  ],
+ "fields": [
+  {
+   "fieldname": "order_type",
+   "fieldtype": "Select",
+   "label": "Order Type",
+   "options": "Purchase\nSale\nTransfer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "buyer_profile",
+   "fieldtype": "Link",
+   "label": "Buyer",
+   "options": "BusinessProfile",
+   "reqd": 1
+  },
+  {
+   "fieldname": "seller_profile",
+   "fieldtype": "Link",
+   "label": "Seller",
+   "options": "BusinessProfile",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nInquiry Sent\nApproved\nPacked\nDispatched\nIn Transit\nReceived\nCancelled\nRejected",
+   "default": "Draft"
+  },
+  {
+   "fieldname": "order_date",
+   "fieldtype": "Date",
+   "label": "Order Date",
+   "default": "Today"
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "label": "Total Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+   {
+    "fieldname": "delivery_method",
+    "fieldtype": "Select",
+    "label": "Delivery Method",
+    "options": "Pickup\nFOR\nDelivery to Shop\nCity Transport Office\nCourier"
+   },
+   {
+    "fieldname": "transport_section",
+    "fieldtype": "Section Break",
+    "label": "Transport Details"
+   },
+   {
+    "fieldname": "transporter_name",
+    "fieldtype": "Data",
+    "label": "Transporter Name"
+   },
+   {
+    "fieldname": "transporter_phone",
+    "fieldtype": "Data",
+    "label": "Transporter Phone"
+   },
+   {
+    "fieldname": "vehicle_number",
+    "fieldtype": "Data",
+    "label": "Vehicle Number"
+   },
+   {
+    "fieldname": "builty_no",
+    "fieldtype": "Data",
+    "label": "Builty / LR Number"
+   },
+   {
+    "fieldname": "builty_date",
+    "fieldtype": "Date",
+    "label": "Builty Date"
+   },
+   {
+    "fieldname": "pickup_address",
+    "fieldtype": "Small Text",
+    "label": "Pickup Address"
+   },
+   {
+    "fieldname": "delivery_address",
+    "fieldtype": "Small Text",
+    "label": "Delivery Address"
+   },
+   {
+    "fieldname": "expected_delivery_date",
+    "fieldtype": "Date",
+    "label": "Expected Delivery Date"
+   },
+   {
+    "fieldname": "freight_charge",
+    "fieldtype": "Currency",
+    "label": "Freight Charge"
+   },
+   {
+    "fieldname": "delivery_receipt_slip",
+    "fieldtype": "Attach",
+    "label": "Delivery Receipt Slip"
+   },
+   {
+    "fieldname": "delivery_receipt_ref",
+    "fieldtype": "Data",
+    "label": "Delivery Receipt Ref"
+   },
+   {
+    "fieldname": "transport_notes",
+    "fieldtype": "Small Text",
+    "label": "Transport Notes"
+   },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Order Items"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "InternalOrderItem",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-15 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Trading",
+ "name": "InternalOrder",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Publisher",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Bookseller",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 0
+}

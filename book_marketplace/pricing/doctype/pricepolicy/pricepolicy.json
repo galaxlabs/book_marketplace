@@ -1,0 +1,98 @@
+{
+ "actions": [],
+ "autoname": "format:PP-{publisher_profile}-{book}-{###}",
+ "creation": "2026-07-15 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "publisher_profile",
+  "book",
+  "mrp",
+  "min_seller_price",
+  "max_discount_pct",
+  "allow_discount_below_min",
+  "is_active"
+ ],
+ "fields": [
+  {
+   "fieldname": "publisher_profile",
+   "fieldtype": "Link",
+   "label": "Publisher",
+   "options": "BusinessProfile",
+   "reqd": 1
+  },
+  {
+   "fieldname": "book",
+   "fieldtype": "Link",
+   "label": "Book",
+   "options": "Book",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mrp",
+   "fieldtype": "Currency",
+   "label": "MRP",
+   "options": "currency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "min_seller_price",
+   "fieldtype": "Currency",
+   "label": "Minimum Seller Price",
+   "options": "currency"
+  },
+  {
+   "fieldname": "max_discount_pct",
+   "fieldtype": "Float",
+   "label": "Maximum Discount %"
+  },
+  {
+   "fieldname": "allow_discount_below_min",
+   "fieldtype": "Check",
+   "label": "Allow Discount Below Minimum"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-15 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Pricing",
+ "name": "PricePolicy",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Publisher",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 0
+}

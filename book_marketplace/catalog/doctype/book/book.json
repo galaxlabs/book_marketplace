@@ -1,0 +1,206 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:title",
+ "creation": "2026-07-15 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "author",
+  "publisher",
+  "book_type",
+  "isbn",
+  "language",
+  "board",
+  "binding",
+  "size",
+  "paper",
+  "print_type",
+  "print_quality",
+  "imported",
+  "set_mrp",
+  "global_visibility",
+  "subjects_section",
+  "subjects",
+  "volumes_section",
+  "volumes"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "unique": 0
+  },
+  {
+   "fieldname": "author",
+   "fieldtype": "Data",
+   "label": "Author",
+   "reqd": 1
+  },
+  {
+   "fieldname": "publisher",
+   "fieldtype": "Link",
+   "label": "Publisher",
+   "options": "BusinessProfile",
+   "reqd": 1
+  },
+  {
+   "fieldname": "book_type",
+   "fieldtype": "Select",
+   "label": "Book Type",
+   "options": "Single Volume\nMulti Volume",
+   "default": "Single Volume",
+   "reqd": 1
+  },
+  {
+   "fieldname": "isbn",
+   "fieldtype": "Data",
+   "label": "ISBN"
+  },
+  {
+   "fieldname": "language",
+   "fieldtype": "Select",
+   "label": "Language",
+   "options": "Urdu\nEnglish\nArabic\nRoman Urdu\nSindhi\nPashto\nPunjabi\nBalochi\nOther"
+  },
+  {
+   "fieldname": "board",
+   "fieldtype": "Data",
+   "label": "Board / Syllabus"
+  },
+  {
+   "fieldname": "binding",
+   "fieldtype": "Select",
+   "label": "Binding",
+   "options": "Paperback\nHardcover\nSpiral\nOther"
+  },
+  {
+   "fieldname": "size",
+   "fieldtype": "Data",
+   "label": "Size"
+  },
+  {
+   "fieldname": "paper",
+   "fieldtype": "Data",
+   "label": "Paper"
+  },
+  {
+   "fieldname": "print_type",
+   "fieldtype": "Data",
+   "label": "Print Type"
+  },
+  {
+   "fieldname": "print_quality",
+   "fieldtype": "Select",
+   "label": "Print Quality",
+   "options": "Standard\nPremium\nEconomy"
+  },
+  {
+   "fieldname": "imported",
+   "fieldtype": "Check",
+   "label": "Imported"
+  },
+  {
+   "fieldname": "set_mrp",
+   "fieldtype": "Currency",
+   "label": "Set MRP",
+   "options": "currency",
+   "description": "Complete set price for multi-volume books"
+  },
+  {
+   "fieldname": "global_visibility",
+   "fieldtype": "Check",
+   "label": "Visible in Marketplace",
+   "default": "1"
+  },
+  {
+   "fieldname": "subjects_section",
+   "fieldtype": "Section Break",
+   "label": "Subjects & Categories"
+  },
+  {
+   "fieldname": "subjects",
+   "fieldtype": "Table",
+   "label": "Subjects",
+   "options": "BookSubject",
+   "reqd": 0
+  },
+  {
+   "fieldname": "volumes_section",
+   "fieldtype": "Section Break",
+   "label": "Volumes",
+   "depends_on": "eval:doc.book_type=='Multi Volume'"
+  },
+  {
+   "fieldname": "volumes",
+   "fieldtype": "Table",
+   "label": "Volumes",
+   "options": "BookVolume",
+   "depends_on": "eval:doc.book_type=='Multi Volume'"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-15 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Catalog",
+ "name": "Book",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Publisher",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Bookseller",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Customer",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

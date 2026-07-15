@@ -1,1 +1,7 @@
 Book Marketplace
+Catalog
+Trading
+Stock Management
+Pricing
+Auth
+Sync

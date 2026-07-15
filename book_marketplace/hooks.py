@@ -5,10 +5,22 @@ app_description = "Book Marketplace"
 app_email = "galaxylab2020@gmail.com"
 app_license = "agpl-3.0"
 
+
+
+
+
+login_manager = "book_marketplace.auth.overrides.BookMarketplaceLoginManager"
+
+
+
+app_include_js = "/assets/book_marketplace/js/book_marketplace.bundle.js"
+app_include_css = "/assets/book_marketplace/css/book_marketplace.bundle.css"
+
 # Apps
 # ------------------
 
 # required_apps = []
+required_apps = ["frappe"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -84,7 +96,8 @@ app_license = "agpl-3.0"
 
 # before_install = "book_marketplace.install.before_install"
 # after_install = "book_marketplace.install.after_install"
-
+after_install = "book_marketplace.setup.install.after_install"
+after_migrate = "book_marketplace.setup.migrate.after_migrate"
 # Uninstallation
 # ------------
 
@@ -247,3 +260,13 @@ app_license = "agpl-3.0"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+doc_events = {
+    "User": {
+        "validate": "book_marketplace.auth.overrides.login",
+    },
+}
+
+scheduler_events = {
+    "daily": [],
+    "hourly": [],
+}
