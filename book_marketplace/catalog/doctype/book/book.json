@@ -6,27 +6,29 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": [
-  "title",
-  "author",
-  "publisher",
-  "book_type",
-  "isbn",
-  "language",
-  "board",
-  "binding",
-  "size",
-  "paper",
-  "print_type",
-  "print_quality",
-  "imported",
-  "set_mrp",
-  "global_visibility",
-  "subjects_section",
-  "subjects",
-  "volumes_section",
-  "volumes"
- ],
+  "field_order": [
+   "title",
+   "author",
+   "publisher",
+   "book_type",
+   "isbn",
+   "barcode",
+   "qr_code",
+   "language",
+   "board",
+   "binding",
+   "size",
+   "paper",
+   "print_type",
+   "print_quality",
+   "imported",
+   "set_mrp",
+   "global_visibility",
+   "subjects_section",
+   "subjects",
+   "volumes_section",
+   "volumes"
+  ],
  "fields": [
   {
    "fieldname": "title",
@@ -56,13 +58,26 @@
    "default": "Single Volume",
    "reqd": 1
   },
-  {
-   "fieldname": "isbn",
-   "fieldtype": "Data",
-   "label": "ISBN"
-  },
-  {
-   "fieldname": "language",
+   {
+    "fieldname": "isbn",
+    "fieldtype": "Data",
+    "label": "ISBN",
+    "description": "ISBN-10 or ISBN-13"
+   },
+   {
+    "fieldname": "barcode",
+    "fieldtype": "Data",
+    "label": "Barcode / SKU",
+    "description": "Internal SKU or scannable barcode identifier"
+   },
+   {
+    "fieldname": "qr_code",
+    "fieldtype": "Attach",
+    "label": "QR Code",
+    "read_only": 1
+   },
+   {
+    "fieldname": "language",
    "fieldtype": "Select",
    "label": "Language",
    "options": "Urdu\nEnglish\nArabic\nRoman Urdu\nSindhi\nPashto\nPunjabi\nBalochi\nOther"

@@ -5,7 +5,7 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": [
+  "field_order": [
    "order_type",
    "buyer_profile",
    "seller_profile",
@@ -26,6 +26,12 @@
    "delivery_receipt_slip",
    "delivery_receipt_ref",
    "transport_notes",
+   "payment_section",
+   "payment_status",
+   "paid_amount",
+   "settlement",
+   "payment_entry",
+   "payment_remarks",
    "notes",
    "items_section",
    "items"
@@ -143,11 +149,45 @@
     "fieldtype": "Small Text",
     "label": "Transport Notes"
    },
-  {
-   "fieldname": "notes",
-   "fieldtype": "Small Text",
-   "label": "Notes"
-  },
+   {
+    "fieldname": "payment_section",
+    "fieldtype": "Section Break",
+    "label": "Payment & Settlement"
+   },
+   {
+    "fieldname": "payment_status",
+    "fieldtype": "Select",
+    "label": "Payment Status",
+    "options": "Unpaid\nPartially Paid\nPaid\nRefunded",
+    "default": "Unpaid"
+   },
+   {
+    "fieldname": "paid_amount",
+    "fieldtype": "Currency",
+    "label": "Paid Amount"
+   },
+   {
+    "fieldname": "settlement",
+    "fieldtype": "Link",
+    "label": "Settlement",
+    "options": "Settlement"
+   },
+   {
+    "fieldname": "payment_entry",
+    "fieldtype": "Link",
+    "label": "Payment Entry",
+    "options": "Payment Entry"
+   },
+   {
+    "fieldname": "payment_remarks",
+    "fieldtype": "Small Text",
+    "label": "Payment Remarks"
+   },
+   {
+    "fieldname": "notes",
+    "fieldtype": "Small Text",
+    "label": "Notes"
+   },
   {
    "fieldname": "items_section",
    "fieldtype": "Section Break",

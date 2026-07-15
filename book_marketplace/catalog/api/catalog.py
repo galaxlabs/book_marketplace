@@ -22,7 +22,7 @@ def search(text=None, subject=None, publisher=None, author=None, language=None, 
         filters=filters,
         fields=["name", "title", "author", "publisher", "book_type", "isbn", "language", "set_mrp", "creation"],
         limit=limit,
-        offset=offset,
+        start=offset,
         order_by="modified desc",
     )
     for book in books:
@@ -48,6 +48,15 @@ def get_book(book_id):
         "volume_count": len(volumes) if is_multi else 0,
         "stock_summary": stock_summary,
     }
+
+
+@frappe.whitelist(allow_guest=True)
+def lookup_by_barcode(barcode):
+    for field in ("barcode", "isbn"):
+        book_name = frappe.db.get_value("Book", {field: barcode}, "name")
+        if book_name:
+            return get_book(book_name)
+    frappe.throw(_("No book found with this barcode/ISBN"))
 
 
 def get_stock_summary(book_id, volumes=None):
@@ -240,7 +249,7 @@ def search_stores(text=None, city=None, profile_type=None, limit=20, offset=0):
         filters=filters,
         fields=["name", "store_name", "slug", "description", "city", "business_profile"],
         limit=limit,
-        offset=offset,
+        start=offset,
         order_by="modified desc",
     )
     for s in stores:
