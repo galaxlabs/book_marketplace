@@ -8,8 +8,13 @@
   "field_order": [
    "user",
    "profile_type",
-   "business_name",
-   "status",
+    "business_name",
+    "branding_section",
+    "logo",
+    "banner_image",
+    "business_description",
+    "public_message",
+    "status",
    "parent_publisher",
    "accepted_terms",
    "enable_fbr",
@@ -50,6 +55,31 @@
    "label": "Business Name",
    "reqd": 1
   },
+   {
+    "fieldname": "branding_section",
+    "fieldtype": "Section Break",
+    "label": "Branding"
+   },
+   {
+    "fieldname": "logo",
+    "fieldtype": "Attach Image",
+    "label": "Logo"
+   },
+   {
+    "fieldname": "banner_image",
+    "fieldtype": "Attach Image",
+    "label": "Banner Image"
+   },
+   {
+    "fieldname": "business_description",
+    "fieldtype": "Small Text",
+    "label": "Business Description"
+   },
+   {
+    "fieldname": "public_message",
+    "fieldtype": "Small Text",
+    "label": "Public Message Board"
+   },
   {
    "fieldname": "status",
    "fieldtype": "Select",
@@ -180,6 +210,14 @@
   {
    "link_doctype": "PricePolicy",
    "link_fieldname": "publisher_profile"
+  },
+  {
+   "link_doctype": "BusinessBankAccount",
+   "link_fieldname": "business_profile"
+  },
+  {
+   "link_doctype": "PaymentTransaction",
+   "link_fieldname": "seller_profile"
   }
  ],
  "modified": "2026-07-15 00:00:00",

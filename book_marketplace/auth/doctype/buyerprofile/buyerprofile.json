@@ -1,0 +1,47 @@
+{
+ "actions": [],
+ "autoname": "format:BUYER-{#####}",
+ "creation": "2026-07-15 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "avatar",
+  "full_name",
+  "phone",
+  "email",
+  "default_address",
+  "city",
+  "country",
+  "status"
+ ],
+ "fields": [
+  {"fieldname": "user", "fieldtype": "Link", "label": "User", "options": "User", "reqd": 1, "unique": 1},
+  {"fieldname": "avatar", "fieldtype": "Attach Image", "label": "Avatar"},
+  {"fieldname": "full_name", "fieldtype": "Data", "label": "Full Name", "reqd": 1},
+  {"fieldname": "phone", "fieldtype": "Data", "label": "Phone"},
+  {"fieldname": "email", "fieldtype": "Data", "label": "Email"},
+  {"fieldname": "default_address", "fieldtype": "Small Text", "label": "Default Address"},
+  {"fieldname": "city", "fieldtype": "Data", "label": "City"},
+  {"fieldname": "country", "fieldtype": "Link", "label": "Country", "options": "Country"},
+  {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Active\nBlocked", "default": "Active"}
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [
+  {"link_doctype": "PaymentTransaction", "link_fieldname": "buyer_profile"}
+ ],
+ "modified": "2026-07-15 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Auth",
+ "name": "BuyerProfile",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "report": 1, "share": 1},
+  {"role": "Customer", "read": 1, "write": 1, "create": 1, "delete": 0, "email": 1, "export": 0, "print": 1, "report": 0, "share": 0},
+  {"role": "Website User", "read": 1, "write": 1, "create": 1, "delete": 0, "email": 1, "export": 0, "print": 1, "report": 0, "share": 0}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

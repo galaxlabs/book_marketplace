@@ -1,0 +1,41 @@
+{
+ "actions": [],
+ "autoname": "format:PAY-{YYYY}-{######}",
+ "creation": "2026-07-15 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["order", "buyer_profile", "seller_profile", "amount", "payment_method", "reference_no", "payment_date", "screenshot", "notes", "status", "verified_by", "verified_on", "rejection_reason"],
+ "fields": [
+  {"fieldname": "order", "fieldtype": "Link", "label": "Order", "options": "InternalOrder"},
+  {"fieldname": "buyer_profile", "fieldtype": "Link", "label": "Buyer Profile", "options": "BuyerProfile"},
+  {"fieldname": "seller_profile", "fieldtype": "Link", "label": "Seller Profile", "options": "BusinessProfile"},
+  {"fieldname": "amount", "fieldtype": "Currency", "label": "Amount", "reqd": 1},
+  {"fieldname": "payment_method", "fieldtype": "Select", "label": "Payment Method", "options": "Bank Transfer\nEasypaisa\nJazzCash\nCash\nCheque\nOther", "reqd": 1},
+  {"fieldname": "reference_no", "fieldtype": "Data", "label": "Reference No"},
+  {"fieldname": "payment_date", "fieldtype": "Date", "label": "Payment Date", "default": "Today"},
+  {"fieldname": "screenshot", "fieldtype": "Attach Image", "label": "Payment Screenshot"},
+  {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"},
+  {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Pending\nVerified\nRejected", "default": "Pending"},
+  {"fieldname": "verified_by", "fieldtype": "Link", "label": "Verified By", "options": "User", "read_only": 1},
+  {"fieldname": "verified_on", "fieldtype": "Date", "label": "Verified On", "read_only": 1},
+  {"fieldname": "rejection_reason", "fieldtype": "Small Text", "label": "Rejection Reason"}
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-15 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Trading",
+ "name": "PaymentTransaction",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "report": 1, "share": 1},
+  {"role": "Customer", "read": 1, "write": 1, "create": 1, "delete": 0, "email": 1, "export": 0, "print": 1, "report": 0, "share": 0},
+  {"role": "Website User", "read": 1, "write": 1, "create": 1, "delete": 0, "email": 1, "export": 0, "print": 1, "report": 0, "share": 0},
+  {"role": "Publisher", "read": 1, "write": 1, "create": 0, "delete": 0, "email": 1, "export": 0, "print": 1, "report": 0, "share": 0},
+  {"role": "Bookseller", "read": 1, "write": 1, "create": 0, "delete": 0, "email": 1, "export": 0, "print": 1, "report": 0, "share": 0}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
