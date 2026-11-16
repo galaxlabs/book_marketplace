@@ -182,6 +182,12 @@ def get_store_by_slug(slug):
             {"book": item.book, "business_profile": store.business_profile, "state": "Available"},
             "sum(quantity)",
         )
+        # A publisher's own book with no stock record is not tracked, so it is shown as available.
+        # Once the publisher records a quantity, that quantity decides (0 means unavailable).
+        if str(item.name).startswith("OWN-") and not frappe.db.exists(
+            "StockLedger", {"book": item.book, "business_profile": store.business_profile}
+        ):
+            stock = None
         catalog.append({
             "item_name": item.name,
             "book_id": item.book,
@@ -195,7 +201,7 @@ def get_store_by_slug(slug):
             "genre": book.genre if book else "",
             "religious_segment": book.religious_segment if book else "",
             "introduction": book.introduction if book else "",
-            "stock": stock or 0,
+            "stock": None if stock is None else (stock or 0),
         })
     store.catalog = catalog
     store.catalog_count = len(catalog)
