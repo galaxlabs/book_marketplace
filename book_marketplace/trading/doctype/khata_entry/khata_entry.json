@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:KHATA-{YYYY}-{#####}",
+ "creation": "2026-11-16 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "party_name",
+  "entry_date",
+  "column_break_khata",
+  "entry_type",
+  "amount",
+  "section_details",
+  "reference",
+  "notes"
+ ],
+ "fields": [
+  {"fieldname": "business_profile", "fieldtype": "Link", "label": "Business Profile", "options": "BusinessProfile", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "party_name", "fieldtype": "Data", "label": "Party Name / فریق کا نام", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "entry_date", "fieldtype": "Date", "label": "Date / تاریخ", "default": "Today", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "column_break_khata", "fieldtype": "Column Break"},
+  {"fieldname": "entry_type", "fieldtype": "Select", "label": "Entry Type / قسم", "options": "Credit Given\nPayment Received\nCredit Taken\nPayment Made", "reqd": 1, "in_list_view": 1, "description": "Credit Given: party owes you more. Payment Received: party paid you. Credit Taken: you owe the party more. Payment Made: you paid the party."},
+  {"fieldname": "amount", "fieldtype": "Currency", "label": "Amount / رقم", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "section_details", "fieldtype": "Section Break", "label": "Details / تفصیل"},
+  {"fieldname": "reference", "fieldtype": "Data", "label": "Reference / حوالہ"},
+  {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes / نوٹ"}
+ ],
+ "index_web_pages_for_search": 0,
+ "modified": "2026-11-16 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Trading",
+ "name": "Khata Entry",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "create": 1, "delete": 1, "email": 0, "export": 1, "print": 1, "read": 1, "report": 1, "share": 0, "write": 1},
+  {"role": "Publisher", "create": 1, "delete": 0, "email": 0, "export": 0, "print": 0, "read": 1, "report": 0, "share": 0, "write": 1},
+  {"role": "Bookseller", "create": 1, "delete": 0, "email": 0, "export": 0, "print": 0, "read": 1, "report": 0, "share": 0, "write": 1},
+  {"role": "Distributor", "create": 1, "delete": 0, "email": 0, "export": 0, "print": 0, "read": 1, "report": 0, "share": 0, "write": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
