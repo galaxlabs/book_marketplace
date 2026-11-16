@@ -6,7 +6,7 @@ def after_install():
 
 
 def create_default_roles():
-    roles = ["Publisher", "Bookseller", "Distributor", "Agent"]
+    roles = ["Publisher", "Bookseller", "Distributor", "Agent", "Seller Applicant", "Customer"]
     for role in roles:
         if not frappe.db.exists("Role", role):
             doc = frappe.get_doc({"doctype": "Role", "role_name": role})

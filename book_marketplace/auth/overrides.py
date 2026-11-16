@@ -8,6 +8,8 @@ class BookMarketplaceLoginManager(LoginManager):
         super().validate_for_enabled_user()
         if self.user == "Administrator":
             return
+        if frappe.db.exists("BuyerProfile", {"user": self.user}):
+            return
         profiles = frappe.get_all(
             "BusinessProfile",
             filters={"user": self.user, "status": "Approved"},

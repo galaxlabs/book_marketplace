@@ -1,10 +1,10 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 
 BUYER_FIELDS = ["name", "user", "avatar", "full_name", "phone", "email", "default_address", "city", "country", "status"]
 SELLER_FIELDS = ["name", "user", "profile_type", "business_name", "status", "logo", "banner_image", "business_description", "public_message", "phone", "email", "address", "city", "country"]
-BANK_FIELDS = ["name", "business_profile", "bank_name", "account_title", "account_number", "iban", "branch_code", "payment_instructions", "is_default", "is_active"]
 PAYMENT_FIELDS = ["name", "order", "buyer_profile", "seller_profile", "amount", "payment_method", "reference_no", "payment_date", "screenshot", "notes", "status", "creation"]
 
 
@@ -16,6 +16,8 @@ def _get_owned_business_profile(profile_id):
 
 
 def _get_or_create_buyer_profile():
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Login is required."), frappe.PermissionError)
     existing = frappe.db.get_value("BuyerProfile", {"user": frappe.session.user}, "name")
     if existing:
         return frappe.get_doc("BuyerProfile", existing)
@@ -76,38 +78,16 @@ def update_business_profile(profile_id, business_name=None, logo=None, banner_im
     return {field: doc.get(field) for field in SELLER_FIELDS}
 
 
-@frappe.whitelist()
-def list_bank_accounts(profile_id):
-    _get_owned_business_profile(profile_id)
-    return frappe.get_all("BusinessBankAccount", filters={"business_profile": profile_id}, fields=BANK_FIELDS, order_by="is_default desc, modified desc")
-
-
-@frappe.whitelist()
-def save_bank_account(profile_id, bank_name, account_title, account_number, account_id=None, iban=None, branch_code=None, payment_instructions=None, is_default=0, is_active=1):
-    _get_owned_business_profile(profile_id)
-    if account_id:
-        doc = frappe.get_doc("BusinessBankAccount", account_id)
-        if doc.business_profile != profile_id:
-            frappe.throw(_("Not permitted"), frappe.PermissionError)
-    else:
-        doc = frappe.get_doc({"doctype": "BusinessBankAccount", "business_profile": profile_id})
-    doc.bank_name = bank_name
-    doc.account_title = account_title
-    doc.account_number = account_number
-    doc.iban = iban
-    doc.branch_code = branch_code
-    doc.payment_instructions = payment_instructions
-    doc.is_default = int(is_default or 0)
-    doc.is_active = int(is_active or 0)
-    doc.save(ignore_permissions=True)
-    if doc.is_default:
-        frappe.db.set_value("BusinessBankAccount", {"business_profile": profile_id, "name": ["!=", doc.name]}, "is_default", 0)
-    return {field: doc.get(field) for field in BANK_FIELDS}
+# Bank accounts are managed in auth/api/auth.py (list_bank_accounts, add_bank_account, ...).
 
 
 @frappe.whitelist()
 def create_payment_transaction(amount, payment_method, seller_profile=None, order=None, reference_no=None, payment_date=None, screenshot=None, notes=None):
     buyer = _get_or_create_buyer_profile()
+    if not flt(amount) > 0:
+        frappe.throw(_("Payment amount must be greater than zero."))
+    if seller_profile and not frappe.db.exists("BusinessProfile", seller_profile):
+        frappe.throw(_("Seller profile not found."))
     doc = frappe.get_doc({
         "doctype": "PaymentTransaction",
         "order": order,

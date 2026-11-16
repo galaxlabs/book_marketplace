@@ -2,6 +2,19 @@ import frappe
 from frappe import _
 from frappe.utils.password import check_password
 
+from book_marketplace.auth.doctype.marketplace_settings.marketplace_settings import (
+    enabled_profile_types,
+    is_profile_type_enabled,
+)
+
+PROFILE_TYPES = ["Publisher", "Bookseller", "Distributor", "Agent"]
+
+
+@frappe.whitelist(allow_guest=True)
+def get_marketplace_settings():
+    """Business types the app currently offers. Used by signup and the business panel."""
+    return {"enabled_profile_types": enabled_profile_types()}
+
 
 @frappe.whitelist(allow_guest=True)
 def get_active_terms():
@@ -24,7 +37,7 @@ def get_me():
         filters={"user": user},
         fields=["name", "profile_type", "business_name", "status"],
     )
-    buyer_profile = frappe.db.get_value("BuyerProfile", {"user": user}, "name") if frappe.db.exists("DocType", "BuyerProfile") else None
+    buyer_profile = frappe.db.get_value("BuyerProfile", {"user": user}, "name")
     approved = [profile for profile in profiles if profile.status == "Approved"]
     pending = [profile for profile in profiles if profile.status == "Pending"]
     rejected = [profile for profile in profiles if profile.status == "Rejected"]
@@ -75,9 +88,19 @@ def login_with_token(usr, pwd):
 def signup(email, password, full_name, business_name=None, profile_type=None, terms_accepted=0, purpose="sale"):
     if not terms_accepted:
         frappe.throw(_("You must accept the terms and conditions to sign up."))
+    purpose = purpose or "sale"
+    if purpose not in ["sale", "purchase"]:
+        frappe.throw(_("Invalid signup purpose."))
     if frappe.db.exists("User", email):
         frappe.throw(_("User already exists."))
-    purpose = purpose or "sale"
+    if purpose == "sale" and business_name and profile_type not in PROFILE_TYPES:
+        frappe.throw(_("Invalid seller type."))
+    if purpose == "sale" and business_name and not profile_type:
+        frappe.throw(_("Business name and profile type are required."))
+    if purpose == "sale" and business_name and not is_profile_type_enabled(profile_type):
+        frappe.throw(_("This business type is not enabled in Marketplace Settings."))
+
+    # Validate everything before creating the user, so a failed signup never leaves an orphan User.
     roles = [{"role": "Website User"}]
     if purpose == "sale":
         ensure_role("Seller Applicant")
@@ -90,9 +113,6 @@ def signup(email, password, full_name, business_name=None, profile_type=None, te
         "roles": roles,
     })
     user.insert(ignore_permissions=True)
-
-    if purpose == "sale" and not business_name:
-        return {"user": user.name, "profile": None, "status": "Setup Required", "purpose": "sale"}
 
     if purpose == "purchase":
         ensure_role("Customer")
@@ -108,7 +128,7 @@ def signup(email, password, full_name, business_name=None, profile_type=None, te
         return {"user": user.name, "profile": None, "status": "Active", "purpose": "purchase"}
 
     if not business_name or not profile_type:
-        frappe.throw(_("Business name and profile type are required."))
+        return {"user": user.name, "profile": None, "status": "Setup Required", "purpose": "sale"}
 
     profile = frappe.get_doc({
         "doctype": "BusinessProfile",
@@ -131,12 +151,17 @@ def ensure_role(role_name):
 
 @frappe.whitelist()
 def create_business_profile(business_name, profile_type, terms_accepted=0):
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Login is required to create a business profile."), frappe.PermissionError)
     if not terms_accepted:
         frappe.throw(_("You must accept the terms and conditions."))
-    if frappe.db.exists("BusinessProfile", {"user": frappe.session.user}):
-        frappe.throw(_("Business profile already exists for this user."))
-    if profile_type not in ["Publisher", "Bookseller", "Distributor", "Agent"]:
+    # A user may hold one profile per business type (publisher, bookseller, distributor).
+    if frappe.db.exists("BusinessProfile", {"user": frappe.session.user, "profile_type": profile_type}):
+        frappe.throw(_("You already have a {0} profile.").format(profile_type))
+    if profile_type not in PROFILE_TYPES:
         frappe.throw(_("Invalid seller type."))
+    if not is_profile_type_enabled(profile_type):
+        frappe.throw(_("This business type is not enabled in Marketplace Settings."))
     profile = frappe.get_doc({
         "doctype": "BusinessProfile",
         "user": frappe.session.user,
@@ -152,19 +177,112 @@ def create_business_profile(business_name, profile_type, terms_accepted=0):
 
 
 @frappe.whitelist()
+def list_bank_accounts(profile_id):
+    _assert_profile_owner(profile_id)
+    return frappe.get_all(
+        "BusinessBankAccount",
+        filters={"business_profile": profile_id},
+        fields=[
+            "name", "business_profile", "bank_name", "account_title", "account_number",
+            "iban", "branch_code", "payment_instructions", "is_default", "is_active"
+        ],
+        order_by="is_default desc, modified desc",
+    )
+
+
+@frappe.whitelist()
+def add_bank_account(
+    business_profile,
+    bank_name,
+    account_title,
+    account_number,
+    iban=None,
+    branch_code=None,
+    payment_instructions=None,
+    is_default=0,
+):
+    _assert_profile_owner(business_profile)
+    doc = frappe.get_doc({
+        "doctype": "BusinessBankAccount",
+        "business_profile": business_profile,
+        "bank_name": bank_name,
+        "account_title": account_title,
+        "account_number": account_number,
+        "iban": iban,
+        "branch_code": branch_code,
+        "payment_instructions": payment_instructions,
+        "is_default": is_default,
+        "is_active": 1,
+    })
+    doc.insert(ignore_permissions=True)
+    if doc.is_default:
+        _clear_other_default_bank_accounts(doc.business_profile, doc.name)
+    return doc.as_dict()
+
+
+@frappe.whitelist()
+def set_default_bank_account(account_id):
+    doc = frappe.get_doc("BusinessBankAccount", account_id)
+    _assert_profile_owner(doc.business_profile)
+    _clear_other_default_bank_accounts(doc.business_profile, doc.name)
+    doc.is_default = 1
+    doc.is_active = 1
+    doc.save(ignore_permissions=True)
+    return {"name": doc.name, "is_default": doc.is_default}
+
+
+@frappe.whitelist()
+def toggle_bank_account(account_id, is_active):
+    doc = frappe.get_doc("BusinessBankAccount", account_id)
+    _assert_profile_owner(doc.business_profile)
+    doc.is_active = 1 if int(is_active) else 0
+    if not doc.is_active:
+        doc.is_default = 0
+    doc.save(ignore_permissions=True)
+    return {"name": doc.name, "is_active": doc.is_active}
+
+
+def _clear_other_default_bank_accounts(profile_id, keep_account=None):
+    filters = {"business_profile": profile_id, "is_default": 1}
+    if keep_account:
+        filters["name"] = ["!=", keep_account]
+    for account in frappe.get_all("BusinessBankAccount", filters=filters, pluck="name"):
+        frappe.db.set_value("BusinessBankAccount", account, "is_default", 0)
+
+
+def _is_admin():
+    return "System Manager" in frappe.get_roles()
+
+
+def _assert_admin():
+    if not _is_admin():
+        frappe.throw(_("Only an administrator can do this."), frappe.PermissionError)
+
+
+def _assert_profile_owner(profile_id):
+    if _is_admin():
+        return
+    owner = frappe.db.get_value("BusinessProfile", profile_id, "user")
+    if owner != frappe.session.user:
+        frappe.throw(_("Not permitted for this business profile."), frappe.PermissionError)
+
+
+@frappe.whitelist()
 def get_my_profiles(user=None):
-    if not user:
-        user = frappe.session.user
-    profiles = frappe.get_all(
+    # Users see only their own profiles. Admins may pass another user to inspect it.
+    if user and user != frappe.session.user:
+        _assert_admin()
+    target = user or frappe.session.user
+    return frappe.get_all(
         "BusinessProfile",
-        filters={"user": user},
+        filters={"user": target},
         fields=["name", "profile_type", "business_name", "status", "logo", "banner_image", "business_description", "public_message", "phone", "email", "address", "city", "country"],
     )
-    return profiles
 
 
 @frappe.whitelist()
 def approve_profile(profile_id):
+    _assert_admin()
     doc = frappe.get_doc("BusinessProfile", profile_id)
     doc.status = "Approved"
     doc.approved_by = frappe.session.user
@@ -177,17 +295,18 @@ def approve_profile(profile_id):
 
 @frappe.whitelist()
 def reject_profile(profile_id):
+    _assert_admin()
     doc = frappe.get_doc("BusinessProfile", profile_id)
     doc.status = "Rejected"
     doc.save()
     return {"name": doc.name, "status": doc.status}
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_pending_profiles():
-    profiles = frappe.get_all(
+    _assert_admin()
+    return frappe.get_all(
         "BusinessProfile",
         filters={"status": "Pending"},
         fields=["name", "business_name", "profile_type", "user", "creation"],
     )
-    return profiles

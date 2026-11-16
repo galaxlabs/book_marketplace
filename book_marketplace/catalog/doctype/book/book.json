@@ -9,6 +9,7 @@
   "field_order": [
    "title",
    "author",
+   "author_profile",
    "publisher",
    "book_type",
    "isbn",
@@ -23,11 +24,25 @@
    "print_quality",
    "imported",
    "set_mrp",
+   "profile_section",
+   "subtitle",
+   "introduction",
+   "description",
+   "page_count",
+   "dimensions",
+   "weight",
+   "edition",
+   "publication_year",
+   "primary_category",
+   "genre",
+   "religious_segment",
    "global_visibility",
    "subjects_section",
    "subjects",
    "volumes_section",
-   "volumes"
+   "volumes",
+   "variants_section",
+   "variants"
   ],
  "fields": [
   {
@@ -42,6 +57,13 @@
    "fieldtype": "Data",
    "label": "Author",
    "reqd": 1
+  },
+  {
+   "fieldname": "author_profile",
+   "fieldtype": "Link",
+   "label": "Author Profile",
+   "options": "AuthorProfile",
+   "description": "Optional structured author profile linked to this book"
   },
   {
    "fieldname": "publisher",
@@ -127,6 +149,68 @@
    "description": "Complete set price for multi-volume books"
   },
   {
+   "fieldname": "profile_section",
+   "fieldtype": "Section Break",
+   "label": "Book Profile"
+  },
+  {
+   "fieldname": "subtitle",
+   "fieldtype": "Data",
+   "label": "Subtitle"
+  },
+  {
+   "fieldname": "introduction",
+   "fieldtype": "Small Text",
+   "label": "Short Introduction"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Full Description"
+  },
+  {
+   "fieldname": "page_count",
+   "fieldtype": "Int",
+   "label": "Pages"
+  },
+  {
+   "fieldname": "dimensions",
+   "fieldtype": "Data",
+   "label": "Dimensions / Size"
+  },
+  {
+   "fieldname": "weight",
+   "fieldtype": "Float",
+   "label": "Weight"
+  },
+  {
+   "fieldname": "edition",
+   "fieldtype": "Data",
+   "label": "Edition"
+  },
+  {
+   "fieldname": "publication_year",
+   "fieldtype": "Int",
+   "label": "Publication Year"
+  },
+  {
+   "fieldname": "primary_category",
+   "fieldtype": "Link",
+   "label": "Primary Category",
+   "options": "SubjectMaster"
+  },
+  {
+   "fieldname": "genre",
+   "fieldtype": "Data",
+   "label": "Genre"
+  },
+  {
+   "fieldname": "religious_segment",
+   "fieldtype": "Select",
+   "label": "Religious Segment",
+   "options": "\nQuran Kareem\nPanj Para\nPanj Surah\nWazaif\nHadith\nTafseer\nIslamic Children\nOther"
+  },
+  {
    "fieldname": "global_visibility",
    "fieldtype": "Check",
    "label": "Visible in Marketplace",
@@ -156,6 +240,18 @@
    "label": "Volumes",
    "options": "BookVolume",
    "depends_on": "eval:doc.book_type=='Multi Volume'"
+  },
+  {
+   "fieldname": "variants_section",
+   "fieldtype": "Section Break",
+   "label": "Variants"
+  },
+  {
+   "fieldname": "variants",
+   "fieldtype": "Table",
+   "label": "Variants",
+   "options": "BookVariant",
+   "description": "Binding/quality/language variants such as اعلی, سادہ, غیر مجلد, مجلد"
   }
  ],
  "index_web_pages_for_search": 1,

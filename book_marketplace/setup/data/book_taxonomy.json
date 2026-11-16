@@ -1,0 +1,182 @@
+{
+  "_sources": [
+    "https://urdubazaronline.pk/",
+    "https://www.libertybooks.com/",
+    "https://www.markaz.app/shop/home-page/Books%20%26%20Stationery",
+    "https://www.mustakbil.com/ (search summary)",
+    "https://booksquare.org/ (search summary)",
+    "https://bookmaster.pk/ (search summary)",
+    "https://mbabookstore.com/ (search summary)"
+  ],
+  "roots": [
+    {
+      "name": "Book Types",
+      "name_ur": "کتابوں کی اقسام",
+      "category_type": "Book Type",
+      "children": [
+        {"name": "Textbook", "name_ur": "درسی کتب"},
+        {"name": "Guide and Notes", "name_ur": "گائیڈ اور نوٹس"},
+        {"name": "Past Papers", "name_ur": "گزشتہ پرچے"},
+        {"name": "Reference and Dictionary", "name_ur": "حوالہ جاتی اور لغت"},
+        {"name": "Novel", "name_ur": "ناول"},
+        {"name": "Non-Fiction", "name_ur": "غیر افسانوی"},
+        {"name": "Poetry", "name_ur": "شاعری"},
+        {"name": "Children Book", "name_ur": "بچوں کی کتاب"},
+        {"name": "Islamic Book", "name_ur": "اسلامی کتاب"},
+        {"name": "Ebook", "name_ur": "ای بک"}
+      ]
+    },
+    {
+      "name": "Title Types",
+      "name_ur": "عنوانات کی اقسام",
+      "category_type": "Title Type",
+      "children": [
+        {
+          "name": "Fiction",
+          "name_ur": "افسانوی ادب",
+          "children": [
+            {"name": "Fantasy"}, {"name": "Classics"}, {"name": "Film and Drama"},
+            {"name": "Romance and Love Stories"}, {"name": "Action and Adventure"},
+            {"name": "Historical Fiction"}, {"name": "Horror"}, {"name": "Regional Fiction"},
+            {"name": "Contemporary Fiction"}, {"name": "Manga, Comics and Graphic Novel"},
+            {"name": "Mystery, Crime and Detective"}, {"name": "Thriller and Suspense"},
+            {"name": "Young Adults"}
+          ]
+        },
+        {
+          "name": "Non-Fiction",
+          "name_ur": "غیر افسانوی ادب",
+          "children": [
+            {"name": "Self Help"}, {"name": "Biography and Autobiography"}, {"name": "Memoirs"},
+            {"name": "History"}, {"name": "Politics and Current Affairs"}, {"name": "Religion and Spirituality"},
+            {"name": "Health and Fitness"}, {"name": "Business and Management"},
+            {"name": "Innovation and Technology"}, {"name": "Philosophy"}, {"name": "Travelogues"},
+            {"name": "Sports and Entertainment"}, {"name": "Cooking, Food and Drink"},
+            {"name": "Art, Design and Architecture"}, {"name": "True Crime"}
+          ]
+        },
+        {
+          "name": "Urdu Books",
+          "name_ur": "اردو کتب",
+          "children": [
+            {"name": "Afsanay", "name_ur": "افسانے"}, {"name": "Novel", "name_ur": "ناول"},
+            {"name": "Urdu Literature", "name_ur": "اردو ادب"}, {"name": "Shayari", "name_ur": "شاعری"},
+            {"name": "Safarnama", "name_ur": "سفرنامہ"}, {"name": "Sawanih Hayat", "name_ur": "سوانح حیات"},
+            {"name": "Yadashtein", "name_ur": "یادداشتیں"}, {"name": "Khana Pakana", "name_ur": "کھانا پکانا"},
+            {"name": "Mazhab aur Rohaniyat", "name_ur": "مذہب اور روحانیت"},
+            {"name": "Siyasat aur Halat Hazra", "name_ur": "سیاست اور حالات حاضرہ"},
+            {"name": "Tareekh", "name_ur": "تاریخ"}, {"name": "Sehat aur Tandrusti", "name_ur": "صحت اور تندرستی"}
+          ]
+        },
+        {
+          "name": "Children's Books",
+          "name_ur": "بچوں کی کتب",
+          "children": [
+            {"name": "Early Learning"}, {"name": "Activity Books"}, {"name": "Colouring Books"},
+            {"name": "Story Books"}, {"name": "Board Books"}, {"name": "Flash Cards"},
+            {"name": "Encyclopedias and General Knowledge"}, {"name": "Children Urdu Books"},
+            {"name": "Islamic Children Books"}, {"name": "Pre School"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Departments",
+      "name_ur": "شعبہ جات",
+      "category_type": "Department",
+      "children": [
+        {
+          "name": "School Books",
+          "name_ur": "اسکول کی کتب",
+          "children": [
+            {"name": "Federal Board"},
+            {"name": "Grade 1 to 8 Books"},
+            {"name": "O Level", "children": [
+              {"name": "O Level Mathematics"}, {"name": "O Level English"}, {"name": "O Level Physics"},
+              {"name": "O Level Chemistry"}, {"name": "O Level Biology"}, {"name": "O Level Computer Studies"},
+              {"name": "O Level Economics"}, {"name": "O Level Accounting"}, {"name": "O Level Commerce"},
+              {"name": "O Level Islamiyat"}, {"name": "O Level Pakistan Studies"}, {"name": "O Level Urdu"},
+              {"name": "O Level Sociology"}, {"name": "O Level Statistics"}, {"name": "O Level Business Studies"}
+            ]},
+            {"name": "A Level", "children": [
+              {"name": "A Level Mathematics"}, {"name": "A Level Physics"}, {"name": "A Level Chemistry"},
+              {"name": "A Level Biology"}, {"name": "A Level Computer Science"}, {"name": "A Level Economics"},
+              {"name": "A Level Accounts"}, {"name": "A Level Business Studies"}, {"name": "A Level Psychology"},
+              {"name": "A Level Sociology"}, {"name": "A Level Law"}, {"name": "A Level English"},
+              {"name": "A Level Geography"}, {"name": "A Level General Paper"}, {"name": "A Level Urdu"}
+            ]}
+          ]
+        },
+        {
+          "name": "University Books",
+          "name_ur": "یونیورسٹی کی کتب",
+          "children": [
+            {"name": "Engineering", "children": [
+              {"name": "Civil Engineering"}, {"name": "Electrical Engineering"},
+              {"name": "Electronics Engineering"}, {"name": "Mechanical Engineering"}
+            ]},
+            {"name": "BBA, MBA, BS and MCom"},
+            {"name": "BSc"}, {"name": "BA Part 1 and 2"}, {"name": "MA"},
+            {"name": "Computer Science"}, {"name": "ADC"}
+          ]
+        },
+        {
+          "name": "Medical and Health",
+          "name_ur": "طبی اور صحت",
+          "children": [
+            {"name": "MBBS 1st Year"}, {"name": "MBBS 2nd Year"}, {"name": "MBBS 3rd Year"},
+            {"name": "MBBS 4th Year"}, {"name": "MBBS Final Year"},
+            {"name": "Anatomy"}, {"name": "Physiology"}, {"name": "Biochemistry"}, {"name": "Pathology"},
+            {"name": "Pharmacology"}, {"name": "Microbiology"}, {"name": "Medicine"}, {"name": "Surgery and Trauma"},
+            {"name": "Paediatrics"}, {"name": "Obstetric and Gynaecology"}, {"name": "Cardiology"},
+            {"name": "Neurology and Neurosurgery"}, {"name": "Ophthalmology"}, {"name": "Orthopedics"},
+            {"name": "Dermatology and Venereology"}, {"name": "Radiology and Imaging"},
+            {"name": "Dentistry"}, {"name": "Nursing"}, {"name": "Pharmacy and Drug"},
+            {"name": "Physiotherapy and Rehabilitation"}, {"name": "Veterinary Sciences"},
+            {"name": "Homeopathy"}, {"name": "Medical Jurisprudence and Forensic Medicine"},
+            {"name": "FCPS"}, {"name": "USMLE"}
+          ]
+        },
+        {
+          "name": "Competitive and Entry Tests",
+          "name_ur": "مقابلے کے امتحانات",
+          "children": [
+            {"name": "CSS", "children": [
+              {"name": "CSS Compulsory Subjects"}, {"name": "CSS Optional Subjects"},
+              {"name": "CSS MCQs"}, {"name": "CSS Past Papers"}, {"name": "CSS Syllabus"},
+              {"name": "General Knowledge"}
+            ]},
+            {"name": "FPSC and PPSC"}, {"name": "SPSC"}, {"name": "NTS"},
+            {"name": "MDCAT"}, {"name": "ECAT"}, {"name": "BCAT"}, {"name": "LAW Entry Test"},
+            {"name": "IELTS"}, {"name": "TOEFL"}, {"name": "PTE"}, {"name": "GRE"}, {"name": "GMAT"}, {"name": "SAT"},
+            {"name": "OET"}
+          ]
+        },
+        {
+          "name": "Accounting and Finance",
+          "name_ur": "اکاؤنٹنگ اور فنانس",
+          "children": [
+            {"name": "ACCA"}, {"name": "CFA"}, {"name": "FRM"}, {"name": "CIA"}
+          ]
+        },
+        {
+          "name": "IT and Certifications",
+          "name_ur": "آئی ٹی اور سرٹیفیکیشن",
+          "children": [
+            {"name": "CCNA"}, {"name": "CISA"}, {"name": "PMP"}, {"name": "ISTQB"}, {"name": "MCSD"}
+          ]
+        },
+        {
+          "name": "Law",
+          "name_ur": "قانون",
+          "children": []
+        },
+        {
+          "name": "Dictionaries and Calculators",
+          "name_ur": "لغات اور کیلکولیٹر",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

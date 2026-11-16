@@ -1,0 +1,83 @@
+{
+ "actions": [],
+ "creation": "2026-11-16 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_types_section",
+  "enable_publisher",
+  "enable_bookseller",
+  "column_break_types",
+  "enable_distributor",
+  "help_section",
+  "help_text"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_types_section",
+   "fieldtype": "Section Break",
+   "label": "Business Types / کاروباری اقسام"
+  },
+  {
+   "default": "0",
+   "description": "Publisher: lets a user list books they publish, set MRP and manage their own catalog. Turn off if this app should not accept publishers. / ناشر: کتابیں شائع کرنے، ایم آر پی طے کرنے اور اپنا کیٹلاگ چلانے کی سہولت۔ اگر ایپ میں ناشر نہیں چاہیے تو بند رکھیں۔",
+   "fieldname": "enable_publisher",
+   "fieldtype": "Check",
+   "label": "Enable Publisher / ناشر فعال کریں"
+  },
+  {
+   "default": "0",
+   "description": "Bookseller: lets a user run a shop, buy from publishers and distributors and sell to customers. Turn off if no shops should register. / کتب فروش: دکان چلانے، ناشرین اور تقسیم کاروں سے خریداری اور گاہکوں کو فروخت کی سہولت۔",
+   "fieldname": "enable_bookseller",
+   "fieldtype": "Check",
+   "label": "Enable Bookseller / کتب فروش فعال کریں"
+  },
+  {
+   "fieldname": "column_break_types",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Distributor: lets a user move stock from publishers to booksellers and manage branches and transfers. Turn off if no distributors should register. / تقسیم کار: ناشر سے کتب فروش تک اسٹاک پہنچانے، شاخوں اور ٹرانسفر کا انتظام۔",
+   "fieldname": "enable_distributor",
+   "fieldtype": "Check",
+   "label": "Enable Distributor / تقسیم کار فعال کریں"
+  },
+  {
+   "fieldname": "help_section",
+   "fieldtype": "Section Break",
+   "label": "Help / مدد"
+  },
+  {
+   "fieldname": "help_text",
+   "fieldtype": "Small Text",
+   "label": "Note / نوٹ",
+   "description": "All three are off by default. Every user may hold all three roles once they are enabled here. Turning a type off hides it from new signups and blocks new profiles of that type; existing profiles are kept. / تینوں پہلے سے بند ہیں۔ یہاں فعال کرنے کے بعد ہر صارف تینوں کردار رکھ سکتا ہے۔ بند کرنے سے نئے پروفائل نہیں بنیں گے، موجودہ محفوظ رہیں گے۔",
+   "read_only": 1,
+   "default": "All three types are off by default. / تینوں اقسام پہلے سے بند ہیں۔"
+  }
+ ],
+ "issingle": 1,
+ "modified": "2026-11-16 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Auth",
+ "name": "Marketplace Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

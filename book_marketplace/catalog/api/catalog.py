@@ -20,7 +20,11 @@ def search(text=None, subject=None, publisher=None, author=None, language=None, 
     books = frappe.get_all(
         "Book",
         filters=filters,
-        fields=["name", "title", "author", "publisher", "book_type", "isbn", "language", "set_mrp", "creation"],
+        fields=[
+            "name", "title", "subtitle", "author", "author_profile", "publisher",
+            "book_type", "isbn", "language", "set_mrp", "primary_category",
+            "genre", "religious_segment", "introduction", "creation"
+        ],
         limit=limit,
         start=offset,
         order_by="modified desc",
@@ -36,6 +40,7 @@ def get_book(book_id):
     book = frappe.get_doc("Book", book_id)
     subjects = book.get("subjects", [])
     volumes = book.get("volumes", [])
+    variants = book.get("variants", [])
     is_multi = book.book_type == "Multi Volume"
     loose_volumes = [v for v in volumes if v.loose_sale] if is_multi else []
     stock_summary = get_stock_summary(book_id, volumes)
@@ -43,6 +48,7 @@ def get_book(book_id):
         "book": book.as_dict(),
         "subjects": [s.as_dict() for s in subjects],
         "volumes": [v.as_dict() for v in volumes] if is_multi else [],
+        "variants": [v.as_dict() for v in variants],
         "loose_volumes": [v.as_dict() for v in loose_volumes],
         "is_multi_volume": is_multi,
         "volume_count": len(volumes) if is_multi else 0,
@@ -106,13 +112,15 @@ def list_catalog(profile_id, active_only=True):
     for item in items:
         book = frappe.db.get_value(
             "Book", item.book,
-            ["title", "author", "book_type", "set_mrp", "language"],
+            ["title", "author", "book_type", "set_mrp", "language", "genre", "religious_segment"],
             as_dict=True,
         )
         item.book_title = book.title if book else ""
         item.book_author = book.author if book else ""
         item.book_type = book.book_type if book else ""
         item.book_mrp = book.set_mrp if book else None
+        item.genre = book.genre if book else ""
+        item.religious_segment = book.religious_segment if book else ""
         stock = frappe.db.get_value(
             "StockLedger",
             {"book": item.book, "business_profile": profile_id, "state": "Available"},
@@ -168,7 +176,10 @@ def get_store_by_slug(slug):
     for item in items:
         book = frappe.db.get_value(
             "Book", item.book,
-            ["title", "author", "book_type", "set_mrp", "language", "binding"],
+            [
+                "title", "subtitle", "author", "book_type", "set_mrp", "language",
+                "binding", "genre", "religious_segment", "introduction"
+            ],
             as_dict=True,
         )
         stock = frappe.db.get_value(
@@ -180,11 +191,15 @@ def get_store_by_slug(slug):
             "item_name": item.name,
             "book_id": item.book,
             "title": book.title if book else "",
+            "subtitle": book.subtitle if book else "",
             "author": book.author if book else "",
             "book_type": book.book_type if book else "",
             "mrp": book.set_mrp if book else None,
             "selling_price": item.selling_price,
             "language": book.language if book else "",
+            "genre": book.genre if book else "",
+            "religious_segment": book.religious_segment if book else "",
+            "introduction": book.introduction if book else "",
             "stock": stock or 0,
         })
     store.catalog = catalog

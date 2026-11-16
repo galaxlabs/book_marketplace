@@ -251,9 +251,11 @@ after_migrate = "book_marketplace.setup.migrate.after_migrate"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+# User validate hook removed: book_marketplace.auth.overrides.login does not exist.
+
 doc_events = {
-    "User": {
-        "validate": "book_marketplace.auth.overrides.login",
+    "Book": {
+        "after_save": "book_marketplace.catalog.item_sync.sync_book_to_item",
     },
 }
 
