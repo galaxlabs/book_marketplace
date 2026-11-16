@@ -99,13 +99,19 @@ def create_pos_profile():
     return POS_PROFILE
 
 
+TAXONOMY_FILES = ["book_taxonomy.json", "book_taxonomy_extra.json"]
+
+
 def seed_taxonomy():
-    path = os.path.join(os.path.dirname(__file__), "data", "book_taxonomy.json")
-    with open(path, encoding="utf-8") as fh:
-        data = json.load(fh)
     created = 0
-    for root in data["roots"]:
-        created += _insert_category(root, parent=None, category_type=root["category_type"])
+    for name in TAXONOMY_FILES:
+        path = os.path.join(os.path.dirname(__file__), "data", name)
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        for root in data["roots"]:
+            created += _insert_category(root, parent=None, category_type=root["category_type"])
     return {"created": created}
 
 

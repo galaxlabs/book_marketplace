@@ -1,0 +1,168 @@
+{
+  "_sources": [
+    "https://bookmaster.pk/ (category menu, robots.txt allows /category)",
+    "https://mbabookstore.com/ (Shop By Categories block, robots.txt allows /shop)",
+    "https://newbooksnbooks.pk/ (Browse categories block, robots.txt allows /collections)"
+  ],
+  "roots": [
+    {
+      "name": "Medical Sciences Extra",
+      "name_ur": "طبی علوم (مزید)",
+      "category_type": "Department",
+      "children": [
+        {"name": "Surgery and Trauma"}, {"name": "Internal Medicine"}, {"name": "Radiology and Imaging"},
+        {"name": "Oral and Maxillofacial Surgery"}, {"name": "Anaesthesia"}, {"name": "Community Medicine"},
+        {"name": "Respiratory Disease"}, {"name": "Dermatology"}, {"name": "ENT"},
+        {"name": "DPT (Doctor of Physical Therapy)", "children": [
+          {"name": "DPT 1st Year"}, {"name": "DPT 2nd Year"}, {"name": "DPT 3rd Year"}, {"name": "DPT 4th Year"}, {"name": "DPT Final Year"}
+        ]},
+        {"name": "BDS", "children": [
+          {"name": "BDS 1st Year"}, {"name": "BDS 2nd Year"}, {"name": "BDS 3rd Year"}, {"name": "BDS 4th Year"}, {"name": "BDS Final Year"}
+        ]},
+        {"name": "Nursing", "children": [
+          {"name": "BSN 1st Year"}, {"name": "BSN 2nd Year"}, {"name": "BSN 3rd Year"}, {"name": "BSN 4th Year"}, {"name": "Post-RN 1st and 2nd Year"}
+        ]},
+        {"name": "MRCS"}, {"name": "MRCP"}
+      ]
+    },
+    {
+      "name": "Engineering and Technical",
+      "name_ur": "انجینئرنگ اور تکنیکی",
+      "category_type": "Department",
+      "children": [
+        {"name": "Chemical Engineering"}, {"name": "Computer Engineering"}, {"name": "Mechanical Engineering"},
+        {"name": "Metallurgy and Materials Science"}, {"name": "Telecommunication Engineering"},
+        {"name": "Industrial Engineering"}, {"name": "Electrical Engineering"}, {"name": "Civil Engineering"},
+        {"name": "Electronics Engineering"}, {"name": "General Engineering"}
+      ]
+    },
+    {
+      "name": "Agriculture",
+      "name_ur": "زراعت",
+      "category_type": "Department",
+      "children": [
+        {"name": "Agronomy"}, {"name": "Entomology"}, {"name": "Forestry, Range and Wildlife Management"},
+        {"name": "Horticulture"}, {"name": "Poultry Farming"}, {"name": "Soil Sciences"}, {"name": "Water Management"},
+        {"name": "Food Technology"}, {"name": "Plant Pathology"}, {"name": "Fishery"}, {"name": "Architecture"}
+      ]
+    },
+    {
+      "name": "Management and Commerce",
+      "name_ur": "انتظامیہ اور تجارت",
+      "category_type": "Department",
+      "children": [
+        {"name": "Business Studies"}, {"name": "Public Administration and Public Policy"},
+        {"name": "Banking and Finance"}, {"name": "Accounting"}, {"name": "Marketing"}, {"name": "Commerce"},
+        {"name": "Economics"}, {"name": "Calculus and Math"}
+      ]
+    },
+    {
+      "name": "Science",
+      "name_ur": "سائنس",
+      "category_type": "Department",
+      "children": [
+        {"name": "Mathematics"}, {"name": "Physics"}, {"name": "Chemistry"}, {"name": "Biology"}, {"name": "Botany"},
+        {"name": "Zoology"}, {"name": "Biotechnology"}, {"name": "Environmental Science"}, {"name": "Cosmology"},
+        {"name": "Astrology"}, {"name": "Geography"}
+      ]
+    },
+    {
+      "name": "Computer Science and IT",
+      "name_ur": "کمپیوٹر سائنس اور آئی ٹی",
+      "category_type": "Department",
+      "children": [
+        {"name": "Computer Networks"}, {"name": "Data Structures"}, {"name": "Programming Languages"},
+        {"name": "Web and IT"}, {"name": "Computer Science (General)"}
+      ]
+    },
+    {
+      "name": "Social Sciences",
+      "name_ur": "سماجی علوم",
+      "category_type": "Department",
+      "children": [
+        {"name": "Fine Arts"}, {"name": "English Language"}, {"name": "Politics and International Relations"},
+        {"name": "Library Science"}, {"name": "Pakistan Studies"}, {"name": "Psychology"}, {"name": "History"},
+        {"name": "Education"}, {"name": "Political Science"}, {"name": "Sociology"}, {"name": "Philosophy"},
+        {"name": "Communication Studies"}, {"name": "Gender Studies"}, {"name": "Criminology"},
+        {"name": "Home Economics"}, {"name": "Mass Communication"}, {"name": "Law"}
+      ]
+    },
+    {
+      "name": "Punjab Textbook Board",
+      "name_ur": "پنجاب ٹیکسٹ بک بورڈ",
+      "category_type": "Department",
+      "children": [
+        {"name": "Class I"}, {"name": "Class II"}, {"name": "Class III"}, {"name": "Class IV"}, {"name": "Class V"},
+        {"name": "Class VI"}, {"name": "Class VII"}, {"name": "Class VIII"}, {"name": "Class IX"}, {"name": "Class X"},
+        {"name": "Class XI"}, {"name": "Class XII"}
+      ]
+    },
+    {
+      "name": "Competitive Exams Extra",
+      "name_ur": "مقابلے کے امتحانات (مزید)",
+      "category_type": "Department",
+      "children": [
+        {"name": "Public-Sector Jobs"}, {"name": "University Admissions"}, {"name": "Civil Services"},
+        {"name": "Forces and Services"}, {"name": "Medical Entry (MDCAT)"}, {"name": "Engineering Entry (ECAT)"},
+        {"name": "Language Tests"}, {"name": "CSS, PCS and PMS"}, {"name": "Entry Test (General)"}
+      ]
+    },
+    {
+      "name": "Stationery",
+      "name_ur": "اسٹیشنری",
+      "category_type": "Department",
+      "children": [
+        {"name": "Pens"}, {"name": "Pencils"}, {"name": "Highlighters and Markers"}, {"name": "Erasers"},
+        {"name": "Pencil Cases and Boxes"}, {"name": "Calculators"}, {"name": "Glues and Adhesives"},
+        {"name": "Pencil Sharpeners"}, {"name": "Boards and Flipcharts"}, {"name": "Note Books and Pads"},
+        {"name": "Post-it Notes, Flags and Tabs"}, {"name": "Diaries and Year Planners"},
+        {"name": "Art Pads and Folios"}, {"name": "Registers and Copies"}, {"name": "Bags"}
+      ]
+    },
+    {
+      "name": "Novels and Fiction Extra",
+      "name_ur": "ناول اور افسانہ (مزید)",
+      "category_type": "Title Type",
+      "children": [
+        {"name": "Contemporary Fiction"}, {"name": "Literary Fiction"}, {"name": "Thriller and Mystery"},
+        {"name": "English Novels"}, {"name": "Romance"}, {"name": "Fantasy and Sci-Fi"}, {"name": "Classics"},
+        {"name": "Urdu Novels"}, {"name": "Horror"}, {"name": "Manga"}, {"name": "Superhero Comics"},
+        {"name": "Graphic Novels"}, {"name": "Comics for Kids"}, {"name": "Light Novels"}
+      ]
+    },
+    {
+      "name": "Islamic and Religious",
+      "name_ur": "اسلامی اور مذہبی",
+      "category_type": "Title Type",
+      "children": [
+        {"name": "Quran and Tafseer"}, {"name": "Islamiyat"}, {"name": "Islamic Books for Children"},
+        {"name": "Seerah and Islamic History"}, {"name": "Dua, Wazaif and Supplications"},
+        {"name": "Aqeedah and Beliefs"}, {"name": "Hadith"}, {"name": "Fiqh and Jurisprudence"},
+        {"name": "Islamic Studies (Academic)"}, {"name": "Islamic Biography"}, {"name": "Madrasa and Dars-e-Nizami"},
+        {"name": "Sufism"}
+      ]
+    },
+    {
+      "name": "Urdu Books Extra",
+      "name_ur": "اردو کتب (مزید)",
+      "category_type": "Title Type",
+      "children": [
+        {"name": "Urdu Poetry", "name_ur": "اردو شاعری"}, {"name": "Urdu Literature", "name_ur": "اردو ادب"},
+        {"name": "Urdu Mazah", "name_ur": "مزاح"}, {"name": "Urdu Afsanay", "name_ur": "اردو افسانے"},
+        {"name": "Urdu Safarnamay", "name_ur": "اردو سفرنامے"}, {"name": "Urdu General Books", "name_ur": "عام اردو کتب"},
+        {"name": "Punjabi Books", "name_ur": "پنجابی کتب"}
+      ]
+    },
+    {
+      "name": "Self Help and Other Subjects",
+      "name_ur": "خود مدد اور دیگر مضامین",
+      "category_type": "Title Type",
+      "children": [
+        {"name": "Self Help"}, {"name": "Feminism"}, {"name": "Nutrition"}, {"name": "Nurses"},
+        {"name": "Money Making Books"}, {"name": "Pakistan Related Books"}, {"name": "Translated Books"},
+        {"name": "Gift Books"}, {"name": "Dictionaries"}, {"name": "Grammar and Composition"},
+        {"name": "Languages"}, {"name": "Literature"}, {"name": "Psychology"}, {"name": "Sociology"}
+      ]
+    }
+  ]
+}
