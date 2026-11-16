@@ -99,7 +99,7 @@ def create_pos_profile():
     return POS_PROFILE
 
 
-TAXONOMY_FILES = ["book_taxonomy.json", "book_taxonomy_extra.json"]
+TAXONOMY_FILES = ["book_taxonomy.json", "book_taxonomy_extra.json", "book_taxonomy_extra2.json"]
 
 
 def seed_taxonomy():

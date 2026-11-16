@@ -1,0 +1,50 @@
+{
+  "_sources": [
+    "https://sangemeel.shop/ (Categories menu, robots.txt allows /collections and the homepage)",
+    "Quran product types (Para, Panj Para, Panj Surah, Wazaif, Siparah set): supplied by the project owner, not verified on a public site yet"
+  ],
+  "roots": [
+    {
+      "name": "Sangemeel Categories",
+      "name_ur": "سنگ میل زمرے",
+      "category_type": "Title Type",
+      "children": [
+        {"name": "Afsanay"}, {"name": "Arabic Literature"}, {"name": "Archaeology"}, {"name": "Art"},
+        {"name": "Autobiography"}, {"name": "Biography"}, {"name": "Biology"}, {"name": "Books on Afghanistan"},
+        {"name": "Botany"}, {"name": "Calligraphy"}, {"name": "Children's Books"}, {"name": "Classics"},
+        {"name": "Collected Works"}, {"name": "Columns"}, {"name": "Cooking"}, {"name": "Criticism"},
+        {"name": "Culture"}, {"name": "Dictionary"}, {"name": "Drama"}, {"name": "Economics"},
+        {"name": "Education"}, {"name": "Essays"}, {"name": "Feminism"}, {"name": "Fiction"},
+        {"name": "Gazetteers"}, {"name": "Geography"}, {"name": "Grammar"}, {"name": "Health"},
+        {"name": "History"}, {"name": "Humour"}, {"name": "Iqbaliat"}, {"name": "Islam"},
+        {"name": "Journalism"}, {"name": "Letters"}, {"name": "Mass Communication"}, {"name": "Mathematics"},
+        {"name": "Memoirs"}, {"name": "Music"}, {"name": "Mysticism"}, {"name": "Novels"},
+        {"name": "O Levels"}, {"name": "Pakistan"}, {"name": "Persian"}, {"name": "Philosophy"},
+        {"name": "Physical Education"}, {"name": "Physics"}, {"name": "Poetry"}, {"name": "Political Science"},
+        {"name": "Psychology"}, {"name": "Punjab"}, {"name": "Reference"}, {"name": "Religion"},
+        {"name": "Safarnama"}, {"name": "Sawaneh"}, {"name": "Short Stories"}, {"name": "Sociology"},
+        {"name": "Speeches"}, {"name": "Sufism"}, {"name": "Tanqeed"}, {"name": "Travelogue"}, {"name": "Urdu Adab"},
+        {"name": "English Language Books"}, {"name": "Punjabi Language Books"}, {"name": "Urdu Language Books"}
+      ]
+    },
+    {
+      "name": "Quran and Related Products",
+      "name_ur": "قرآن کریم اور متعلقہ مصنوعات",
+      "category_type": "Title Type",
+      "children": [
+        {"name": "Quran Majeed (Complete)", "name_ur": "قرآن مجید مکمل"},
+        {"name": "Para (Juz)", "name_ur": "پارہ"},
+        {"name": "Panj Para", "name_ur": "پنج پارے"},
+        {"name": "Panj Surah", "name_ur": "پنج سورہ"},
+        {"name": "Wazaif", "name_ur": "وظائف"},
+        {"name": "Siparah Set", "name_ur": "سیپارہ سیٹ"},
+        {"name": "Quran with Urdu Translation", "name_ur": "ترجمہ کے ساتھ قرآن"},
+        {"name": "Quran with English Translation"},
+        {"name": "Tafseer", "name_ur": "تفسیر"},
+        {"name": "Quran Pocket Edition", "name_ur": "جیبی قرآن"},
+        {"name": "Quran Tajweed Edition", "name_ur": "تجوید والا قرآن"},
+        {"name": "Quran Gift Set", "name_ur": "تحفہ سیٹ"}
+      ]
+    }
+  ]
+}
