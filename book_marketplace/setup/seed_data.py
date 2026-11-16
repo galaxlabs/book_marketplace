@@ -2,6 +2,7 @@ import frappe
 
 
 def seed():
+    frappe.flags.in_import = True  # seed profiles bypass the Marketplace Settings business-type switch
     if frappe.db.get_all("SubjectMaster", limit=1):
         print("Data already seeded, skipping.")
         return
@@ -99,5 +100,5 @@ def seed():
     print("\nSeed data complete!")
     print(f"  SignupTerms: 1")
     print(f"  Subjects: {len(subjects)}")
-    print(f"  BusinessProfiles: {len(publishers)}")
+    print(f"  BusinessProfiles: {len(publisher_profiles)}")
     print(f"  Books: {len(books_data)}")

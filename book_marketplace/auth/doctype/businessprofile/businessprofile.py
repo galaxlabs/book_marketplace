@@ -15,7 +15,7 @@ class BusinessProfile(Document):
             self.approved_on = frappe.utils.today()
 
     def validate_enabled_type(self):
-        if self.is_new() and not is_profile_type_enabled(self.profile_type):
+        if self.is_new() and not frappe.flags.in_import and not is_profile_type_enabled(self.profile_type):
             frappe.throw(_("{0} is switched off in Marketplace Settings.").format(self.profile_type))
 
     def validate_one_profile_per_type(self):
