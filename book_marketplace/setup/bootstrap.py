@@ -117,11 +117,10 @@ def seed_taxonomy():
 
 def _insert_category(node, parent, category_type):
     """Insert a node once (matched by name + type + parent). Returns number of nodes created."""
-    existing = frappe.db.get_value(
-        "Book Category",
-        {"category_name": node["name"], "category_type": category_type, "parent_book_category": parent or ""},
-        "name",
-    )
+    filters = {"category_name": node["name"], "category_type": category_type}
+    # Root rows store NULL as parent; match them with "is not set" so re-runs do not duplicate.
+    filters["parent_book_category"] = parent if parent else ["is", "not set"]
+    existing = frappe.db.get_value("Book Category", filters, "name")
     created = 0
     if existing:
         name = existing
