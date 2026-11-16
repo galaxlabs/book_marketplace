@@ -84,3 +84,86 @@ def confirm_receive(transfer_id):
     doc.received_on = frappe.utils.today()
     doc.save()
     return {"name": doc.name, "status": doc.status}
+
+
+# ─── Publisher's own books: recorded quantity ───────────────
+
+def _assert_publisher_profile(profile_id):
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    _assert_profile_owner(profile_id)
+
+
+def _default_branch(profile_id):
+    name = frappe.db.get_value("BranchLocation", {"business_profile": profile_id, "is_active": 1}, "name")
+    if name:
+        return name
+    doc = frappe.get_doc({
+        "doctype": "BranchLocation",
+        "business_profile": profile_id,
+        "branch_name": "Main",
+        "location_type": "Shop",
+        "is_active": 1,
+    })
+    doc.insert(ignore_permissions=True)
+    return doc.name
+
+
+def _recorded_quantity(profile_id, book_id):
+    """None when no stock record exists for this book (quantity not given). Otherwise the sum of available stock."""
+    if not frappe.db.exists("StockLedger", {"business_profile": profile_id, "book": book_id}):
+        return None
+    rows = frappe.get_all(
+        "StockLedger",
+        filters={"business_profile": profile_id, "book": book_id, "state": "Available"},
+        fields=["quantity"],
+    )
+    return sum(int(r.quantity or 0) for r in rows)
+
+
+@frappe.whitelist()
+def list_own_books(profile_id):
+    _assert_publisher_profile(profile_id)
+    books = frappe.get_all(
+        "Book",
+        filters={"publisher": profile_id, "global_visibility": 1},
+        fields=["name", "title", "author", "set_mrp"],
+        order_by="title asc",
+        limit_page_length=1000,
+    )
+    for b in books:
+        b.quantity = _recorded_quantity(profile_id, b.name)
+    return books
+
+
+@frappe.whitelist()
+def set_own_book_quantity(profile_id, book_id, quantity):
+    _assert_publisher_profile(profile_id)
+    try:
+        qty = int(quantity)
+    except (TypeError, ValueError):
+        frappe.throw(_("Quantity must be a whole number."))
+    if qty < 0:
+        frappe.throw(_("Quantity cannot be negative."))
+    publisher = frappe.db.get_value("Book", book_id, "publisher")
+    if publisher != profile_id:
+        frappe.throw(_("This book is not published by this business."), frappe.PermissionError)
+
+    branch = _default_branch(profile_id)
+    existing = frappe.db.get_value(
+        "StockLedger",
+        {"business_profile": profile_id, "book": book_id, "branch_location": branch, "state": "Available"},
+        "name",
+    )
+    if existing:
+        frappe.db.set_value("StockLedger", existing, "quantity", qty)
+    else:
+        doc = frappe.get_doc({
+            "doctype": "StockLedger",
+            "book": book_id,
+            "business_profile": profile_id,
+            "branch_location": branch,
+            "quantity": qty,
+            "state": "Available",
+        })
+        doc.insert(ignore_permissions=True)
+    return {"book": book_id, "quantity": qty}
