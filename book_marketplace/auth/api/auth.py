@@ -74,6 +74,8 @@ def login_with_token(usr, pwd):
     if not user:
         frappe.throw(_("Invalid email or password."))
     check_password(user, pwd)
+    if not frappe.db.get_value("User", user, "enabled"):
+        frappe.throw(_("This account is disabled. Contact the administrator."))
     user_doc = frappe.get_doc("User", user)
     if not user_doc.api_key:
         user_doc.api_key = frappe.generate_hash(length=15)
