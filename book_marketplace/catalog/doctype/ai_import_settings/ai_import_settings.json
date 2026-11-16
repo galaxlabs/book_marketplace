@@ -1,0 +1,22 @@
+{
+ "actions": [],
+ "creation": "2026-11-16 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["enabled", "provider", "model", "column_break_ai", "api_key", "help_section", "help_text"],
+ "fields": [
+  {"fieldname": "enabled", "fieldtype": "Check", "label": "Enable AI Catalog Import / اے آئی کیٹلاگ امپورٹ فعال کریں", "default": "0"},
+  {"fieldname": "provider", "fieldtype": "Select", "label": "Provider / فراہم کنندہ", "options": "Anthropic", "default": "Anthropic"},
+  {"fieldname": "model", "fieldtype": "Data", "label": "Model / ماڈل", "default": "claude-haiku-5-5"},
+  {"fieldname": "column_break_ai", "fieldtype": "Column Break"},
+  {"fieldname": "api_key", "fieldtype": "Password", "label": "API Key / API کی", "description": "Stored encrypted. Without a key, PDFs are parsed with rules only. / بغیر کی کے صرف قواعد سے پڑھا جائے گا۔"},
+  {"fieldname": "help_section", "fieldtype": "Section Break", "label": "Help / مدد"},
+  {"fieldname": "help_text", "fieldtype": "Small Text", "label": "Note / نوٹ", "read_only": 1, "default": "PDF text is read locally. When enabled with a key, the text is sent to the model to structure rows. Review the preview before creating books. / PDF کا متن مقامی طور پر پڑھا جاتا ہے۔ کی کے ساتھ فعال ہو تو متن ماڈل کو جاتا ہے۔ کتابیں بنانے سے پہلے پیش نظارہ ضرور دیکھیں۔"}
+ ],
+ "issingle": 1,
+ "module": "Catalog",
+ "name": "AI Import Settings",
+ "owner": "Administrator",
+ "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 0, "email": 0, "export": 0, "print": 0, "report": 0, "share": 0}],
+ "states": []
+}
