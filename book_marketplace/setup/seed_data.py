@@ -95,6 +95,9 @@ def seed():
         if subject_name:
             book.append("subjects", {"subject": subject_name})
             book.save()
+        # doc_events are skipped while in_import is set, so sync the POS item explicitly
+        from book_marketplace.catalog.item_sync import sync_book_to_item
+        sync_book_to_item(book)
         print(f"Book: {book.name} ({bd['title']})")
 
     print("\nSeed data complete!")
