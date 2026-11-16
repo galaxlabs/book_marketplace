@@ -29,8 +29,6 @@ login_manager = "book_marketplace.auth.overrides.BookMarketplaceLoginManager"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/book_marketplace/css/book_marketplace.css"
 # app_include_js = "/assets/book_marketplace/js/book_marketplace.js"
-app_include_js = "/assets/book_marketplace/js/book_marketplace.bundle.js"
-app_include_css = "/assets/book_marketplace/css/book_marketplace.bundle.css"
 # include js, css files in header of web template
 # web_include_css = "/assets/book_marketplace/css/book_marketplace.css"
 # web_include_js = "/assets/book_marketplace/js/book_marketplace.js"
