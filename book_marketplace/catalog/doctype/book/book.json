@@ -159,6 +159,11 @@
    "description": "Complete set price for multi-volume books"
   },
   {
+   "fieldname": "cover_image",
+   "fieldtype": "Attach Image",
+   "label": "Cover Image"
+  },
+  {
    "fieldname": "profile_section",
    "fieldtype": "Section Break",
    "label": "Book Profile"

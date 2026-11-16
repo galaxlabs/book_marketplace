@@ -293,3 +293,115 @@ def get_filters():
         "subjects": subjects,
         "languages": [l.language for l in languages if l.language],
     }
+
+
+# ─── Public offers: one book, many sellers ────────────────
+
+def _offer_text_filter(text):
+    return {"title": ["like", f"%{text}%"], "author": ["like", f"%{text}%"]}
+
+
+@frappe.whitelist(allow_guest=True)
+def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0):
+    """Each book once, with every published seller that stocks it.
+
+    Sellers in `city` come first, and books that have a seller in `city`
+    are listed before the rest. Books with no published seller are skipped.
+    """
+    limit = min(int(limit or 24), 100)
+    offset = int(offset or 0)
+    city = (city or "").strip()
+
+    book_filters = {"global_visibility": 1}
+    if book_type:
+        book_filters["book_type"] = book_type
+    if language:
+        book_filters["language"] = language
+    or_filters = None
+    if text:
+        or_filters = _offer_text_filter(text)
+
+    subject_books = None
+    if subject:
+        subject_books = frappe.get_all(
+            "BookSubject", filters={"subject": subject, "parenttype": "Book"}, pluck="parent"
+        )
+        if not subject_books:
+            return {"books": [], "total": 0, "cities": _published_cities()}
+        book_filters["name"] = ["in", subject_books]
+
+    books = frappe.get_all(
+        "Book",
+        filters=book_filters,
+        or_filters=or_filters,
+        fields=["name", "title", "subtitle", "author", "book_type", "language",
+                "set_mrp", "cover_image", "primary_category", "genre", "religious_segment"],
+        order_by="modified desc",
+        limit_page_length=2000,
+    )
+    if not books:
+        return {"books": [], "total": 0, "cities": _published_cities()}
+
+    book_names = [b.name for b in books]
+    items = frappe.get_all(
+        "BusinessCatalogItem",
+        filters={"book": ["in", book_names], "is_active": 1},
+        fields=["book", "business_profile", "selling_price"],
+    )
+    profiles = list({i.business_profile for i in items})
+    stores = frappe.get_all(
+        "BusinessStore",
+        filters={"business_profile": ["in", profiles], "is_published": 1},
+        fields=["business_profile", "slug", "store_name", "city"],
+    ) if profiles else []
+    store_by_profile = {s.business_profile: s for s in stores}
+    profile_rows = frappe.get_all(
+        "BusinessProfile",
+        filters={"name": ["in", list(store_by_profile)]} if store_by_profile else {"name": ""},
+        fields=["name", "business_name", "city", "profile_type"],
+    )
+    profile_by_name = {p.name: p for p in profile_rows}
+
+    offers_by_book = {}
+    for item in items:
+        store = store_by_profile.get(item.business_profile)
+        if not store:
+            continue
+        profile = profile_by_name.get(item.business_profile)
+        seller_city = store.city or (profile.city if profile else "") or ""
+        offers_by_book.setdefault(item.book, []).append({
+            "business_profile": item.business_profile,
+            "business_name": profile.business_name if profile else store.store_name,
+            "store_name": store.store_name,
+            "slug": store.slug,
+            "profile_type": profile.profile_type if profile else "",
+            "city": seller_city,
+            "selling_price": item.selling_price,
+            "in_city": bool(city) and seller_city.strip().lower() == city.lower(),
+        })
+
+    result = []
+    for book in books:
+        sellers = offers_by_book.get(book.name)
+        if not sellers:
+            continue
+        sellers.sort(key=lambda s: (not s["in_city"], s["selling_price"] is None, s["selling_price"] or 0))
+        prices = [s["selling_price"] for s in sellers if s["selling_price"] is not None]
+        result.append({
+            **book,
+            "sellers": sellers,
+            "seller_count": len(sellers),
+            "in_city_count": sum(1 for s in sellers if s["in_city"]),
+            "min_price": min(prices) if prices else None,
+        })
+
+    if city:
+        result.sort(key=lambda b: b["in_city_count"] == 0)
+
+    total = len(result)
+    return {"books": result[offset:offset + limit], "total": total, "cities": _published_cities()}
+
+
+def _published_cities():
+    rows = frappe.get_all("BusinessStore", filters={"is_published": 1}, fields=["city"], pluck="city")
+    return sorted({c.strip() for c in rows if c and c.strip()})
