@@ -166,12 +166,7 @@ def get_store_by_slug(slug):
     )
     store.business_name = profile.business_name if profile else ""
     store.profile_type = profile.profile_type if profile else ""
-    items = frappe.get_all(
-        "BusinessCatalogItem",
-        filters={"business_profile": store.business_profile, "is_active": 1},
-        fields=["name", "book", "selling_price"],
-        order_by="modified desc",
-    )
+    items = _store_items(store.business_profile, store.profile_type)
     catalog = []
     for item in items:
         book = frappe.db.get_value(
@@ -205,6 +200,30 @@ def get_store_by_slug(slug):
     store.catalog = catalog
     store.catalog_count = len(catalog)
     return store
+
+
+def _store_items(profile_name, profile_type):
+    """Active catalog rows for a store. A publisher's own visible books are added too,
+    with no selling price, so the store shows MRP for them."""
+    items = list(frappe.get_all(
+        "BusinessCatalogItem",
+        filters={"business_profile": profile_name, "is_active": 1},
+        fields=["name", "book", "selling_price"],
+        order_by="modified desc",
+    ))
+    if profile_type != "Publisher":
+        return items
+    listed = {i.book for i in items}
+    own = frappe.get_all(
+        "Book",
+        filters={"publisher": profile_name, "global_visibility": 1},
+        fields=["name"],
+        order_by="modified desc",
+    )
+    for book in own:
+        if book.name not in listed:
+            items.append(frappe._dict({"name": f"OWN-{book.name}", "book": book.name, "selling_price": None}))
+    return items
 
 
 @frappe.whitelist(allow_guest=True)
@@ -335,7 +354,7 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
         filters=book_filters,
         or_filters=or_filters,
         fields=["name", "title", "subtitle", "author", "book_type", "language",
-                "set_mrp", "cover_image", "primary_category", "genre", "religious_segment"],
+                "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher"],
         order_by="modified desc",
         limit_page_length=2000,
     )
@@ -343,11 +362,25 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
         return {"books": [], "total": 0, "cities": _published_cities()}
 
     book_names = [b.name for b in books]
-    items = frappe.get_all(
+    items = list(frappe.get_all(
         "BusinessCatalogItem",
         filters={"book": ["in", book_names], "is_active": 1},
         fields=["book", "business_profile", "selling_price"],
-    )
+    ))
+    # A publisher's own books are on offer from the publisher, even without a catalog row.
+    publisher_names = list({b.publisher for b in books if b.publisher})
+    publisher_types = {
+        p.name for p in frappe.get_all(
+            "BusinessProfile",
+            filters={"name": ["in", publisher_names], "profile_type": "Publisher"},
+            fields=["name"],
+        )
+    } if publisher_names else set()
+    listed = {(i.book, i.business_profile) for i in items}
+    for b in books:
+        if b.publisher in publisher_types and (b.name, b.publisher) not in listed:
+            items.append(frappe._dict({"book": b.name, "business_profile": b.publisher, "selling_price": None}))
+    book_mrp = {b.name: b.set_mrp for b in books}
     profiles = list({i.business_profile for i in items})
     stores = frappe.get_all(
         "BusinessStore",
@@ -376,7 +409,7 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
             "slug": store.slug,
             "profile_type": profile.profile_type if profile else "",
             "city": seller_city,
-            "selling_price": item.selling_price,
+            "selling_price": item.selling_price if item.selling_price is not None else book_mrp.get(item.book),
             "in_city": bool(city) and seller_city.strip().lower() == city.lower(),
         })
 
