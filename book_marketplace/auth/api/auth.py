@@ -60,6 +60,7 @@ def get_me():
         "is_authenticated": True,
         "user": user,
         "account_type": account_type,
+        "is_admin": _is_admin(),
         "home": home,
         "buyer_profile": buyer_profile,
         "profiles": profiles,
