@@ -665,7 +665,22 @@ def _offer_text_filter(text):
 
 
 @frappe.whitelist(allow_guest=True)
-def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None, form=None):
+def list_authors(text=None, limit=400):
+    """Authors of visible books, most books first, with the number of books. For the author filter."""
+    limit = min(int(limit or 400), 1000)
+    params = {"text": f"%{text.strip()}%"} if text and text.strip() else {}
+    where = "global_visibility = 1 and ifnull(author, '') != ''"
+    if params:
+        where += " and author like %(text)s"
+    rows = frappe.db.sql(
+        f"select author, count(*) c from tabBook where {where} group by author order by c desc, author asc limit %(limit)s",
+        {**params, "limit": limit}, as_dict=True,
+    )
+    return [{"name": r.author, "books": r.c} for r in rows]
+
+
+@frappe.whitelist(allow_guest=True)
+def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None, form=None, author=None):
     """Each book once, with every published seller that stocks it.
 
     Sellers in `city` come first, and books that have a seller in `city`
@@ -676,6 +691,8 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     city = (city or "").strip()
 
     book_filters = {"global_visibility": 1}
+    if author:
+        book_filters["author"] = author
     if book_type:
         book_filters["book_type"] = book_type
     if binding:
