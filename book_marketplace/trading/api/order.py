@@ -129,6 +129,6 @@ def list_sales(profile_id, limit=50, offset=0):
         "InternalOrder",
         filters={"seller_profile": profile_id, "order_type": "Sale"},
         fields=["name", "customer_name", "customer_phone", "status", "payment_status", "total_amount", "order_date", "creation"],
-        order_by="creation desc", limit=int(limit), offset=int(offset),
+        order_by="creation desc", limit_page_length=int(limit), limit_start=int(offset),
     )
     return rows
