@@ -771,6 +771,15 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     )
     profile_by_name = {p.name: p for p in profile_rows}
 
+    stock = {}
+    if book_names:
+        for r in frappe.db.sql(
+            "select business_profile, book, sum(quantity) from `tabStockLedger` "
+            "where state = 'Available' and book in %(books)s group by business_profile, book",
+            {"books": book_names},
+        ):
+            stock[(r[0], r[1])] = int(r[2] or 0)
+
     offers_by_book = {}
     for item in items:
         store = store_by_profile.get(item.business_profile)
@@ -783,6 +792,7 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
         else:
             pv = price_view(item.selling_price or book_mrp.get(item.book), item.discount_percent)
         offers_by_book.setdefault(item.book, []).append({
+            "in_stock": stock.get((item.business_profile, item.book), 0) > 0,
             "business_profile": item.business_profile,
             "business_name": profile.business_name if profile else store.store_name,
             "store_name": store.store_name,
@@ -804,6 +814,7 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
         prices = [s["selling_price"] for s in sellers if s["selling_price"] is not None]
         result.append({
             **book,
+            "in_stock": any(x["in_stock"] for x in sellers),
             "sellers": sellers,
             "seller_count": len(sellers),
             "in_city_count": sum(1 for s in sellers if s["in_city"]),
