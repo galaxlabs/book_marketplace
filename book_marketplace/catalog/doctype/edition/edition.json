@@ -1,0 +1,100 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "Prompt",
+ "creation": "2026-11-17 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "work",
+  "publisher",
+  "isbn",
+  "edition_year",
+  "volume_count",
+  "mrp",
+  "trade_price",
+  "visibility",
+  "created_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "work",
+   "fieldtype": "Link",
+   "label": "Work",
+   "reqd": 1,
+   "options": "Work",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "publisher",
+   "fieldtype": "Link",
+   "label": "Publisher",
+   "options": "BusinessProfile",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "isbn",
+   "fieldtype": "Data",
+   "label": "ISBN",
+   "search_index": 1
+  },
+  {
+   "fieldname": "edition_year",
+   "fieldtype": "Int",
+   "label": "Edition Year"
+  },
+  {
+   "fieldname": "volume_count",
+   "fieldtype": "Int",
+   "label": "Volumes"
+  },
+  {
+   "fieldname": "mrp",
+   "fieldtype": "Currency",
+   "label": "General Price (publisher)",
+   "options": "currency"
+  },
+  {
+   "fieldname": "trade_price",
+   "fieldtype": "Currency",
+   "label": "Trade Price (publisher)",
+   "options": "currency"
+  },
+  {
+   "fieldname": "visibility",
+   "fieldtype": "Select",
+   "label": "Visibility",
+   "options": "draft\npending\npublic\nhidden",
+   "default": "public"
+  },
+  {
+   "fieldname": "created_by",
+   "fieldtype": "Link",
+   "label": "Created By (profile)",
+   "options": "BusinessProfile"
+  }
+ ],
+ "istable": 0,
+ "module": "Catalog",
+ "name": "Edition",
+ "naming_rule": "",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

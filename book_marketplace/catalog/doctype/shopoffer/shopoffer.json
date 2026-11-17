@@ -1,0 +1,90 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-11-17 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "shop",
+  "edition",
+  "price_general",
+  "price_trade",
+  "price_source",
+  "visibility",
+  "is_active"
+ ],
+ "fields": [
+  {
+   "fieldname": "shop",
+   "fieldtype": "Link",
+   "label": "Shop",
+   "reqd": 1,
+   "options": "BusinessProfile",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "edition",
+   "fieldtype": "Link",
+   "label": "Edition",
+   "reqd": 1,
+   "options": "Edition",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "price_general",
+   "fieldtype": "Currency",
+   "label": "General Price (shop)",
+   "options": "currency"
+  },
+  {
+   "fieldname": "price_trade",
+   "fieldtype": "Currency",
+   "label": "Trade Price (shop)",
+   "options": "currency"
+  },
+  {
+   "fieldname": "price_source",
+   "fieldtype": "Select",
+   "label": "Price Source",
+   "options": "publisher\nshop",
+   "default": "publisher"
+  },
+  {
+   "fieldname": "visibility",
+   "fieldtype": "Select",
+   "label": "Visibility",
+   "options": "draft\npending\npublic\nhidden",
+   "default": "public"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active",
+   "default": "1"
+  }
+ ],
+ "istable": 0,
+ "module": "Catalog",
+ "name": "ShopOffer",
+ "naming_rule": "",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
