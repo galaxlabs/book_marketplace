@@ -475,7 +475,11 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     if book_type:
         book_filters["book_type"] = book_type
     if language:
-        book_filters["language"] = language
+        lang_books = set(frappe.get_all("BookLanguage", filters={"language": language, "parenttype": "Book"}, pluck="parent", limit_page_length=0))
+        lang_books |= set(frappe.get_all("Book", filters={"language": language}, pluck="name", limit_page_length=0))
+        if not lang_books:
+            return {"books": [], "total": 0, "cities": _published_cities()}
+        book_filters["name"] = ["in", list(lang_books)]
     or_filters = None
     if text:
         or_filters = _offer_text_filter(text)

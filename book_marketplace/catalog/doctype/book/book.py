@@ -31,11 +31,17 @@ class Book(Document):
         self.name = f"{candidate} ({n})"
 
     def before_save(self):
+        self.sync_primary_language()
         self.detect_duplicates()
         self.validate_volumes()
 
     def after_save(self):
         self.generate_qr_code()
+
+    def sync_primary_language(self):
+        rows = [r.language for r in (self.get("languages") or []) if r.language]
+        if rows:
+            self.language = rows[0]
 
     def detect_duplicates(self):
         filters = {"name": ["!=", self.name]} if self.name else {}

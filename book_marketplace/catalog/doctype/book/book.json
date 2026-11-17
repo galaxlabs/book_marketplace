@@ -17,6 +17,7 @@
   "article_number",
   "qr_code",
   "language",
+  "languages",
   "board",
   "binding",
   "size",
@@ -120,6 +121,12 @@
    "fieldtype": "Select",
    "label": "Language",
    "options": "Urdu\nEnglish\nArabic\nRoman Urdu\nSindhi\nPashto\nPunjabi\nBalochi\nOther"
+  },
+  {
+   "fieldname": "languages",
+   "fieldtype": "Table",
+   "label": "Languages / زبانیں (ایک سے زیادہ)",
+   "options": "BookLanguage"
   },
   {
    "fieldname": "board",
