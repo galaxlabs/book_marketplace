@@ -264,3 +264,15 @@ scheduler_events = {
         "*/10 * * * *": ["book_marketplace.trading.api.customer_order.expire_overdue"],
     },
 }
+
+# customer orders: a buyer or a shop sees only its own rows
+permission_query_conditions = {
+    **globals().get("permission_query_conditions", {}),
+    "Customer Order": "book_marketplace.trading.customer_order_permissions.order_query",
+    "Customer Basket": "book_marketplace.trading.customer_order_permissions.basket_query",
+}
+has_permission = {
+    **globals().get("has_permission", {}),
+    "Customer Order": "book_marketplace.trading.customer_order_permissions.order_has_permission",
+    "Customer Basket": "book_marketplace.trading.customer_order_permissions.basket_has_permission",
+}

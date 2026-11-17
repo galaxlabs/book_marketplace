@@ -136,6 +136,46 @@
    "create": 1,
    "delete": 1,
    "report": 1
+  },
+  {
+   "role": "Publisher",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 0,
+   "export": 0,
+   "print": 1
+  },
+  {
+   "role": "Bookseller",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 0,
+   "export": 0,
+   "print": 1
+  },
+  {
+   "role": "Distributor",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 0,
+   "export": 0,
+   "print": 1
+  },
+  {
+   "role": "Buyer",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0,
+   "report": 0,
+   "export": 0,
+   "print": 1
   }
  ],
  "istable": 0,
