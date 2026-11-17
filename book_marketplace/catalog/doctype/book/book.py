@@ -40,6 +40,8 @@ class Book(Document):
 
     def sync_primary_language(self):
         rows = [r.language for r in (self.get("languages") or []) if r.language]
+        if len(set(rows)) > 1:
+            frappe.throw("Each language is a separate product (one product per language). Add it as another book.")
         if rows:
             self.language = rows[0]
 

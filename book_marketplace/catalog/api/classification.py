@@ -100,3 +100,29 @@ def set_book_classification(profile_id, book_id, categories=None, is_bound=0, is
     book.part_count = int(part_count) if part_count not in (None, "") else None
     book.save(ignore_permissions=True)
     return {"name": book.name, "categories": [r.category for r in book.classifications]}
+@frappe.whitelist()
+def section_overview():
+    """قسم → موضوعات with book counts. Used by the panel and the public store filters."""
+    sections = frappe.get_all(
+        "Book Category", filters={"category_type": "Book Type", "parent_book_category": ["is", "set"]},
+        fields=["name", "category_name", "category_name_ur"], order_by="category_name asc", limit_page_length=0,
+    )
+    roots = frappe.get_all(
+        "Book Category", filters={"category_type": "Subject", "section": ["is", "set"]},
+        fields=["name", "category_name", "category_name_ur", "section"], limit_page_length=0,
+    )
+    out = []
+    for sec in sections:
+        subjects = []
+        for r in [x for x in roots if x.section == sec.name]:
+            subjects.append({
+                "name": r.name, "category_name": r.category_name, "category_name_ur": r.category_name_ur,
+                "books": len(book_names_for_categories([r.name])),
+            })
+        subjects.sort(key=lambda x: x["category_name"])
+        out.append({
+            "name": sec.name, "category_name": sec.category_name, "category_name_ur": sec.category_name_ur,
+            "books": len({b for sj in subjects for b in book_names_for_categories([sj["name"]])}),
+            "subjects": subjects,
+        })
+    return out

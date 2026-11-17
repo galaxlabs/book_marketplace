@@ -9,6 +9,7 @@
   "category_name",
   "category_name_ur",
   "parent_book_category",
+  "section",
   "column_break_info",
   "category_type",
   "is_group",
@@ -33,6 +34,13 @@
    "fieldtype": "Link",
    "options": "Book Category",
    "label": "Parent Category / والد قسم"
+  },
+  {
+   "fieldname": "section",
+   "fieldtype": "Link",
+   "label": "Section (قسم)",
+   "options": "Book Category",
+   "description": "For subject roots: the قسم they belong to"
   },
   {
    "fieldname": "column_break_info",
