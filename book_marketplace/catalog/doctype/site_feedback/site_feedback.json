@@ -1,0 +1,104 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-17 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Catalog",
+ "name": "Site Feedback",
+ "owner": "Administrator",
+ "modified": "2026-11-17 00:00:00.000000",
+ "modified_by": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "track_changes": 1,
+ "title_field": "message",
+ "field_order": [
+  "feedback_type",
+  "status",
+  "column_break_top",
+  "sender_name",
+  "contact",
+  "page_url",
+  "message_section",
+  "message",
+  "review_section",
+  "admin_note"
+ ],
+ "fields": [
+  {
+   "fieldname": "feedback_type",
+   "fieldtype": "Select",
+   "label": "Type / قسم",
+   "options": "Suggestion\nProblem\nOther",
+   "default": "Suggestion",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status / حالت",
+   "options": "Open\nReviewed\nResolved",
+   "default": "Open",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_top",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sender_name",
+   "fieldtype": "Data",
+   "label": "Name / نام",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "contact",
+   "fieldtype": "Data",
+   "label": "Contact (optional) / رابطہ (اختیاری)"
+  },
+  {
+   "fieldname": "page_url",
+   "fieldtype": "Data",
+   "label": "Page / صفحہ",
+   "read_only": 1
+  },
+  {
+   "fieldname": "message_section",
+   "fieldtype": "Section Break",
+   "label": "Feedback / رائے"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message / پیغام",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "review_section",
+   "fieldtype": "Section Break",
+   "label": "Review / جائزہ"
+  },
+  {
+   "fieldname": "admin_note",
+   "fieldtype": "Small Text",
+   "label": "Admin note / ایڈمن نوٹ"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ]
+}
