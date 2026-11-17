@@ -78,7 +78,7 @@ def get_stock_summary(book_id, volumes=None):
 # ─── Business Catalog (own store) ─────────────────────────
 
 @frappe.whitelist()
-def add_to_catalog(profile_id, book_id, selling_price=None):
+def add_to_catalog(profile_id, book_id, selling_price=None, trade_price=None):
     if frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id}):
         return {"error": "Book already in catalog"}
     doc = frappe.get_doc({
@@ -86,6 +86,7 @@ def add_to_catalog(profile_id, book_id, selling_price=None):
         "business_profile": profile_id,
         "book": book_id,
         "selling_price": selling_price,
+        "trade_price": trade_price,
         "is_active": 1,
     })
     doc.insert()
@@ -98,44 +99,110 @@ def remove_from_catalog(item_id):
     return {"status": "removed"}
 
 
+def _stock_for(book_id, profile_id):
+    return frappe.db.get_value(
+        "StockLedger",
+        {"book": book_id, "business_profile": profile_id, "state": "Available"},
+        "sum(quantity)",
+    ) or 0
+
+
 @frappe.whitelist()
 def list_catalog(profile_id, active_only=True):
+    """Catalog rows with general (selling) and trade prices.
+    A publisher also sees its own visible books as OWN-<book> rows."""
     filters = {"business_profile": profile_id}
-    if active_only:
+    if frappe.utils.cint(active_only):
         filters["is_active"] = 1
     items = frappe.get_all(
         "BusinessCatalogItem",
         filters=filters,
-        fields=["name", "book", "selling_price", "is_active", "added_on"],
+        fields=["name", "book", "selling_price", "trade_price", "is_active", "added_on"],
         order_by="added_on desc",
     )
+    rows, listed = [], set()
     for item in items:
         book = frappe.db.get_value(
             "Book", item.book,
-            ["title", "author", "book_type", "set_mrp", "language", "genre", "religious_segment"],
+            ["title", "author", "book_type", "set_mrp", "trade_price", "language", "genre", "religious_segment"],
             as_dict=True,
+        ) or frappe._dict()
+        listed.add(item.book)
+        rows.append({
+            "name": item.name,
+            "book": item.book,
+            "book_title": book.title or "",
+            "book_author": book.author or "",
+            "book_type": book.book_type or "",
+            "book_mrp": book.set_mrp,
+            "book_trade_price": book.trade_price,
+            "language": book.language or "",
+            "genre": book.genre or "",
+            "religious_segment": book.religious_segment or "",
+            "selling_price": item.selling_price,
+            "trade_price": item.trade_price,
+            "is_active": item.is_active,
+            "added_on": item.added_on,
+            "owned": 0,
+            "stock_available": _stock_for(item.book, profile_id),
+        })
+    if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") == "Publisher":
+        own = frappe.get_all(
+            "Book",
+            filters={"publisher": profile_id, "global_visibility": 1},
+            fields=["name", "title", "author", "book_type", "set_mrp", "trade_price", "language", "genre", "religious_segment"],
+            order_by="title asc",
+            limit_page_length=5000,
         )
-        item.book_title = book.title if book else ""
-        item.book_author = book.author if book else ""
-        item.book_type = book.book_type if book else ""
-        item.book_mrp = book.set_mrp if book else None
-        item.genre = book.genre if book else ""
-        item.religious_segment = book.religious_segment if book else ""
-        stock = frappe.db.get_value(
-            "StockLedger",
-            {"book": item.book, "business_profile": profile_id, "state": "Available"},
-            "sum(quantity)",
-        )
-        item.stock_available = stock or 0
-    return items
+        for b in own:
+            if b.name in listed:
+                continue
+            rows.append({
+                "name": "OWN-" + b.name,
+                "book": b.name,
+                "book_title": b.title or "",
+                "book_author": b.author or "",
+                "book_type": b.book_type or "",
+                "book_mrp": b.set_mrp,
+                "book_trade_price": b.trade_price,
+                "language": b.language or "",
+                "genre": b.genre or "",
+                "religious_segment": b.religious_segment or "",
+                "selling_price": b.set_mrp,
+                "trade_price": b.trade_price,
+                "is_active": 1,
+                "added_on": None,
+                "owned": 1,
+                "stock_available": _stock_for(b.name, profile_id),
+            })
+    return rows
 
 
 @frappe.whitelist()
-def update_catalog_price(item_id, selling_price):
+def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_id=None):
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+
+    if str(item_id).startswith("OWN-"):
+        book_id = str(item_id)[4:]
+        book = frappe.get_doc("Book", book_id)
+        if profile_id and profile_id != book.publisher:
+            frappe.throw(_("Not permitted for this book."), frappe.PermissionError)
+        _assert_profile_owner(book.publisher)
+        if selling_price is not None:
+            book.set_mrp = selling_price
+        if trade_price is not None:
+            book.trade_price = trade_price
+        book.save()
+        return {"name": item_id, "selling_price": book.set_mrp, "trade_price": book.trade_price}
+
     doc = frappe.get_doc("BusinessCatalogItem", item_id)
-    doc.selling_price = selling_price
+    _assert_profile_owner(doc.business_profile)
+    if selling_price is not None:
+        doc.selling_price = selling_price
+    if trade_price is not None:
+        doc.trade_price = trade_price
     doc.save()
-    return {"name": doc.name, "selling_price": selling_price}
+    return {"name": doc.name, "selling_price": doc.selling_price, "trade_price": doc.trade_price}
 
 
 @frappe.whitelist()
