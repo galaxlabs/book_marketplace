@@ -152,3 +152,55 @@ def seller_orders(profile_id, status=None, limit=50, offset=0):
     return frappe.get_all("Customer Order", filters=f,
                           fields=["name", "status", "total", "reserved_until", "creation", "buyer_profile"],
                           order_by="creation desc", limit_page_length=int(limit), limit_start=int(offset))
+"""Customer orders, step 5: read APIs for the shop panel and the buyer's pages. Appended to trading/api/customer_payment.py
+on dev-b (branch feat/customer-orders). No trade price or margin is returned to either side."""
+import frappe
+from frappe import _
+
+from book_marketplace.trading.api.customer_order import _buyer_from_session
+
+
+@frappe.whitelist()
+def seller_order_detail(order):
+    """One order for its shop: items, payment proofs, and the buyer's contact for this order only."""
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    doc = frappe.get_doc("Customer Order", order)
+    _assert_profile_owner(doc.seller_profile)
+    buyer = frappe.db.get_value("BuyerProfile", doc.buyer_profile, ["full_name", "phone", "email"], as_dict=True) or {}
+    items = [{"book": i.book, "title": frappe.db.get_value("Book", i.book, "title"), "qty": i.qty,
+              "unit_price": i.unit_price, "line_total": i.line_total} for i in doc.items]
+    pays = frappe.get_all("PaymentTransaction", filters={"customer_order": order},
+                          fields=["name", "amount", "payment_method", "reference_no", "payment_date", "status", "rejection_reason"],
+                          order_by="creation desc")
+    return {"name": doc.name, "status": doc.status, "total": doc.total, "reserved_until": doc.reserved_until,
+            "buyer": buyer, "items": items, "payments": pays, "buyer_note": doc.buyer_note}
+
+
+@frappe.whitelist()
+def my_orders():
+    """The buyer's orders, grouped by basket. Each order shows its shop's name only."""
+    buyer = _buyer_from_session()
+    rows = frappe.get_all("Customer Order", filters={"buyer_profile": buyer},
+                          fields=["name", "basket", "seller_profile", "status", "total", "reserved_until", "creation"],
+                          order_by="creation desc", limit_page_length=200)
+    for r in rows:
+        r["business_name"] = frappe.db.get_value("BusinessProfile", r.seller_profile, "business_name")
+        r.pop("seller_profile", None)
+    return rows
+
+
+@frappe.whitelist()
+def my_order_detail(order):
+    """One of the buyer's orders, with the payment details of that shop only (for this order)."""
+    buyer = _buyer_from_session()
+    doc = frappe.get_doc("Customer Order", order)
+    if doc.buyer_profile != buyer:
+        frappe.throw(_("Not your order."), frappe.PermissionError)
+    bank = frappe.get_all("BusinessBankAccount", filters={"business_profile": doc.seller_profile, "is_active": 1},
+                          fields=["bank_name", "account_title", "account_number", "iban", "payment_instructions"],
+                          order_by="is_default desc", limit_page_length=3)
+    items = [{"title": frappe.db.get_value("Book", i.book, "title"), "qty": i.qty, "unit_price": i.unit_price,
+              "line_total": i.line_total} for i in doc.items]
+    return {"name": doc.name, "status": doc.status, "total": doc.total, "reserved_until": doc.reserved_until,
+            "business_name": frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name"),
+            "items": items, "payment_accounts": bank}
