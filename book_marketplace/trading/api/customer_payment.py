@@ -204,3 +204,73 @@ def my_order_detail(order):
     return {"name": doc.name, "status": doc.status, "total": doc.total, "reserved_until": doc.reserved_until,
             "business_name": frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name"),
             "items": items, "payment_accounts": bank}
+"""Customer orders v2 payment side (dev-b): manual transitions, shop confirmation (credit or pay on pickup, discount chain),
+credit into khata, and revive for the seller. Appended to trading/api/customer_payment.py."""
+import frappe
+from frappe import _
+from frappe.utils import add_days, flt, nowdate
+
+from book_marketplace.trading.api.customer_order import revive_order as _revive
+
+# manual orders (no proof): the shop confirms; expiry and cancel as before
+TRANSITIONS.update({
+    ("Awaiting Shop Confirmation", "Accepted"): "seller",
+    ("Awaiting Shop Confirmation", "Rejected"): "seller",
+    ("Awaiting Shop Confirmation", "Cancelled"): "buyer",
+    ("Awaiting Shop Confirmation", "Expired"): "system",
+})
+
+
+def _apply_discount_chain(total, chain):
+    """40,10,5 means successive discounts: each one on what is left after the previous one."""
+    value = flt(total)
+    steps = []
+    for part in (chain or "").replace("+", ",").split(","):
+        part = part.strip().rstrip("%")
+        if not part:
+            continue
+        pct = flt(part)
+        if pct < 0 or pct > 100:
+            frappe.throw(_("Each discount must be between 0 and 100."))
+        value = value * (100 - pct) / 100
+        steps.append(pct)
+    return round(value), steps
+
+
+@frappe.whitelist()
+def seller_confirm(order, mode, discount_chain=None):
+    """Shop confirms a manual order: 'credit' (ادھار, one month, into khata) or 'pay_on_pickup' (وصولی پر ادائیگی).
+    Optional successive discounts, e.g. '40,10,5'. The shop decides; the customer never sees 'credit'."""
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+
+    doc = frappe.get_doc("Customer Order", order)
+    _assert_profile_owner(doc.seller_profile)
+    if mode not in ("credit", "pay_on_pickup"):
+        frappe.throw(_("Unknown confirmation."))
+    if discount_chain is not None:
+        total, steps = _apply_discount_chain(doc.subtotal, discount_chain)
+        frappe.db.set_value("Customer Order", order, {"discount_chain": ",".join(str(int(s)) for s in steps), "total": total})
+    frappe.db.set_value("Customer Order", order, {
+        "payment_status": "Credit" if mode == "credit" else "Due",
+        "credit_due_on": add_days(nowdate(), 30) if mode == "credit" else None,
+    })
+    res = _move(order, "Accepted", "seller")
+    if mode == "credit":
+        buyer_name = frappe.db.get_value("BuyerProfile", doc.buyer_profile, "full_name") or doc.buyer_profile
+        frappe.get_doc({
+            "doctype": "Khata Entry",
+            "business_profile": doc.seller_profile,
+            "party_name": buyer_name,
+            "entry_date": nowdate(),
+            "entry_type": "Credit Given",
+            "amount": frappe.db.get_value("Customer Order", order, "total"),
+            "reference": order,
+            "notes": "Customer order on credit, due in one month",
+        }).insert(ignore_permissions=True)
+    return res
+
+
+@frappe.whitelist()
+def revive(order):
+    """Revive an expired order under the same number (buyer or shop). Stock must be available."""
+    return _revive(order)

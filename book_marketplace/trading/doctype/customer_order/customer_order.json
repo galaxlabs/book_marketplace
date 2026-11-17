@@ -24,7 +24,12 @@
   "dispatched_on",
   "delivered_on",
   "rejection_reason",
-  "assigned_to"
+  "assigned_to",
+  "payment_mode",
+  "payment_status",
+  "discount_chain",
+  "credit_due_on",
+  "expired_on"
  ],
  "fields": [
   {
@@ -55,7 +60,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status / حالت",
-   "options": "Awaiting Payment\nPayment Under Review\nAccepted\nPacked\nDispatched\nDelivered\nRejected\nCancelled\nExpired",
+   "options": "Awaiting Payment\nAwaiting Shop Confirmation\nPayment Under Review\nAccepted\nPacked\nDispatched\nDelivered\nRejected\nCancelled\nExpired",
    "default": "Awaiting Payment",
    "reqd": 1,
    "in_list_view": 1,
@@ -126,6 +131,38 @@
    "fieldtype": "Link",
    "label": "Assigned to / ملازم",
    "options": "User"
+  },
+  {
+   "fieldname": "payment_mode",
+   "fieldtype": "Select",
+   "label": "Payment mode / ادائیگی کا طریقہ",
+   "options": "online\nmanual",
+   "default": "online",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "label": "Payment status / ادائیگی",
+   "options": "Unpaid\nDue\nCredit\nPaid",
+   "default": "Unpaid",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "discount_chain",
+   "fieldtype": "Data",
+   "label": "Discount chain / ڈسکاؤنٹ (مثلاً 40,10,5)"
+  },
+  {
+   "fieldname": "credit_due_on",
+   "fieldtype": "Date",
+   "label": "Credit due on / ادھار کی آخری تاریخ"
+  },
+  {
+   "fieldname": "expired_on",
+   "fieldtype": "Datetime",
+   "label": "Expired on / میعاد ختم",
+   "read_only": 1
   }
  ],
  "permissions": [

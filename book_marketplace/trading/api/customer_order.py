@@ -4,7 +4,11 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, flt, now_datetime
 
-RESERVE_HOURS = 2  # owner's decision 2026-11-18
+ONLINE_HOURS = 2     # owner's decision: online payment window
+MANUAL_HOURS = 24    # owner's decision: shop confirmation window (manual / pay-at-shop)
+REVIVE_DAYS = 7      # owner's decision: an expired order can be revived for 7 days
+WAIT_STATUS = {"online": "Awaiting Payment", "manual": "Awaiting Shop Confirmation"}
+HOURS = {"online": ONLINE_HOURS, "manual": MANUAL_HOURS}
 
 
 def _buyer_from_session():
@@ -21,7 +25,6 @@ def _store_open(seller):
 
 
 def _offers(book):
-    """Every seller that can supply the book, with its price (after discount) and its available copies."""
     from book_marketplace.catalog.api.catalog import price_view, publisher_discount
 
     bk = frappe.db.get_value("Book", book, ["set_mrp", "publisher", "global_visibility"], as_dict=True)
@@ -53,7 +56,6 @@ def _offers(book):
 
 
 def _reserve(seller, book, qty, ledger, branch):
-    """Move copies from Available to Reserved (row locked). False when not enough copies."""
     cur = frappe.db.sql("select quantity from `tabStockLedger` where name=%s for update", ledger)
     have = int(cur[0][0] or 0) if cur else 0
     if have < qty:
@@ -70,7 +72,6 @@ def _reserve(seller, book, qty, ledger, branch):
 
 
 def _release(seller, book, qty):
-    """Give reserved copies back to Available (used on expiry)."""
     res = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Reserved"},
                               ["name", "quantity", "branch_location"], as_dict=True)
     if res:
@@ -88,15 +89,17 @@ def basket_view(name, buyer):
     if not b or b.buyer_profile != buyer:
         frappe.throw(_("Not found."), frappe.PermissionError)
     orders = frappe.get_all("Customer Order", filters={"basket": name},
-                            fields=["name", "seller_profile", "status", "total", "reserved_until"])
+                            fields=["name", "seller_profile", "status", "total", "reserved_until", "payment_mode"])
     for o in orders:
         o["business_name"] = frappe.db.get_value("BusinessProfile", o.seller_profile, "business_name")
         o.pop("seller_profile", None)
     return {"basket": b.name, "grand_total": b.grand_total, "orders": orders}
 
 
-def checkout_for(buyer, client_id, items, choices=None):
-    """Checkout core (used by the API and by tests). Nothing is created unless every book can be served."""
+def checkout_for(buyer, client_id, items, choices=None, payment_mode="online"):
+    """Checkout core. payment_mode: 'online' (proof, 2 h) or 'manual' (pay at shop / by hand, shop confirms, 24 h)."""
+    if payment_mode not in WAIT_STATUS:
+        frappe.throw(_("Unknown payment choice."))
     client_id = (client_id or "").strip()
     if client_id:
         existing = frappe.db.get_value("Customer Basket", {"client_id": client_id}, ["name", "buyer_profile"], as_dict=True)
@@ -142,7 +145,7 @@ def checkout_for(buyer, client_id, items, choices=None):
     basket = frappe.get_doc({"doctype": "Customer Basket", "buyer_profile": buyer,
                              "client_id": client_id or None, "created_on": now_datetime()})
     basket.insert(ignore_permissions=True)
-    deadline = add_to_date(now_datetime(), hours=RESERVE_HOURS)
+    deadline = add_to_date(now_datetime(), hours=HOURS[payment_mode])
     grand, orders = 0, []
     for seller, lines in plan.items():
         for ln in lines:
@@ -153,7 +156,8 @@ def checkout_for(buyer, client_id, items, choices=None):
         grand += total
         order = frappe.get_doc({
             "doctype": "Customer Order", "basket": basket.name, "buyer_profile": buyer, "seller_profile": seller,
-            "status": "Awaiting Payment", "reserved_until": deadline, "subtotal": total, "total": total,
+            "status": WAIT_STATUS[payment_mode], "payment_mode": payment_mode, "payment_status": "Unpaid",
+            "reserved_until": deadline, "subtotal": total, "total": total,
             "items": [{"book": ln["book"], "qty": ln["qty"], "unit_price": ln["unit_price"],
                        "line_total": ln["qty"] * ln["unit_price"]} for ln in lines],
         })
@@ -164,8 +168,8 @@ def checkout_for(buyer, client_id, items, choices=None):
 
 
 @frappe.whitelist()
-def checkout(client_id=None, items=None, choices=None):
-    return checkout_for(_buyer_from_session(), client_id, items, choices)
+def checkout(client_id=None, items=None, choices=None, payment_mode="online"):
+    return checkout_for(_buyer_from_session(), client_id, items, choices, payment_mode)
 
 
 @frappe.whitelist()
@@ -174,13 +178,57 @@ def my_basket(name):
 
 
 def expire_overdue():
-    """Every 10 minutes: unpaid orders past their deadline become Expired; their copies go back to stock."""
-    due = frappe.get_all("Customer Order", filters={"status": "Awaiting Payment", "reserved_until": ["<", now_datetime()]},
+    """Every 10 minutes: orders past their window (2 h online, 24 h manual) become Expired; copies go back to stock.
+    Expired orders stay, and can be revived for 7 days."""
+    due = frappe.get_all("Customer Order",
+                         filters={"status": ["in", list(WAIT_STATUS.values())], "reserved_until": ["<", now_datetime()]},
                          fields=["name", "seller_profile"])
     for o in due:
         items = frappe.get_all("Customer Order Item", filters={"parent": o.name, "parenttype": "Customer Order"},
                                fields=["book", "qty"])
         for it in items:
             _release(o.seller_profile, it.book, int(it.qty))
-        frappe.db.set_value("Customer Order", o.name, "status", "Expired")
+        frappe.db.set_value("Customer Order", o.name, {"status": "Expired", "expired_on": now_datetime()})
     return len(due)
+
+
+def _may_act_on(order_doc):
+    """The buyer of the order, or the shop that owns it."""
+    buyer = frappe.db.get_value("BuyerProfile", {"user": frappe.session.user}, "name")
+    if buyer and buyer == order_doc.buyer_profile:
+        return True
+    shops = frappe.get_all("BusinessProfile", filters={"user": frappe.session.user}, pluck="name")
+    return order_doc.seller_profile in shops or frappe.session.user == "Administrator"
+
+
+@frappe.whitelist()
+def revive_order(order):
+    """Bring an expired order back under the same number. Stock must be available now; the window restarts."""
+    doc = frappe.get_doc("Customer Order", order)
+    if not _may_act_on(doc):
+        frappe.throw(_("Not your order."), frappe.PermissionError)
+    if doc.status != "Expired":
+        frappe.throw(_("Only an expired order can be revived."))
+    if doc.expired_on and frappe.utils.add_days(doc.expired_on, REVIVE_DAYS) < now_datetime():
+        frappe.throw(_("This order can no longer be revived (more than {0} days).").format(REVIVE_DAYS))
+    mode = doc.payment_mode or "online"
+    short = []
+    ledgers = []
+    for it in doc.items:
+        led = frappe.db.get_value("StockLedger", {"business_profile": doc.seller_profile, "book": it.book, "state": "Available"},
+                                  ["name", "quantity", "branch_location"], as_dict=True)
+        have = int(led.quantity or 0) if led else 0
+        if have < int(it.qty):
+            short.append({"book": it.book, "wanted": int(it.qty), "available": have})
+        ledgers.append((it, led))
+    if short:
+        frappe.throw(_("Not enough copies to revive this order: {0}").format(
+            ", ".join(f"{frappe.db.get_value('Book', s['book'], 'title')} ({s['available']})" for s in short)))
+    for it, led in ledgers:
+        if not _reserve(doc.seller_profile, it.book, int(it.qty), led.name, led.branch_location):
+            frappe.throw(_("Stock changed; please try again."))
+    doc.status = WAIT_STATUS[mode]
+    doc.reserved_until = add_to_date(now_datetime(), hours=HOURS[mode])
+    doc.expired_on = None
+    doc.save(ignore_permissions=True)
+    return {"name": doc.name, "status": doc.status, "reserved_until": str(doc.reserved_until)}
