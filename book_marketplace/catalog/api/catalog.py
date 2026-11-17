@@ -37,6 +37,8 @@ def search(text=None, subject=None, publisher=None, author=None, language=None, 
 
 @frappe.whitelist(allow_guest=True)
 def get_book(book_id):
+    if not book_id or not frappe.db.exists("Book", book_id):
+        return None  # unknown id: the store shows Book not found, not a permission error
     book = frappe.get_doc("Book", book_id)
     subjects = book.get("subjects", [])
     volumes = book.get("volumes", [])
