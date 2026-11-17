@@ -13,6 +13,7 @@
   "column_break_info",
   "category_type",
   "is_group",
+  "sort_order",
   "section_description",
   "description"
  ],
@@ -69,6 +70,12 @@
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description / تفصیل"
+  },
+  {
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "label": "Sort order / ترتیب",
+   "description": "Lower comes first among siblings. 0 = by name."
   }
  ],
  "modified": "2026-11-16 10:00:00.000000",

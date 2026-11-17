@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-17 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Catalog",
+ "name": "Syllabus Entry",
+ "owner": "Administrator",
+ "modified": "2026-11-17 00:00:00.000000",
+ "modified_by": "Administrator",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1,
+ "title_field": "book_title",
+ "search_fields": "book_title,subject_name",
+ "field_order": [
+  "board",
+  "stage",
+  "darja",
+  "column_break_place",
+  "subject_name",
+  "sort_order",
+  "book_section",
+  "book_title",
+  "portion",
+  "column_break_book",
+  "work",
+  "note",
+  "source"
+ ],
+ "fields": [
+  {
+   "fieldname": "board",
+   "fieldtype": "Link",
+   "label": "Board / بورڈ",
+   "options": "Book Category",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "stage",
+   "fieldtype": "Link",
+   "label": "Stage / مرحلہ",
+   "options": "Book Category"
+  },
+  {
+   "fieldname": "darja",
+   "fieldtype": "Link",
+   "label": "Darja / درجہ",
+   "options": "Book Category",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_place",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "subject_name",
+   "fieldtype": "Data",
+   "label": "Subject / مضمون",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "label": "Sort order / ترتیب"
+  },
+  {
+   "fieldname": "book_section",
+   "fieldtype": "Section Break",
+   "label": "Book / کتاب"
+  },
+  {
+   "fieldname": "book_title",
+   "fieldtype": "Data",
+   "label": "Book title / کتاب کا نام",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "portion",
+   "fieldtype": "Data",
+   "label": "Portion / حصہ",
+   "description": "e.g. پارہ 1 تا 15، جلد اول"
+  },
+  {
+   "fieldname": "column_break_book",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "work",
+   "fieldtype": "Link",
+   "label": "Work (base book) / اصل کتاب",
+   "options": "Work",
+   "description": "Linked later, when the editions are joined (stage 3)."
+  },
+  {
+   "fieldname": "note",
+   "fieldtype": "Small Text",
+   "label": "Note / نوٹ"
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "label": "Source / ماخذ"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Publisher",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Bookseller",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  },
+  {
+   "role": "Distributor",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1
+  }
+ ]
+}

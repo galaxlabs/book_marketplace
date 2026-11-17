@@ -158,12 +158,15 @@ def department_tree(lang=None):
     """شعبہ جات: the education tree, nested, with translated labels."""
     rows = frappe.get_all(
         "Book Category", filters={"category_type": "Department"},
-        fields=["name", "category_name", "category_name_ur", "parent_book_category", "section"],
+        fields=["name", "category_name", "category_name_ur", "parent_book_category", "section", "sort_order"],
         order_by="category_name asc", limit_page_length=0,
     )
     kids = {}
     for r in rows:
         kids.setdefault(r.parent_book_category or "", []).append(r)
+    for sibs in kids.values():
+        # an explicit order (boards, stages, darajat) comes first, in that order; the rest by name
+        sibs.sort(key=lambda r: (not r.sort_order, r.sort_order or 0, r.category_name))
 
     def build(parent, inherited=None):
         out = []
