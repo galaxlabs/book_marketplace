@@ -105,7 +105,7 @@ def set_book_classification(profile_id, book_id, categories=None, is_bound=0, is
     book.part_count = int(part_count) if part_count not in (None, "") else None
     book.save(ignore_permissions=True)
     return {"name": book.name, "categories": [r.category for r in book.classifications]}
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def section_overview():
     """قسم → موضوعات with book counts. Used by the panel and the public store filters."""
     sections = frappe.get_all(
