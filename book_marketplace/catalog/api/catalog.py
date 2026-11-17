@@ -213,6 +213,26 @@ def toggle_catalog_item(item_id, is_active):
     return {"name": doc.name, "is_active": is_active}
 
 
+AVAILABILITY_BLOCKS_DEALERS = {"Unavailable", "Out of print", "Forthcoming", "General readers only"}
+
+
+@frappe.whitelist()
+def set_book_availability(profile_id, book_id, availability):
+    """Publisher marks its own book. Shops cannot change this."""
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+
+    book = frappe.get_doc("Book", book_id)
+    if book.publisher != profile_id:
+        frappe.throw(_("Only the publisher of this book can change its availability."), frappe.PermissionError)
+    _assert_profile_owner(profile_id)
+    allowed = ["Available", "Unavailable", "Out of print", "Forthcoming", "General readers only"]
+    if availability not in allowed:
+        frappe.throw(_("Unknown availability."))
+    book.availability = availability
+    book.save()
+    return {"name": book.name, "availability": availability}
+
+
 @frappe.whitelist()
 def create_own_book(profile_id, title, author, book_type="Single Volume", language="Urdu", isbn=None,
                     set_mrp=None, trade_price=None, binding=None, page_count=None, weight=None, colours=None):
@@ -279,6 +299,12 @@ def get_store_by_slug(slug):
                 "StockLedger", {"book": item.book, "business_profile": store.business_profile}
             ))
         stock = None if not tracked else (stock or 0)
+        pub_avail = frappe.db.get_value("Book", item.book, "availability") or "Available"
+        if pub_avail in AVAILABILITY_BLOCKS_DEALERS and store.profile_type != "Publisher":
+            # The publisher says this is not for dealers. The shop cannot show it as in stock.
+            stock = 0
+        elif pub_avail == "General readers only" and store.profile_type == "Publisher":
+            stock = None
         catalog.append({
             "item_name": item.name,
             "book_id": item.book,
@@ -290,6 +316,7 @@ def get_store_by_slug(slug):
             "selling_price": item.selling_price,
             "language": book.language if book else "",
             "binding": book.binding if book else "",
+            "publisher_availability": pub_avail,
             "page_count": book.page_count if book else None,
             "weight": book.weight if book else None,
             "colours": book.colours if book else "",

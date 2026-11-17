@@ -24,6 +24,7 @@
   "print_type",
   "print_quality",
   "colours",
+  "availability",
   "imported",
   "set_mrp",
   "profile_section",
@@ -152,6 +153,13 @@
    "fieldtype": "Select",
    "label": "Colours / رنگ (اختیاری)",
    "options": "\n1 colour (black)\n2 colours\nFull colour (4 colours)"
+  },
+  {
+   "fieldname": "availability",
+   "fieldtype": "Select",
+   "label": "Availability / دستیابی",
+   "options": "Available\nUnavailable\nOut of print\nForthcoming\nGeneral readers only",
+   "default": "Available"
   },
   {
    "fieldname": "imported",
