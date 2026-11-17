@@ -136,8 +136,8 @@
   {
    "fieldname": "binding",
    "fieldtype": "Select",
-   "label": "Binding",
-   "options": "Paperback\nHardcover\nSpiral\nOther"
+   "label": "Binding / Format (بائنڈنگ / فارمیٹ)",
+   "options": "Paperback\nHardcover\nSpiral\nBoard Book\nFlexi Bind\nEbook/PDF\nAudiobook\nOther"
   },
   {
    "fieldname": "size",

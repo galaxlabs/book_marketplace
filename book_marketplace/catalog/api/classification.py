@@ -115,11 +115,17 @@ def section_overview():
     for sec in sections:
         subjects = []
         for r in [x for x in roots if x.section == sec.name]:
+            children = frappe.get_all(
+                "Book Category", filters={"parent_book_category": r.name, "category_type": "Subject"},
+                fields=["name", "category_name"], order_by="creation asc", limit_page_length=0,
+            )
             subjects.append({
                 "name": r.name, "category_name": r.category_name, "category_name_ur": r.category_name_ur,
                 "books": len(book_names_for_categories([r.name])),
+                "children": [{"name": c.name, "category_name": c.category_name} for c in children],
             })
-        subjects.sort(key=lambda x: x["category_name"])
+        if not subjects:
+            continue
         out.append({
             "name": sec.name, "category_name": sec.category_name, "category_name_ur": sec.category_name_ur,
             "books": len({b for sj in subjects for b in book_names_for_categories([sj["name"]])}),
