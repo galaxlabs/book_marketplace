@@ -167,3 +167,34 @@ def set_own_book_quantity(profile_id, book_id, quantity):
         })
         doc.insert(ignore_permissions=True)
     return {"book": book_id, "quantity": qty}
+
+
+@frappe.whitelist()
+def set_catalog_quantity(profile_id, book_id, quantity):
+    """Quantity of a book this business holds. Allowed when the book is in its catalog, or when it is the publisher's own book."""
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    _assert_profile_owner(profile_id)
+    try:
+        qty = int(quantity)
+    except (TypeError, ValueError):
+        frappe.throw(_("Quantity must be a whole number."))
+    if qty < 0:
+        frappe.throw(_("Quantity cannot be negative."))
+    in_catalog = frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id})
+    is_publisher = frappe.db.get_value("Book", book_id, "publisher") == profile_id
+    if not (in_catalog or is_publisher):
+        frappe.throw(_("Add this book to your catalog first."), frappe.PermissionError)
+    branch = _default_branch(profile_id)
+    existing = frappe.db.get_value(
+        "StockLedger",
+        {"business_profile": profile_id, "book": book_id, "branch_location": branch, "state": "Available"},
+        "name",
+    )
+    if existing:
+        frappe.db.set_value("StockLedger", existing, "quantity", qty)
+    else:
+        frappe.get_doc({
+            "doctype": "StockLedger", "book": book_id, "business_profile": profile_id,
+            "branch_location": branch, "quantity": qty, "state": "Available",
+        }).insert(ignore_permissions=True)
+    return {"book": book_id, "quantity": qty}

@@ -39,12 +39,13 @@ def book_names_for_categories(names):
 
 
 def _check_publisher_or_admin(profile_id):
+    """Who may add categories, subjects and types: publishers, booksellers, distributors, and admin."""
     from book_marketplace.auth.api.auth import _assert_profile_owner, _is_admin
 
     if _is_admin():
         return
-    if not profile_id or frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Publisher":
-        frappe.throw(_("Only publishers or admin can do this."), frappe.PermissionError)
+    if not profile_id or frappe.db.get_value("BusinessProfile", profile_id, "profile_type") not in ("Publisher", "Bookseller", "Distributor"):
+        frappe.throw(_("Only a business account or admin can do this."), frappe.PermissionError)
     _assert_profile_owner(profile_id)
 
 
