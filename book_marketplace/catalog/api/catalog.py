@@ -150,7 +150,7 @@ def list_catalog(profile_id, active_only=True):
         own = frappe.get_all(
             "Book",
             filters={"publisher": profile_id, "global_visibility": 1},
-            fields=["name", "title", "author", "book_type", "set_mrp", "trade_price", "language", "genre", "religious_segment"],
+            fields=["name", "title", "author", "book_type", "set_mrp", "trade_price", "language", "genre", "religious_segment", "availability"],
             order_by="title asc",
             limit_page_length=5000,
         )
@@ -173,6 +173,7 @@ def list_catalog(profile_id, active_only=True):
                 "is_active": 1,
                 "added_on": None,
                 "owned": 1,
+                "availability": b.availability or "Available",
                 "stock_available": _stock_for(b.name, profile_id),
             })
     return rows
