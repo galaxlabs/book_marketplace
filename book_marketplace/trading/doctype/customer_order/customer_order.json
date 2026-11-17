@@ -1,0 +1,146 @@
+{
+ "actions": [],
+ "autoname": "format:CO-{#######}",
+ "creation": "2026-11-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Trading",
+ "name": "Customer Order",
+ "owner": "Administrator",
+ "modified": "2026-11-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "basket",
+  "buyer_profile",
+  "seller_profile",
+  "status",
+  "items",
+  "subtotal",
+  "total",
+  "buyer_note",
+  "reserved_until",
+  "accepted_on",
+  "packed_on",
+  "dispatched_on",
+  "delivered_on",
+  "rejection_reason",
+  "assigned_to"
+ ],
+ "fields": [
+  {
+   "fieldname": "basket",
+   "fieldtype": "Link",
+   "label": "Basket / کارٹ",
+   "options": "Customer Basket",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "buyer_profile",
+   "fieldtype": "Link",
+   "label": "Buyer / خریدار",
+   "options": "BuyerProfile",
+   "reqd": 1
+  },
+  {
+   "fieldname": "seller_profile",
+   "fieldtype": "Link",
+   "label": "Seller / دکان",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status / حالت",
+   "options": "Awaiting Payment\nPayment Under Review\nAccepted\nPacked\nDispatched\nDelivered\nRejected\nCancelled\nExpired",
+   "default": "Awaiting Payment",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items / چیزیں",
+   "options": "Customer Order Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "subtotal",
+   "fieldtype": "Currency",
+   "label": "Subtotal",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total / کل رقم",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "buyer_note",
+   "fieldtype": "Small Text",
+   "label": "Buyer note / گاہک کا نوٹ"
+  },
+  {
+   "fieldname": "reserved_until",
+   "fieldtype": "Datetime",
+   "label": "Payment due by / ادائیگی کی آخری مدت",
+   "read_only": 1
+  },
+  {
+   "fieldname": "accepted_on",
+   "fieldtype": "Datetime",
+   "label": "Accepted on",
+   "read_only": 1
+  },
+  {
+   "fieldname": "packed_on",
+   "fieldtype": "Datetime",
+   "label": "Packed on",
+   "read_only": 1
+  },
+  {
+   "fieldname": "dispatched_on",
+   "fieldtype": "Datetime",
+   "label": "Dispatched on",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivered_on",
+   "fieldtype": "Datetime",
+   "label": "Delivered on",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Small Text",
+   "label": "Rejection / cancel reason"
+  },
+  {
+   "fieldname": "assigned_to",
+   "fieldtype": "Link",
+   "label": "Assigned to / ملازم",
+   "options": "User"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  }
+ ],
+ "istable": 0,
+ "track_changes": 1,
+ "title_field": "basket",
+ "sort_field": "creation",
+ "sort_order": "DESC"
+}

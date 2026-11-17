@@ -1,0 +1,63 @@
+{
+ "actions": [],
+ "autoname": "format:BSK-{######}",
+ "creation": "2026-11-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Trading",
+ "name": "Customer Basket",
+ "owner": "Administrator",
+ "modified": "2026-11-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "buyer_profile",
+  "client_id",
+  "grand_total",
+  "created_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "buyer_profile",
+   "fieldtype": "Link",
+   "label": "Buyer / خریدار",
+   "options": "BuyerProfile",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "client_id",
+   "fieldtype": "Data",
+   "label": "Client id (idempotency)",
+   "unique": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "grand_total",
+   "fieldtype": "Currency",
+   "label": "Grand total / مجموعی رقم",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_on",
+   "fieldtype": "Datetime",
+   "label": "Created on",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  }
+ ],
+ "istable": 0,
+ "track_changes": 1,
+ "title_field": "buyer_profile",
+ "sort_field": "creation",
+ "sort_order": "DESC"
+}
