@@ -181,3 +181,40 @@ def department_tree(lang=None):
         return out
 
     return build("")
+
+
+@frappe.whitelist(allow_guest=True)
+def filter_trees(lang=None):
+    """The three public filters, each a nested tree {name, label, children}:
+    department (شعبہ → ذیلی شعبہ ...), subject (موضوع = section → ذیلی موضوع ...), form (قسم → ذیلی قسم)."""
+    rows = frappe.get_all(
+        "Book Category",
+        fields=["name", "category_name", "category_name_ur", "parent_book_category", "section", "sort_order", "category_type"],
+        limit_page_length=0,
+    )
+    kids = {}
+    for r in rows:
+        kids.setdefault(r.parent_book_category or "", []).append(r)
+    for sibs in kids.values():
+        sibs.sort(key=lambda r: (not r.sort_order, r.sort_order or 0, label(r.category_name, r.category_name_ur, lang)))
+
+    def build(parent):
+        return [{"name": r.name, "label": label(r.category_name, r.category_name_ur, lang), "children": build(r.name)}
+                for r in kids.get(parent, [])]
+
+    def root(name, ctype):
+        return next((r.name for r in kids.get("", []) if r.category_name == name and r.category_type == ctype), None)
+
+    dep, forms, types = root("Departments", "Department"), root("Title Types", "Title Type"), root("Book Types", "Book Type")
+    subject_roots = {}
+    for r in kids.get("", []):
+        if r.category_type == "Subject" and r.section:
+            subject_roots.setdefault(r.section, []).append(r)
+    subject = []
+    for sec in kids.get(types, []):
+        roots = sorted(subject_roots.get(sec.name, []), key=lambda r: label(r.category_name, r.category_name_ur, lang))
+        if roots:
+            subject.append({"name": sec.name, "label": label(sec.category_name, sec.category_name_ur, lang),
+                            "children": [{"name": r.name, "label": label(r.category_name, r.category_name_ur, lang),
+                                          "children": build(r.name)} for r in roots]})
+    return {"department": build(dep) if dep else [], "subject": subject, "form": build(forms) if forms else []}

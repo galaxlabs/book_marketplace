@@ -663,7 +663,7 @@ def _offer_text_filter(text):
 
 
 @frappe.whitelist(allow_guest=True)
-def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None):
+def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None, form=None):
     """Each book once, with every published seller that stocks it.
 
     Sellers in `city` come first, and books that have a seller in `city`
@@ -690,7 +690,7 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
 
     from book_marketplace.catalog.api.classification import book_names_for_categories
 
-    for picked in (subject, category, department):
+    for picked in (subject, category, department, form):
         if picked:
             picked_books = book_names_for_categories([picked])
             if not picked_books:
