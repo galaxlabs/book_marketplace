@@ -158,18 +158,23 @@ def department_tree(lang=None):
     """شعبہ جات: the education tree, nested, with translated labels."""
     rows = frappe.get_all(
         "Book Category", filters={"category_type": "Department"},
-        fields=["name", "category_name", "category_name_ur", "parent_book_category"],
+        fields=["name", "category_name", "category_name_ur", "parent_book_category", "section"],
         order_by="category_name asc", limit_page_length=0,
     )
     kids = {}
     for r in rows:
         kids.setdefault(r.parent_book_category or "", []).append(r)
 
-    def build(parent):
-        return [{
-            "name": r.name, "category_name": r.category_name,
-            "label": label(r.category_name, r.category_name_ur, lang),
-            "children": build(r.name),
-        } for r in kids.get(parent, [])]
+    def build(parent, inherited=None):
+        out = []
+        for r in kids.get(parent, []):
+            sec = r.section or inherited
+            out.append({
+                "name": r.name, "category_name": r.category_name,
+                "label": label(r.category_name, r.category_name_ur, lang),
+                "section": sec,
+                "children": build(r.name, sec),
+            })
+        return out
 
     return build("")

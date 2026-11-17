@@ -465,7 +465,7 @@ def _offer_text_filter(text):
 
 
 @frappe.whitelist(allow_guest=True)
-def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None):
+def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None):
     """Each book once, with every published seller that stocks it.
 
     Sellers in `city` come first, and books that have a seller in `city`
@@ -478,6 +478,8 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     book_filters = {"global_visibility": 1}
     if book_type:
         book_filters["book_type"] = book_type
+    if binding:
+        book_filters["binding"] = binding
     if language:
         lang_books = set(frappe.get_all("BookLanguage", filters={"language": language, "parenttype": "Book"}, pluck="parent", limit_page_length=0))
         lang_books |= set(frappe.get_all("Book", filters={"language": language}, pluck="name", limit_page_length=0))
