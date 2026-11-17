@@ -28,6 +28,9 @@
   "availability",
   "imported",
   "set_mrp",
+  "trade_price",
+  "own_discount",
+  "discount_percent",
   "profile_section",
   "subtitle",
   "introduction",
@@ -329,6 +332,18 @@
    "label": "Variants",
    "options": "BookVariant",
    "description": "Binding/quality/language variants such as اعلی, سادہ, غیر مجلد, مجلد"
+  },
+  {
+   "fieldname": "own_discount",
+   "fieldtype": "Check",
+   "label": "Own discount for this book / اس کتاب کی الگ رعایت",
+   "default": "0"
+  },
+  {
+   "fieldname": "discount_percent",
+   "fieldtype": "Percent",
+   "label": "Discount % / رعایت",
+   "depends_on": "own_discount"
   }
  ],
  "index_web_pages_for_search": 1,

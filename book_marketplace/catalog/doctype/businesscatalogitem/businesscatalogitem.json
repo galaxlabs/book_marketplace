@@ -8,9 +8,16 @@
  "field_order": [
   "business_profile",
   "book",
-  "selling_price",
   "is_active",
-  "added_on"
+  "added_on",
+  "column_break_prices",
+  "selling_price",
+  "trade_price",
+  "discount_percent",
+  "location_section",
+  "storage_place",
+  "column_break_location",
+  "shelf"
  ],
  "fields": [
   {
@@ -50,6 +57,35 @@
    "fieldtype": "Date",
    "label": "Added On",
    "default": "Today"
+  },
+  {
+   "fieldname": "column_break_prices",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "discount_percent",
+   "fieldtype": "Percent",
+   "label": "Discount % / رعایت"
+  },
+  {
+   "fieldname": "location_section",
+   "fieldtype": "Section Break",
+   "label": "Where it is kept / کہاں رکھی ہے"
+  },
+  {
+   "fieldname": "storage_place",
+   "fieldtype": "Select",
+   "label": "Place / جگہ",
+   "options": "\nShop\nWarehouse"
+  },
+  {
+   "fieldname": "column_break_location",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shelf",
+   "fieldtype": "Data",
+   "label": "Shelf / شیلف"
   }
  ],
  "index_web_pages_for_search": 0,

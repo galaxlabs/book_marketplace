@@ -53,6 +53,7 @@ def get_book(book_id):
         "is_multi_volume": is_multi,
         "volume_count": len(volumes) if is_multi else 0,
         "stock_summary": stock_summary,
+        "price": price_view(book.set_mrp, publisher_discount(book=book.as_dict())),
     }
 
 
@@ -77,20 +78,169 @@ def get_stock_summary(book_id, volumes=None):
 
 # ─── Business Catalog (own store) ─────────────────────────
 
-@frappe.whitelist()
-def add_to_catalog(profile_id, book_id, selling_price=None, trade_price=None):
-    if frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id}):
-        return {"error": "Book already in catalog"}
-    doc = frappe.get_doc({
+STORAGE_PLACES = ("", "Shop", "Warehouse")
+
+
+def _pct(value):
+    """Discount percent as a float between 0 and 100. Blank is 0."""
+    v = frappe.utils.flt(value)
+    return min(max(v, 0), 100)
+
+
+def price_view(list_price, discount_percent):
+    """General price, discount and the price after discount.
+    list_price 0 or blank means no price is known."""
+    lp = frappe.utils.flt(list_price) or None
+    d = _pct(discount_percent) if lp else 0
+    net = round(lp * (100 - d) / 100) if lp else None
+    return {"list_price": lp, "discount_percent": d, "net_price": net}
+
+
+def publisher_discount(book_id=None, book=None, _cache=None):
+    """The publisher's discount for one book: the book's own rate when set, else the publisher's general rate."""
+    if book is None:
+        book = frappe.db.get_value("Book", book_id, ["publisher", "own_discount", "discount_percent"], as_dict=True) or frappe._dict()
+    if frappe.utils.cint(book.get("own_discount")):
+        return _pct(book.get("discount_percent"))
+    pub = book.get("publisher")
+    if not pub:
+        return 0
+    if _cache is not None:
+        if pub not in _cache:
+            _cache[pub] = _pct(frappe.db.get_value("BusinessProfile", pub, "default_discount_percent"))
+        return _cache[pub]
+    return _pct(frappe.db.get_value("BusinessProfile", pub, "default_discount_percent"))
+
+
+def _catalog_row(profile_id, book_id, selling_price=None, trade_price=None, discount_percent=None,
+                 shelf=None, storage_place=None):
+    if storage_place not in STORAGE_PLACES:
+        frappe.throw(_("Place must be Shop or Warehouse."))
+    return {
         "doctype": "BusinessCatalogItem",
         "business_profile": profile_id,
         "book": book_id,
-        "selling_price": selling_price,
-        "trade_price": trade_price,
+        "selling_price": frappe.utils.flt(selling_price) or None,
+        "trade_price": frappe.utils.flt(trade_price) or None,
+        "discount_percent": _pct(discount_percent),
+        "shelf": (shelf or "").strip() or None,
+        "storage_place": storage_place or None,
         "is_active": 1,
-    })
-    doc.insert()
+    }
+
+
+@frappe.whitelist()
+def add_to_catalog(profile_id, book_id, selling_price=None, trade_price=None, discount_percent=None,
+                   shelf=None, storage_place=None):
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+
+    _assert_profile_owner(profile_id)
+    if frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id}):
+        return {"error": "Book already in catalog"}
+    doc = frappe.get_doc(_catalog_row(profile_id, book_id, selling_price, trade_price, discount_percent,
+                                      shelf, storage_place))
+    doc.insert(ignore_permissions=True)
     return {"name": doc.name, "book": book_id, "status": "added"}
+
+
+@frappe.whitelist()
+def add_many_to_catalog(profile_id, items):
+    """A shop adds several books at once, each with its own price, discount, shelf and place.
+    items: list of {book, selling_price, trade_price, discount_percent, shelf, storage_place}.
+    Books already in the catalog are skipped."""
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+
+    _assert_profile_owner(profile_id)
+    if isinstance(items, str):
+        items = frappe.parse_json(items)
+    added, skipped = [], []
+    for it in items or []:
+        book_id = it.get("book")
+        if not book_id or not frappe.db.exists("Book", book_id):
+            skipped.append({"book": book_id, "reason": "not found"})
+            continue
+        if frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id}):
+            skipped.append({"book": book_id, "reason": "already in catalog"})
+            continue
+        doc = frappe.get_doc(_catalog_row(profile_id, book_id, it.get("selling_price"), it.get("trade_price"),
+                                          it.get("discount_percent"), it.get("shelf"), it.get("storage_place")))
+        doc.insert(ignore_permissions=True)
+        added.append(book_id)
+    return {"added": len(added), "skipped": skipped}
+
+
+@frappe.whitelist()
+def list_publishers():
+    """Publishers whose books a shop can add, with the count of visible books and the general discount."""
+    pubs = frappe.get_all("BusinessProfile", filters={"profile_type": "Publisher"},
+                          fields=["name", "business_name", "city", "default_discount_percent"],
+                          order_by="business_name asc")
+    counts = dict(frappe.db.sql("""select publisher, count(*) from tabBook
+        where global_visibility = 1 and ifnull(publisher, '') != '' group by publisher"""))
+    out = []
+    for p in pubs:
+        n = counts.get(p.name, 0)
+        if n:
+            out.append({"name": p.name, "business_name": p.business_name, "city": p.city,
+                        "default_discount_percent": _pct(p.default_discount_percent), "books": n})
+    return out
+
+
+@frappe.whitelist()
+def publisher_books(profile_id, publishers, text=None, limit=50, offset=0):
+    """Books of one or more publishers, for a shop to tick and add.
+    Each row has the publisher's general price, its discount and trade price, and whether the shop already has it."""
+    if isinstance(publishers, str):
+        publishers = frappe.parse_json(publishers) if publishers.strip().startswith("[") else [publishers]
+    publishers = [p for p in (publishers or []) if p]
+    if not publishers:
+        return {"books": [], "total": 0}
+    limit = min(frappe.utils.cint(limit) or 50, 200)
+    offset = frappe.utils.cint(offset)
+    filters = {"publisher": ["in", publishers], "global_visibility": 1}
+    or_filters = _offer_text_filter(text) if text else None
+    total = len(frappe.get_all("Book", filters=filters, or_filters=or_filters, pluck="name", limit_page_length=0))
+    books = frappe.get_all(
+        "Book", filters=filters, or_filters=or_filters,
+        fields=["name", "title", "author", "publisher", "set_mrp", "trade_price", "own_discount",
+                "discount_percent", "availability", "language", "binding"],
+        order_by="title asc", limit_start=offset, limit_page_length=limit,
+    )
+    have = set(frappe.get_all("BusinessCatalogItem", filters={"business_profile": profile_id,
+                                                              "book": ["in", [b.name for b in books] or [""]]},
+                              pluck="book"))
+    names = {p.name: p.business_name for p in frappe.get_all(
+        "BusinessProfile", filters={"name": ["in", publishers]}, fields=["name", "business_name"])}
+    cache = {}
+    rows = []
+    for b in books:
+        d = publisher_discount(book=b, _cache=cache)
+        rows.append({
+            "name": b.name, "title": b.title, "author": b.author, "publisher": b.publisher,
+            "publisher_name": names.get(b.publisher, ""), "language": b.language, "binding": b.binding,
+            "availability": b.availability or "Available",
+            "set_mrp": b.set_mrp, "trade_price": b.trade_price,
+            "publisher_discount": d, "net_price": price_view(b.set_mrp, d)["net_price"],
+            "in_catalog": b.name in have,
+        })
+    return {"books": rows, "total": total}
+
+
+@frappe.whitelist()
+def set_publisher_discount(profile_id, discount_percent):
+    """Publisher's general discount: used for every book that has no discount of its own."""
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+
+    _assert_profile_owner(profile_id)
+    if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Publisher":
+        frappe.throw(_("Only a publisher has a general discount."))
+    frappe.db.set_value("BusinessProfile", profile_id, "default_discount_percent", _pct(discount_percent))
+    return {"name": profile_id, "default_discount_percent": _pct(discount_percent)}
+
+
+@frappe.whitelist()
+def get_publisher_discount(profile_id):
+    return {"default_discount_percent": _pct(frappe.db.get_value("BusinessProfile", profile_id, "default_discount_percent"))}
 
 
 @frappe.whitelist()
@@ -117,14 +267,16 @@ def list_catalog(profile_id, active_only=True):
     items = frappe.get_all(
         "BusinessCatalogItem",
         filters=filters,
-        fields=["name", "book", "selling_price", "trade_price", "is_active", "added_on"],
+        fields=["name", "book", "selling_price", "trade_price", "is_active", "added_on",
+                "discount_percent", "shelf", "storage_place"],
         order_by="added_on desc",
     )
-    rows, listed = [], set()
+    rows, listed, cache = [], set(), {}
     for item in items:
         book = frappe.db.get_value(
             "Book", item.book,
-            ["title", "author", "book_type", "set_mrp", "trade_price", "language", "genre", "religious_segment"],
+            ["title", "author", "book_type", "set_mrp", "trade_price", "language", "genre", "religious_segment",
+             "publisher", "own_discount", "discount_percent"],
             as_dict=True,
         ) or frappe._dict()
         listed.add(item.book)
@@ -139,8 +291,12 @@ def list_catalog(profile_id, active_only=True):
             "language": book.language or "",
             "genre": book.genre or "",
             "religious_segment": book.religious_segment or "",
-            "selling_price": item.selling_price,
-            "trade_price": item.trade_price,
+            "selling_price": item.selling_price or None,
+            "trade_price": item.trade_price or None,
+            "discount_percent": _pct(item.discount_percent),
+            "publisher_discount": publisher_discount(book=book, _cache=cache) if book else 0,
+            "shelf": item.shelf or "",
+            "storage_place": item.storage_place or "",
             "is_active": item.is_active,
             "added_on": item.added_on,
             "owned": 0,
@@ -150,7 +306,8 @@ def list_catalog(profile_id, active_only=True):
         own = frappe.get_all(
             "Book",
             filters={"publisher": profile_id, "global_visibility": 1},
-            fields=["name", "title", "author", "book_type", "set_mrp", "trade_price", "language", "genre", "religious_segment", "availability"],
+            fields=["name", "title", "author", "book_type", "set_mrp", "trade_price", "language", "genre", "religious_segment", "availability",
+                    "publisher", "own_discount", "discount_percent"],
             order_by="title asc",
             limit_page_length=5000,
         )
@@ -170,6 +327,8 @@ def list_catalog(profile_id, active_only=True):
                 "religious_segment": b.religious_segment or "",
                 "selling_price": b.set_mrp,
                 "trade_price": b.trade_price,
+                "discount_percent": publisher_discount(book=b, _cache=cache),
+                "own_discount": frappe.utils.cint(b.own_discount),
                 "is_active": 1,
                 "added_on": None,
                 "owned": 1,
@@ -180,7 +339,11 @@ def list_catalog(profile_id, active_only=True):
 
 
 @frappe.whitelist()
-def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_id=None):
+def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_id=None,
+                         discount_percent=None, shelf=None, storage_place=None):
+    """Prices of one catalog row. For a publisher's own book (OWN-<book>), discount_percent "" means
+    "use my general discount"; a number sets the book's own discount.
+    For a shop row, discount_percent is the shop's own discount; shelf and place say where the copy is kept."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
     if str(item_id).startswith("OWN-"):
@@ -193,8 +356,16 @@ def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_
             book.set_mrp = selling_price
         if trade_price is not None:
             book.trade_price = trade_price
-        book.save()
-        return {"name": item_id, "selling_price": book.set_mrp, "trade_price": book.trade_price}
+        if discount_percent is not None:
+            if str(discount_percent).strip() == "":
+                book.own_discount = 0
+                book.discount_percent = 0
+            else:
+                book.own_discount = 1
+                book.discount_percent = _pct(discount_percent)
+        book.save(ignore_permissions=True)
+        return {"name": item_id, "selling_price": book.set_mrp, "trade_price": book.trade_price,
+                "discount_percent": publisher_discount(book=book.as_dict())}
 
     doc = frappe.get_doc("BusinessCatalogItem", item_id)
     _assert_profile_owner(doc.business_profile)
@@ -202,8 +373,17 @@ def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_
         doc.selling_price = selling_price
     if trade_price is not None:
         doc.trade_price = trade_price
-    doc.save()
-    return {"name": doc.name, "selling_price": doc.selling_price, "trade_price": doc.trade_price}
+    if discount_percent is not None:
+        doc.discount_percent = _pct(discount_percent)
+    if shelf is not None:
+        doc.shelf = shelf.strip() or None
+    if storage_place is not None:
+        if storage_place not in STORAGE_PLACES:
+            frappe.throw(_("Place must be Shop or Warehouse."))
+        doc.storage_place = storage_place or None
+    doc.save(ignore_permissions=True)
+    return {"name": doc.name, "selling_price": doc.selling_price, "trade_price": doc.trade_price,
+            "discount_percent": doc.discount_percent, "shelf": doc.shelf, "storage_place": doc.storage_place}
 
 
 @frappe.whitelist()
@@ -230,7 +410,7 @@ def set_book_availability(profile_id, book_id, availability):
     if availability not in allowed:
         frappe.throw(_("Unknown availability."))
     book.availability = availability
-    book.save()
+    book.save(ignore_permissions=True)
     return {"name": book.name, "availability": availability}
 
 
@@ -279,7 +459,7 @@ def get_store_by_slug(slug):
     store.business_name = profile.business_name if profile else ""
     store.profile_type = profile.profile_type if profile else ""
     items = _store_items(store.business_profile, store.profile_type)
-    catalog = []
+    catalog, cache = [], {}
     for item in items:
         book = frappe.db.get_value(
             "Book", item.book,
@@ -287,6 +467,7 @@ def get_store_by_slug(slug):
                 "title", "subtitle", "author", "book_type", "set_mrp", "language",
                 "binding", "genre", "religious_segment", "introduction",
                 "page_count", "weight", "colours", "dimensions",
+                "publisher", "own_discount", "discount_percent",
             ],
             as_dict=True,
         )
@@ -305,6 +486,12 @@ def get_store_by_slug(slug):
         stock = None if not tracked else (stock or 0)
         # A shop shows its own copies. The publisher's status is only the publisher's own stock.
         pub_avail = frappe.db.get_value("Book", item.book, "availability") or "Available"
+        # Price: a shop shows its own general price and its own discount;
+        # a publisher's own book shows the book's MRP and the publisher's discount.
+        if str(item.name).startswith("OWN-"):
+            pv = price_view(book.set_mrp if book else None, publisher_discount(book=book, _cache=cache) if book else 0)
+        else:
+            pv = price_view(item.selling_price or (book.set_mrp if book else None), item.discount_percent)
         catalog.append({
             "item_name": item.name,
             "book_id": item.book,
@@ -313,7 +500,9 @@ def get_store_by_slug(slug):
             "author": book.author if book else "",
             "book_type": book.book_type if book else "",
             "mrp": book.set_mrp if book else None,
-            "selling_price": item.selling_price,
+            "selling_price": pv["net_price"],
+            "list_price": pv["list_price"],
+            "discount_percent": pv["discount_percent"],
             "language": book.language if book else "",
             "binding": book.binding if book else "",
             "publisher_availability": pub_avail,
@@ -336,7 +525,7 @@ def _store_items(profile_name, profile_type):
     items = list(frappe.get_all(
         "BusinessCatalogItem",
         filters={"business_profile": profile_name, "is_active": 1},
-        fields=["name", "book", "selling_price"],
+        fields=["name", "book", "selling_price", "discount_percent"],
         order_by="modified desc",
     ))
     if profile_type != "Publisher":
@@ -350,7 +539,8 @@ def _store_items(profile_name, profile_type):
     )
     for book in own:
         if book.name not in listed:
-            items.append(frappe._dict({"name": f"OWN-{book.name}", "book": book.name, "selling_price": None}))
+            items.append(frappe._dict({"name": f"OWN-{book.name}", "book": book.name, "selling_price": None,
+                                       "discount_percent": 0}))
     return items
 
 
@@ -517,7 +707,8 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
         filters=book_filters,
         or_filters=or_filters,
         fields=["name", "title", "subtitle", "author", "book_type", "language",
-                "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher"],
+                "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher",
+                "own_discount", "discount_percent"],
         order_by="modified desc",
         limit_page_length=2000,
     )
@@ -528,7 +719,7 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     items = list(frappe.get_all(
         "BusinessCatalogItem",
         filters={"book": ["in", book_names], "is_active": 1},
-        fields=["book", "business_profile", "selling_price"],
+        fields=["book", "business_profile", "selling_price", "discount_percent"],
     ))
     # A publisher's own books are on offer from the publisher, even without a catalog row.
     publisher_names = list({b.publisher for b in books if b.publisher})
@@ -542,8 +733,11 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     listed = {(i.book, i.business_profile) for i in items}
     for b in books:
         if b.publisher in publisher_types and (b.name, b.publisher) not in listed:
-            items.append(frappe._dict({"book": b.name, "business_profile": b.publisher, "selling_price": None}))
+            items.append(frappe._dict({"book": b.name, "business_profile": b.publisher, "selling_price": None,
+                                       "own": True}))
     book_mrp = {b.name: b.set_mrp for b in books}
+    book_by_name = {b.name: b for b in books}
+    disc_cache = {}
     profiles = list({i.business_profile for i in items})
     stores = frappe.get_all(
         "BusinessStore",
@@ -565,6 +759,10 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
             continue
         profile = profile_by_name.get(item.business_profile)
         seller_city = store.city or (profile.city if profile else "") or ""
+        if item.get("own"):
+            pv = price_view(book_mrp.get(item.book), publisher_discount(book=book_by_name[item.book], _cache=disc_cache))
+        else:
+            pv = price_view(item.selling_price or book_mrp.get(item.book), item.discount_percent)
         offers_by_book.setdefault(item.book, []).append({
             "business_profile": item.business_profile,
             "business_name": profile.business_name if profile else store.store_name,
@@ -572,7 +770,9 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
             "slug": store.slug,
             "profile_type": profile.profile_type if profile else "",
             "city": seller_city,
-            "selling_price": item.selling_price if item.selling_price is not None else book_mrp.get(item.book),
+            "selling_price": pv["net_price"],
+            "list_price": pv["list_price"],
+            "discount_percent": pv["discount_percent"],
             "in_city": bool(city) and seller_city.strip().lower() == city.lower(),
         })
 
