@@ -216,40 +216,21 @@ def toggle_catalog_item(item_id, is_active):
 @frappe.whitelist()
 def create_own_book(profile_id, title, author, book_type="Single Volume", language="Urdu", isbn=None,
                     set_mrp=None, trade_price=None):
-    """A publisher adds a book that is not in the system yet. The book is owned by the publisher
-    and shows in its catalog as an OWN row, with general (MRP) and trade prices."""
-    from book_marketplace.auth.api.auth import _assert_profile_owner
+    """Panel entry point for a publisher's new book. Goes through the matching rule (stage 1).
+    Response shape kept for the panel: {name, title, status} on success, {error, existing} on refusal."""
+    from book_marketplace.catalog.api.matching import add_publisher_book
 
-    profile_type = frappe.db.get_value("BusinessProfile", profile_id, "profile_type")
-    if not profile_type:
-        frappe.throw(_("Business profile not found."))
-    if profile_type != "Publisher":
-        frappe.throw(_("Only publishers can add new books."), frappe.PermissionError)
-    _assert_profile_owner(profile_id)
-
-    title = (title or "").strip()
-    author = (author or "").strip()
-    if not title or not author:
-        frappe.throw(_("Title and author are required."))
-    same = frappe.db.get_value("Book", {"title": title, "author": author}, "name")
-    if same:
-        return {"error": _("This book by this author is already in the system. Search for it and add it to your list."),
-                "existing": same}
-
-    doc = frappe.get_doc({
-        "doctype": "Book",
-        "title": title,
-        "author": author,
-        "publisher": profile_id,
-        "book_type": book_type or "Single Volume",
-        "language": language or "Urdu",
-        "isbn": (isbn or "").strip() or None,
-        "set_mrp": set_mrp,
-        "trade_price": trade_price,
-        "global_visibility": 1,
-    })
-    doc.insert(ignore_permissions=True)  # ownership is checked above
-    return {"name": doc.name, "title": doc.title, "status": "created"}
+    res = add_publisher_book(
+        profile_id=profile_id, title=title, author=author, book_type=book_type or "Single Volume",
+        language=language or "Urdu", isbn=isbn, set_mrp=set_mrp, trade_price=trade_price,
+    )
+    if res.get("status") == "exists":
+        return {"error": res.get("message"), "existing": res.get("edition")}
+    if res.get("status") == "queued":
+        # Shown as a message in the panel; the admin confirms it before it is listed.
+        return {"error": res.get("message"), "status": "queued", "decision": res.get("decision")}
+    return {"name": res.get("edition"), "title": title.strip(), "status": "created",
+            "message": res.get("message")}
 
 
 # ─── Business Store (public storefront) ───────────────────
