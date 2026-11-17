@@ -159,6 +159,13 @@
    "description": "Complete set price for multi-volume books"
   },
   {
+   "fieldname": "trade_price",
+   "fieldtype": "Currency",
+   "label": "Trade Price",
+   "options": "currency",
+   "description": "Price for sellers (dealers)"
+  },
+  {
    "fieldname": "cover_image",
    "fieldtype": "Attach Image",
    "label": "Cover Image"
