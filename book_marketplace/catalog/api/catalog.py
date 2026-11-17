@@ -247,7 +247,7 @@ def create_own_book(profile_id, title, author, book_type="Single Volume", langua
         "trade_price": trade_price,
         "global_visibility": 1,
     })
-    doc.insert()
+    doc.insert(ignore_permissions=True)  # ownership is checked above
     return {"name": doc.name, "title": doc.title, "status": "created"}
 
 
