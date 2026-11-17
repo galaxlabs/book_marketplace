@@ -413,34 +413,42 @@ def get_my_store(profile_id):
 # ─── Marketplace (find stores) ────────────────────────────
 
 @frappe.whitelist(allow_guest=True)
-def search_stores(text=None, city=None, profile_type=None, limit=20, offset=0):
+def search_stores(text=None, city=None, profile_type=None, limit=60, offset=0):
+    """Published stores, filtered by city (exact name), type and text. Publishers first, then by name."""
     filters = {"is_published": 1}
     if city:
-        filters["city"] = ["like", f"%{city}%"]
+        filters["city"] = city
     stores = frappe.get_all(
-        "BusinessStore",
-        filters=filters,
-        fields=["name", "store_name", "slug", "description", "city", "business_profile"],
-        limit=limit,
-        start=offset,
-        order_by="modified desc",
+        "BusinessStore", filters=filters,
+        fields=["name", "store_name", "slug", "description", "city", "province", "district", "business_profile"],
+        limit_page_length=1000,
     )
+    out = []
+    needle = (text or "").strip().lower()
     for s in stores:
-        profile = frappe.db.get_value(
-            "BusinessProfile", s.business_profile,
-            ["business_name", "profile_type"],
-            as_dict=True,
-        )
+        profile = frappe.db.get_value("BusinessProfile", s.business_profile, ["business_name", "profile_type"], as_dict=True)
         s.business_name = profile.business_name if profile else ""
         s.profile_type = profile.profile_type if profile else ""
         s.store_url = f"/store/{s.slug}"
-        if text:
-            match = text.lower() in s.store_name.lower() or text.lower() in (s.business_name or "").lower()
-            if profile_type:
-                match = match and s.profile_type == profile_type
-            if not match:
-                stores.remove(s)
-    return stores
+        s.province_name = frappe.db.get_value("Pakistan Location", s.province, "location_name") if s.province else ""
+        if profile_type and s.profile_type != profile_type:
+            continue
+        if needle and needle not in (s.store_name or "").lower() and needle not in (s.business_name or "").lower():
+            continue
+        out.append(s)
+    out.sort(key=lambda x: (x.profile_type != "Publisher", x.store_name or ""))
+    start = int(offset or 0)
+    return out[start:start + int(limit or 60)]
+
+
+@frappe.whitelist(allow_guest=True)
+def store_cities():
+    """Cities that have at least one published store, with the store count."""
+    rows = frappe.db.sql(
+        "select city, count(*) c from `tabBusinessStore` where is_published=1 and ifnull(city,'')!='' group by city order by city",
+        as_dict=True,
+    )
+    return [{"city": r.city, "stores": r.c} for r in rows]
 
 
 @frappe.whitelist(allow_guest=True)
