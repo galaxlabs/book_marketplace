@@ -36,8 +36,8 @@ def list_by_profile(profile_id, status=None, limit=20, offset=0):
         "InternalOrder",
         filters=filters,
         fields=["name", "order_type", "seller_profile", "status", "total_amount", "order_date", "creation"],
-        limit=limit,
-        offset=offset,
+        limit_page_length=int(limit),
+        limit_start=int(offset),
         order_by="creation desc",
     )
     for o in orders:
