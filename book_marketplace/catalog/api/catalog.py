@@ -300,12 +300,8 @@ def get_store_by_slug(slug):
                 "StockLedger", {"book": item.book, "business_profile": store.business_profile}
             ))
         stock = None if not tracked else (stock or 0)
+        # A shop shows its own copies. The publisher's status is only the publisher's own stock.
         pub_avail = frappe.db.get_value("Book", item.book, "availability") or "Available"
-        if pub_avail in AVAILABILITY_BLOCKS_DEALERS and store.profile_type != "Publisher":
-            # The publisher says this is not for dealers. The shop cannot show it as in stock.
-            stock = 0
-        elif pub_avail == "General readers only" and store.profile_type == "Publisher":
-            stock = None
         catalog.append({
             "item_name": item.name,
             "book_id": item.book,
