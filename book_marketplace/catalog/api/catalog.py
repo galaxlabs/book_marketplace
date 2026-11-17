@@ -237,7 +237,7 @@ def set_book_availability(profile_id, book_id, availability):
 @frappe.whitelist()
 def create_own_book(profile_id, title, author, book_type="Single Volume", language="Urdu", isbn=None,
                     set_mrp=None, trade_price=None, binding=None, page_count=None, weight=None, colours=None,
-                    categories=None, is_bound=0, is_set=0, volume_count=None, part_count=None):
+                    categories=None, is_bound=0, is_set=0, volume_count=None, part_count=None, languages=None):
     """Panel entry point for a publisher's new book. Goes through the matching rule (stage 1).
     Response shape kept for the panel: {name, title, status} on success, {error, existing} on refusal."""
     from book_marketplace.catalog.api.matching import add_publisher_book
@@ -247,6 +247,7 @@ def create_own_book(profile_id, title, author, book_type="Single Volume", langua
         language=language or "Urdu", isbn=isbn, set_mrp=set_mrp, trade_price=trade_price,
         binding=binding, page_count=page_count, weight=weight, colours=colours,
         categories=categories, is_bound=is_bound, is_set=is_set, volume_count=volume_count, part_count=part_count,
+        languages=languages,
     )
     if res.get("status") == "exists":
         return {"error": res.get("message"), "existing": res.get("edition")}
