@@ -59,7 +59,7 @@ def set_rows(book, categories):
 
 
 @frappe.whitelist()
-def add_book_category(profile_id, category_name, category_type="Subject", parent=None, category_name_ur=None):
+def add_book_category(profile_id, category_name, category_type="Subject", parent=None, category_name_ur=None, section=None):
     """Publisher or admin adds a category or subject. Existing name under the same parent is reused."""
     _check_publisher_or_admin(profile_id)
     category_name = (category_name or "").strip()
@@ -78,6 +78,7 @@ def add_book_category(profile_id, category_name, category_type="Subject", parent
         "doctype": "Book Category", "category_name": category_name,
         "category_name_ur": category_name_ur or None, "category_type": category_type,
         "parent_book_category": parent or None, "is_group": 0,
+        "section": (section or None) if not parent else None,
     }).insert(ignore_permissions=True)
     return {"name": doc.name, "status": "created"}
 
