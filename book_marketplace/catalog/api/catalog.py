@@ -443,7 +443,7 @@ def search_stores(text=None, city=None, profile_type=None, limit=20, offset=0):
 @frappe.whitelist(allow_guest=True)
 def get_filters():
     cats = frappe.get_all(
-        "Book Category", filters={"category_type": "Subject"},
+        "Book Category", filters={"category_type": "Subject", "section": ["is", "set"]},
         fields=["name", "category_name", "parent_book_category"], order_by="category_name asc",
         limit_page_length=0,
     )

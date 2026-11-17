@@ -16,6 +16,10 @@ def descendants(names):
             "Book Category", filters={"parent_book_category": ["in", frontier]},
             pluck="name", limit_page_length=0,
         )
+        kids += frappe.get_all(
+            "Book Category", filters={"section": ["in", frontier]},
+            pluck="name", limit_page_length=0,
+        )
         frontier = [k for k in kids if k not in seen]
         seen.update(frontier)
     return seen
