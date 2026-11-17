@@ -72,3 +72,63 @@ def mark_dispatched(order_id, transport_details=None):
         doc.transport_details = transport_details
     doc.save()
     return {"name": doc.name, "status": doc.status}
+
+
+def _tracked_quantity(seller, book):
+    """(ledger name, quantity) for the seller's available stock of a book, or (None, None) when it is not tracked."""
+    row = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Available"}, ["name", "quantity"], as_dict=True)
+    return (row.name, int(row.quantity or 0)) if row else (None, None)
+
+
+@frappe.whitelist()
+def create_sale(seller, items, customer_name=None, customer_phone=None, payment_status="Paid"):
+    """A sale over the counter or to a customer without an account. Checks and reduces the shop's stock."""
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    _assert_profile_owner(seller)
+    if isinstance(items, str):
+        items = frappe.parse_json(items)
+    items = [it for it in (items or []) if it.get("book")]
+    if not items:
+        frappe.throw(_("Add at least one book."))
+    plan = []
+    for it in items:
+        qty = int(it.get("quantity") or 0)
+        if qty <= 0:
+            frappe.throw(_("Quantity must be at least 1."))
+        ledger, have = _tracked_quantity(seller, it["book"])
+        if ledger is not None and qty > have:
+            title = frappe.db.get_value("Book", it["book"], "title")
+            frappe.throw(_("Not enough copies of {0}: you have {1}.").format(title, have))
+        plan.append((it, qty, ledger, have))
+    doc = frappe.get_doc({
+        "doctype": "InternalOrder",
+        "order_type": "Sale",
+        "seller_profile": seller,
+        "customer_name": (customer_name or "").strip() or None,
+        "customer_phone": (customer_phone or "").strip() or None,
+        "delivery_method": "Pickup",
+        "status": "Received",
+        "payment_status": payment_status or "Paid",
+        "items": [
+            {"book": it["book"], "quantity": qty, "rate": float(it.get("rate") or 0)}
+            for it, qty, _l, _h in plan
+        ],
+    })
+    doc.insert(ignore_permissions=True)
+    for it, qty, ledger, have in plan:
+        if ledger is not None:
+            frappe.db.set_value("StockLedger", ledger, "quantity", have - qty)
+    return {"name": doc.name, "total_amount": doc.total_amount, "status": doc.status}
+
+
+@frappe.whitelist()
+def list_sales(profile_id, limit=50, offset=0):
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    _assert_profile_owner(profile_id)
+    rows = frappe.get_all(
+        "InternalOrder",
+        filters={"seller_profile": profile_id, "order_type": "Sale"},
+        fields=["name", "customer_name", "customer_phone", "status", "payment_status", "total_amount", "order_date", "creation"],
+        order_by="creation desc", limit=int(limit), offset=int(offset),
+    )
+    return rows

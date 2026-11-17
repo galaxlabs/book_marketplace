@@ -5,37 +5,39 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
-  "field_order": [
-   "order_type",
-   "buyer_profile",
-   "seller_profile",
-   "status",
-   "order_date",
-   "total_amount",
-   "delivery_method",
-   "transport_section",
-   "transporter_name",
-   "transporter_phone",
-   "vehicle_number",
-   "builty_no",
-   "builty_date",
-   "pickup_address",
-   "delivery_address",
-   "expected_delivery_date",
-   "freight_charge",
-   "delivery_receipt_slip",
-   "delivery_receipt_ref",
-   "transport_notes",
-   "payment_section",
-   "payment_status",
-   "paid_amount",
-   "settlement",
-   "payment_entry",
-   "payment_remarks",
-   "notes",
-   "items_section",
-   "items"
-  ],
+ "field_order": [
+  "order_type",
+  "buyer_profile",
+  "customer_name",
+  "customer_phone",
+  "seller_profile",
+  "status",
+  "order_date",
+  "total_amount",
+  "delivery_method",
+  "transport_section",
+  "transporter_name",
+  "transporter_phone",
+  "vehicle_number",
+  "builty_no",
+  "builty_date",
+  "pickup_address",
+  "delivery_address",
+  "expected_delivery_date",
+  "freight_charge",
+  "delivery_receipt_slip",
+  "delivery_receipt_ref",
+  "transport_notes",
+  "payment_section",
+  "payment_status",
+  "paid_amount",
+  "settlement",
+  "payment_entry",
+  "payment_remarks",
+  "notes",
+  "items_section",
+  "items"
+ ],
  "fields": [
   {
    "fieldname": "order_type",
@@ -49,7 +51,7 @@
    "fieldtype": "Link",
    "label": "Buyer",
    "options": "BusinessProfile",
-   "reqd": 1
+   "reqd": 0
   },
   {
    "fieldname": "seller_profile",
@@ -78,116 +80,116 @@
    "options": "currency",
    "read_only": 1
   },
-   {
-    "fieldname": "delivery_method",
-    "fieldtype": "Select",
-    "label": "Delivery Method",
-    "options": "Pickup\nFOR\nDelivery to Shop\nCity Transport Office\nCourier"
-   },
-   {
-    "fieldname": "transport_section",
-    "fieldtype": "Section Break",
-    "label": "Transport Details"
-   },
-   {
-    "fieldname": "transporter_name",
-    "fieldtype": "Data",
-    "label": "Transporter Name"
-   },
-   {
-    "fieldname": "transporter_phone",
-    "fieldtype": "Data",
-    "label": "Transporter Phone"
-   },
-   {
-    "fieldname": "vehicle_number",
-    "fieldtype": "Data",
-    "label": "Vehicle Number"
-   },
-   {
-    "fieldname": "builty_no",
-    "fieldtype": "Data",
-    "label": "Builty / LR Number"
-   },
-   {
-    "fieldname": "builty_date",
-    "fieldtype": "Date",
-    "label": "Builty Date"
-   },
-   {
-    "fieldname": "pickup_address",
-    "fieldtype": "Small Text",
-    "label": "Pickup Address"
-   },
-   {
-    "fieldname": "delivery_address",
-    "fieldtype": "Small Text",
-    "label": "Delivery Address"
-   },
-   {
-    "fieldname": "expected_delivery_date",
-    "fieldtype": "Date",
-    "label": "Expected Delivery Date"
-   },
-   {
-    "fieldname": "freight_charge",
-    "fieldtype": "Currency",
-    "label": "Freight Charge"
-   },
-   {
-    "fieldname": "delivery_receipt_slip",
-    "fieldtype": "Attach",
-    "label": "Delivery Receipt Slip"
-   },
-   {
-    "fieldname": "delivery_receipt_ref",
-    "fieldtype": "Data",
-    "label": "Delivery Receipt Ref"
-   },
-   {
-    "fieldname": "transport_notes",
-    "fieldtype": "Small Text",
-    "label": "Transport Notes"
-   },
-   {
-    "fieldname": "payment_section",
-    "fieldtype": "Section Break",
-    "label": "Payment & Settlement"
-   },
-   {
-    "fieldname": "payment_status",
-    "fieldtype": "Select",
-    "label": "Payment Status",
-    "options": "Unpaid\nPartially Paid\nPaid\nRefunded",
-    "default": "Unpaid"
-   },
-   {
-    "fieldname": "paid_amount",
-    "fieldtype": "Currency",
-    "label": "Paid Amount"
-   },
-   {
-    "fieldname": "settlement",
-    "fieldtype": "Link",
-    "label": "Settlement",
-    "options": "Settlement"
-   },
-   {
-    "fieldname": "payment_entry",
-    "fieldtype": "Link",
-    "label": "Payment Entry",
-    "options": "Payment Entry"
-   },
-   {
-    "fieldname": "payment_remarks",
-    "fieldtype": "Small Text",
-    "label": "Payment Remarks"
-   },
-   {
-    "fieldname": "notes",
-    "fieldtype": "Small Text",
-    "label": "Notes"
-   },
+  {
+   "fieldname": "delivery_method",
+   "fieldtype": "Select",
+   "label": "Delivery Method",
+   "options": "Pickup\nFOR\nDelivery to Shop\nCity Transport Office\nCourier"
+  },
+  {
+   "fieldname": "transport_section",
+   "fieldtype": "Section Break",
+   "label": "Transport Details"
+  },
+  {
+   "fieldname": "transporter_name",
+   "fieldtype": "Data",
+   "label": "Transporter Name"
+  },
+  {
+   "fieldname": "transporter_phone",
+   "fieldtype": "Data",
+   "label": "Transporter Phone"
+  },
+  {
+   "fieldname": "vehicle_number",
+   "fieldtype": "Data",
+   "label": "Vehicle Number"
+  },
+  {
+   "fieldname": "builty_no",
+   "fieldtype": "Data",
+   "label": "Builty / LR Number"
+  },
+  {
+   "fieldname": "builty_date",
+   "fieldtype": "Date",
+   "label": "Builty Date"
+  },
+  {
+   "fieldname": "pickup_address",
+   "fieldtype": "Small Text",
+   "label": "Pickup Address"
+  },
+  {
+   "fieldname": "delivery_address",
+   "fieldtype": "Small Text",
+   "label": "Delivery Address"
+  },
+  {
+   "fieldname": "expected_delivery_date",
+   "fieldtype": "Date",
+   "label": "Expected Delivery Date"
+  },
+  {
+   "fieldname": "freight_charge",
+   "fieldtype": "Currency",
+   "label": "Freight Charge"
+  },
+  {
+   "fieldname": "delivery_receipt_slip",
+   "fieldtype": "Attach",
+   "label": "Delivery Receipt Slip"
+  },
+  {
+   "fieldname": "delivery_receipt_ref",
+   "fieldtype": "Data",
+   "label": "Delivery Receipt Ref"
+  },
+  {
+   "fieldname": "transport_notes",
+   "fieldtype": "Small Text",
+   "label": "Transport Notes"
+  },
+  {
+   "fieldname": "payment_section",
+   "fieldtype": "Section Break",
+   "label": "Payment & Settlement"
+  },
+  {
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "label": "Payment Status",
+   "options": "Unpaid\nPartially Paid\nPaid\nRefunded",
+   "default": "Unpaid"
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Paid Amount"
+  },
+  {
+   "fieldname": "settlement",
+   "fieldtype": "Link",
+   "label": "Settlement",
+   "options": "Settlement"
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry",
+   "options": "Payment Entry"
+  },
+  {
+   "fieldname": "payment_remarks",
+   "fieldtype": "Small Text",
+   "label": "Payment Remarks"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
   {
    "fieldname": "items_section",
    "fieldtype": "Section Break",
@@ -199,6 +201,16 @@
    "label": "Items",
    "options": "InternalOrderItem",
    "reqd": 1
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Walk-in customer name / گاہک کا نام"
+  },
+  {
+   "fieldname": "customer_phone",
+   "fieldtype": "Data",
+   "label": "Customer phone / گاہک کا فون"
   }
  ],
  "index_web_pages_for_search": 1,
