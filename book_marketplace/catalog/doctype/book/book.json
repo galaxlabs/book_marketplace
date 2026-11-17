@@ -23,6 +23,7 @@
   "paper",
   "print_type",
   "print_quality",
+  "colours",
   "imported",
   "set_mrp",
   "profile_section",
@@ -147,6 +148,12 @@
    "options": "Standard\nPremium\nEconomy"
   },
   {
+   "fieldname": "colours",
+   "fieldtype": "Select",
+   "label": "Colours / رنگ (اختیاری)",
+   "options": "\n1 colour (black)\n2 colours\nFull colour (4 colours)"
+  },
+  {
    "fieldname": "imported",
    "fieldtype": "Check",
    "label": "Imported"
@@ -203,7 +210,7 @@
   {
    "fieldname": "weight",
    "fieldtype": "Float",
-   "label": "Weight"
+   "label": "Weight (grams) / وزن (گرام)"
   },
   {
    "fieldname": "edition",

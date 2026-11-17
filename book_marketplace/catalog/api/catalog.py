@@ -215,7 +215,7 @@ def toggle_catalog_item(item_id, is_active):
 
 @frappe.whitelist()
 def create_own_book(profile_id, title, author, book_type="Single Volume", language="Urdu", isbn=None,
-                    set_mrp=None, trade_price=None):
+                    set_mrp=None, trade_price=None, binding=None, page_count=None, weight=None, colours=None):
     """Panel entry point for a publisher's new book. Goes through the matching rule (stage 1).
     Response shape kept for the panel: {name, title, status} on success, {error, existing} on refusal."""
     from book_marketplace.catalog.api.matching import add_publisher_book
@@ -223,6 +223,7 @@ def create_own_book(profile_id, title, author, book_type="Single Volume", langua
     res = add_publisher_book(
         profile_id=profile_id, title=title, author=author, book_type=book_type or "Single Volume",
         language=language or "Urdu", isbn=isbn, set_mrp=set_mrp, trade_price=trade_price,
+        binding=binding, page_count=page_count, weight=weight, colours=colours,
     )
     if res.get("status") == "exists":
         return {"error": res.get("message"), "existing": res.get("edition")}
@@ -240,7 +241,7 @@ def get_store_by_slug(slug):
     store = frappe.db.get_value(
         "BusinessStore",
         {"slug": slug, "is_published": 1},
-        ["name", "business_profile", "store_name", "description", "banner_image",
+        ["name", "business_profile", "store_name", "description", "history", "key_info", "banner_image",
          "contact_phone", "contact_email", "address", "city"],
         as_dict=True,
     )

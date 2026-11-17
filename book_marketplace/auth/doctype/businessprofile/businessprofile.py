@@ -14,6 +14,12 @@ class BusinessProfile(Document):
         if self.status == "Approved" and not self.approved_on:
             self.approved_on = frappe.utils.today()
 
+    def after_insert(self):
+        ensure_publisher_store(self)
+
+    def on_update(self):
+        ensure_publisher_store(self)
+
     def validate_enabled_type(self):
         if self.is_new() and not frappe.flags.in_import and not is_profile_type_enabled(self.profile_type):
             frappe.throw(_("{0} is switched off in Marketplace Settings.").format(self.profile_type))
@@ -28,3 +34,28 @@ class BusinessProfile(Document):
         )
         if duplicate:
             frappe.throw(_("This user already has a {0} profile ({1}).").format(self.profile_type, duplicate))
+
+
+def ensure_publisher_store(profile):
+    """Every publisher gets a store automatically. It is published once the profile is Approved."""
+    if profile.profile_type != "Publisher":
+        return
+    approved = profile.status == "Approved"
+    store_name = frappe.db.get_value("BusinessStore", {"business_profile": profile.name}, "name")
+    if not store_name:
+        slug = profile.name.lower()
+        if frappe.db.exists("BusinessStore", {"slug": slug}):
+            slug = f"{slug}-{profile.name[-6:].lower()}"
+        frappe.get_doc({
+            "doctype": "BusinessStore",
+            "business_profile": profile.name,
+            "store_name": profile.business_name or profile.name,
+            "slug": slug,
+            "address": profile.address,
+            "city": profile.city,
+            "contact_phone": profile.phone,
+            "contact_email": profile.email,
+            "is_published": 1 if approved else 0,
+        }).insert(ignore_permissions=True)
+    elif approved:
+        frappe.db.set_value("BusinessStore", store_name, "is_published", 1)

@@ -10,6 +10,8 @@
   "store_name",
   "slug",
   "description",
+  "history",
+  "key_info",
   "banner_image",
   "contact_phone",
   "contact_email",
@@ -43,7 +45,17 @@
   {
    "fieldname": "description",
    "fieldtype": "Small Text",
-   "label": "Store Description"
+   "label": "Introduction / تعارف"
+  },
+  {
+   "fieldname": "history",
+   "fieldtype": "Text",
+   "label": "History / تاریخ"
+  },
+  {
+   "fieldname": "key_info",
+   "fieldtype": "Text",
+   "label": "Key information / اہم معلومات"
   },
   {
    "fieldname": "banner_image",
