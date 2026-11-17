@@ -669,7 +669,7 @@ def list_authors(text=None, limit=400):
     """Authors of visible books, most books first, with the number of books. For the author filter."""
     limit = min(int(limit or 400), 1000)
     params = {"text": f"%{text.strip()}%"} if text and text.strip() else {}
-    where = "global_visibility = 1 and ifnull(author, '') != ''"
+    where = "global_visibility = 1 and ifnull(author, '') not in ('', '—', '-', '--')"
     if params:
         where += " and author like %(text)s"
     rows = frappe.db.sql(
