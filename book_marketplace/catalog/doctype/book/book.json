@@ -36,12 +36,17 @@
   "weight",
   "edition",
   "publication_year",
+  "is_bound",
+  "is_set",
+  "volume_count",
+  "part_count",
   "primary_category",
   "genre",
   "religious_segment",
   "global_visibility",
   "subjects_section",
   "subjects",
+  "classifications",
   "volumes_section",
   "volumes",
   "variants_section",
@@ -231,6 +236,28 @@
    "label": "Publication Year"
   },
   {
+   "fieldname": "is_bound",
+   "fieldtype": "Check",
+   "label": "Bound / مجلد",
+   "default": "0"
+  },
+  {
+   "fieldname": "is_set",
+   "fieldtype": "Check",
+   "label": "Set / سیٹ",
+   "default": "0"
+  },
+  {
+   "fieldname": "volume_count",
+   "fieldtype": "Int",
+   "label": "Volumes / جلدیں"
+  },
+  {
+   "fieldname": "part_count",
+   "fieldtype": "Int",
+   "label": "Parts / حصے"
+  },
+  {
    "fieldname": "primary_category",
    "fieldtype": "Link",
    "label": "Primary Category",
@@ -264,6 +291,12 @@
    "label": "Subjects",
    "options": "BookSubject",
    "reqd": 0
+  },
+  {
+   "fieldname": "classifications",
+   "fieldtype": "Table",
+   "label": "Categories and subjects / قسم اور موضوع",
+   "options": "BookClassification"
   },
   {
    "fieldname": "volumes_section",

@@ -236,7 +236,8 @@ def set_book_availability(profile_id, book_id, availability):
 
 @frappe.whitelist()
 def create_own_book(profile_id, title, author, book_type="Single Volume", language="Urdu", isbn=None,
-                    set_mrp=None, trade_price=None, binding=None, page_count=None, weight=None, colours=None):
+                    set_mrp=None, trade_price=None, binding=None, page_count=None, weight=None, colours=None,
+                    categories=None, is_bound=0, is_set=0, volume_count=None, part_count=None):
     """Panel entry point for a publisher's new book. Goes through the matching rule (stage 1).
     Response shape kept for the panel: {name, title, status} on success, {error, existing} on refusal."""
     from book_marketplace.catalog.api.matching import add_publisher_book
@@ -245,6 +246,7 @@ def create_own_book(profile_id, title, author, book_type="Single Volume", langua
         profile_id=profile_id, title=title, author=author, book_type=book_type or "Single Volume",
         language=language or "Urdu", isbn=isbn, set_mrp=set_mrp, trade_price=trade_price,
         binding=binding, page_count=page_count, weight=weight, colours=colours,
+        categories=categories, is_bound=is_bound, is_set=is_set, volume_count=volume_count, part_count=part_count,
     )
     if res.get("status") == "exists":
         return {"error": res.get("message"), "existing": res.get("edition")}
@@ -434,7 +436,12 @@ def search_stores(text=None, city=None, profile_type=None, limit=20, offset=0):
 
 @frappe.whitelist(allow_guest=True)
 def get_filters():
-    subjects = frappe.get_all("SubjectMaster", fields=["name", "subject_name", "parent_subject"])
+    cats = frappe.get_all(
+        "Book Category", filters={"category_type": "Subject"},
+        fields=["name", "category_name", "parent_book_category"], order_by="category_name asc",
+        limit_page_length=0,
+    )
+    subjects = [{"name": c.name, "subject_name": c.category_name, "parent_subject": c.parent_book_category} for c in cats]
     languages = frappe.get_all("Book", fields=["language"], distinct=1)
     return {
         "subjects": subjects,
@@ -449,7 +456,7 @@ def _offer_text_filter(text):
 
 
 @frappe.whitelist(allow_guest=True)
-def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0):
+def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None):
     """Each book once, with every published seller that stocks it.
 
     Sellers in `city` come first, and books that have a seller in `city`
@@ -468,14 +475,19 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     if text:
         or_filters = _offer_text_filter(text)
 
-    subject_books = None
-    if subject:
-        subject_books = frappe.get_all(
-            "BookSubject", filters={"subject": subject, "parenttype": "Book"}, pluck="parent"
-        )
-        if not subject_books:
-            return {"books": [], "total": 0, "cities": _published_cities()}
-        book_filters["name"] = ["in", subject_books]
+    from book_marketplace.catalog.api.classification import book_names_for_categories
+
+    for picked in (subject, category):
+        if picked:
+            picked_books = book_names_for_categories([picked])
+            if not picked_books:
+                return {"books": [], "total": 0, "cities": _published_cities()}
+            existing = book_filters.get("name")
+            if existing:
+                picked_books = [n for n in picked_books if n in existing[1]]
+                if not picked_books:
+                    return {"books": [], "total": 0, "cities": _published_cities()}
+            book_filters["name"] = ["in", picked_books]
 
     books = frappe.get_all(
         "Book",

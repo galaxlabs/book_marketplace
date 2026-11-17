@@ -68,6 +68,9 @@ def _create_edition(work_id, entry, publisher, values, status_visibility="public
         "doctype": "Book", "title": entry.title, "author": entry.author, "publisher": publisher,
         "book_type": values.get("book_type") or "Single Volume", "language": values.get("language") or "Urdu",
         "isbn": entry.isbn or None, "set_mrp": values.get("set_mrp"), "trade_price": values.get("trade_price"),
+        "classifications": [{"category": c} for c in (values.get("categories") or [])],
+        "is_bound": 1 if values.get("is_bound") else 0, "is_set": 1 if values.get("is_set") else 0,
+        "volume_count": values.get("volume_count") or None, "part_count": values.get("part_count") or None,
         "binding": values.get("binding") or None, "page_count": values.get("page_count") or None,
         "weight": values.get("weight") or None, "colours": values.get("colours") or None,
         "global_visibility": 1,
@@ -97,7 +100,8 @@ def _log(entry, decision, status, chosen_work=None, chosen_edition=None, decided
 @frappe.whitelist()
 def add_publisher_book(profile_id, title, author, book_type="Single Volume", language="Urdu", isbn=None,
                        set_mrp=None, trade_price=None, volumes=None, binding=None, page_count=None,
-                       weight=None, colours=None):
+                       weight=None, colours=None, categories=None, is_bound=0, is_set=0,
+                       volume_count=None, part_count=None):
     """A publisher adds a book. The matching rule decides; nothing is merged silently."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
@@ -112,7 +116,9 @@ def add_publisher_book(profile_id, title, author, book_type="Single Volume", lan
     entry = Entry(title=title, author=author, publisher=profile_id, isbn=isbn,
                   volumes=int(volumes) if volumes else None, language=language)
     values = {"book_type": book_type, "language": language, "set_mrp": set_mrp, "trade_price": trade_price,
-              "binding": binding, "page_count": page_count, "weight": weight, "colours": colours}
+              "binding": binding, "page_count": page_count, "weight": weight, "colours": colours,
+              "categories": categories or [], "is_bound": is_bound, "is_set": is_set,
+              "volume_count": volume_count, "part_count": part_count}
     decision = decide(entry, _candidates())
 
     if decision.action == "attach_edition":
