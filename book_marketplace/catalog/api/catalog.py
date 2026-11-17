@@ -374,6 +374,11 @@ def create_or_update_store(profile_id, store_name, slug, description=None, conta
         doc = frappe.get_doc("BusinessStore", existing)
     else:
         doc = frappe.get_doc({"doctype": "BusinessStore", "business_profile": profile_id})
+    slug = (slug or "").strip()
+    if not slug:
+        frappe.throw(_("Handle is required."))
+    if frappe.db.exists("BusinessStore", {"slug": slug, "name": ["!=", doc.name or "__new__"]}):
+        frappe.throw(_("This handle is already used by another store. Choose another."))
     doc.store_name = store_name
     doc.slug = slug
     doc.description = description
