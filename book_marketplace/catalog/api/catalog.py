@@ -261,7 +261,8 @@ def get_store_by_slug(slug):
             "Book", item.book,
             [
                 "title", "subtitle", "author", "book_type", "set_mrp", "language",
-                "binding", "genre", "religious_segment", "introduction"
+                "binding", "genre", "religious_segment", "introduction",
+                "page_count", "weight", "colours", "dimensions",
             ],
             as_dict=True,
         )
@@ -288,6 +289,10 @@ def get_store_by_slug(slug):
             "mrp": book.set_mrp if book else None,
             "selling_price": item.selling_price,
             "language": book.language if book else "",
+            "binding": book.binding if book else "",
+            "page_count": book.page_count if book else None,
+            "weight": book.weight if book else None,
+            "colours": book.colours if book else "",
             "genre": book.genre if book else "",
             "religious_segment": book.religious_segment if book else "",
             "introduction": book.introduction if book else "",
