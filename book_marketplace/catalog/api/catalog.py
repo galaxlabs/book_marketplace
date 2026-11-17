@@ -231,9 +231,10 @@ def create_own_book(profile_id, title, author, book_type="Single Volume", langua
     author = (author or "").strip()
     if not title or not author:
         frappe.throw(_("Title and author are required."))
-    if frappe.db.exists("Book", title):
-        return {"error": _("A book with this title already exists. Search for it and add it to your list."),
-                "existing": title}
+    same = frappe.db.get_value("Book", {"title": title, "author": author}, "name")
+    if same:
+        return {"error": _("This book by this author is already in the system. Search for it and add it to your list."),
+                "existing": same}
 
     doc = frappe.get_doc({
         "doctype": "Book",

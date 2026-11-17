@@ -5,6 +5,31 @@ from frappe.utils import get_url
 
 
 class Book(Document):
+    def autoname(self):
+        """Title is the name while it is free. A second book with the same title (different author
+        or edition) gets 'title - author', then 'title - author - publisher', then a counter.
+        Existing books keep their names."""
+        base = (self.title or "").strip()
+        if not base:
+            frappe.throw("Title is required")
+        if not frappe.db.exists("Book", base):
+            self.name = base
+            return
+        author = (self.author or "").strip()
+        candidate = f"{base} - {author}" if author else base
+        if not frappe.db.exists("Book", candidate):
+            self.name = candidate
+            return
+        if self.publisher:
+            candidate = f"{candidate} - {self.publisher}"
+            if not frappe.db.exists("Book", candidate):
+                self.name = candidate
+                return
+        n = 2
+        while frappe.db.exists("Book", f"{candidate} ({n})"):
+            n += 1
+        self.name = f"{candidate} ({n})"
+
     def before_save(self):
         self.detect_duplicates()
         self.validate_volumes()
