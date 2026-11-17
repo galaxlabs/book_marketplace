@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-11-17 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "location_name",
+  "location_name_en",
+  "location_type",
+  "parent_location"
+ ],
+ "fields": [
+  {
+   "fieldname": "location_name",
+   "fieldtype": "Data",
+   "label": "Name / نام",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "location_name_en",
+   "fieldtype": "Data",
+   "label": "Name (English)",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "location_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Province\nDistrict\nTehsil\nCity",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "parent_location",
+   "fieldtype": "Link",
+   "label": "Parent",
+   "options": "Pakistan Location"
+  }
+ ],
+ "istable": 0,
+ "module": "Catalog",
+ "name": "Pakistan Location",
+ "naming_rule": "",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "export": 1,
+   "report": 1,
+   "role": "System Manager"
+  },
+  {
+   "read": 1,
+   "role": "Publisher"
+  },
+  {
+   "read": 1,
+   "role": "Bookseller"
+  }
+ ],
+ "search_fields": "location_name_en",
+ "title_field": "location_name",
+ "sort_field": "location_name",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

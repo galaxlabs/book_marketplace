@@ -266,7 +266,7 @@ def get_store_by_slug(slug):
         "BusinessStore",
         {"slug": slug, "is_published": 1},
         ["name", "business_profile", "store_name", "description", "history", "key_info", "banner_image",
-         "contact_phone", "contact_email", "address", "city"],
+         "contact_phone", "contact_email", "address", "city", "province", "district", "map_link"],
         as_dict=True,
     )
     if not store:
@@ -369,7 +369,7 @@ def get_store_by_profile(profile_id):
 
 
 @frappe.whitelist()
-def create_or_update_store(profile_id, store_name, slug, description=None, contact_phone=None, contact_email=None, address=None, city=None, is_published=None, history=None, key_info=None):
+def create_or_update_store(profile_id, store_name, slug, description=None, contact_phone=None, contact_email=None, address=None, city=None, is_published=None, history=None, key_info=None, province=None, district=None, map_link=None):
     existing = frappe.db.get_value("BusinessStore", {"business_profile": profile_id}, "name")
     if existing:
         doc = frappe.get_doc("BusinessStore", existing)
@@ -389,6 +389,9 @@ def create_or_update_store(profile_id, store_name, slug, description=None, conta
     doc.contact_email = contact_email
     doc.address = address
     doc.city = city
+    doc.province = province or doc.get("province")
+    doc.district = district or doc.get("district")
+    doc.map_link = map_link if map_link is not None else doc.get("map_link")
     if is_published is not None:
         doc.is_published = is_published
     doc.save()
@@ -588,3 +591,15 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
 def _published_cities():
     rows = frappe.get_all("BusinessStore", filters={"is_published": 1}, fields=["city"], pluck="city")
     return sorted({c.strip() for c in rows if c and c.strip()})
+
+
+
+@frappe.whitelist(allow_guest=True)
+def pakistan_locations(parent=None, location_type=None):
+    """Provinces (no parent), or the districts / cities under a parent. Urdu name first."""
+    filters = {"parent_location": parent} if parent else {"parent_location": ["is", "not set"]}
+    if location_type:
+        filters["location_type"] = location_type
+    return frappe.get_all("Pakistan Location", filters=filters,
+                          fields=["name", "location_name", "location_name_en", "location_type"],
+                          order_by="location_name_en asc", limit_page_length=0)

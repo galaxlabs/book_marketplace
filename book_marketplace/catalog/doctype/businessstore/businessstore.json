@@ -16,6 +16,9 @@
   "contact_phone",
   "contact_email",
   "address",
+  "province",
+  "district",
+  "map_link",
   "city",
   "is_published"
  ],
@@ -76,6 +79,23 @@
    "fieldname": "address",
    "fieldtype": "Small Text",
    "label": "Address"
+  },
+  {
+   "fieldname": "province",
+   "fieldtype": "Link",
+   "label": "Province / صوبہ",
+   "options": "Pakistan Location"
+  },
+  {
+   "fieldname": "district",
+   "fieldtype": "Link",
+   "label": "District / ضلع",
+   "options": "Pakistan Location"
+  },
+  {
+   "fieldname": "map_link",
+   "fieldtype": "Data",
+   "label": "Google Map link / نقشہ"
   },
   {
    "fieldname": "city",
