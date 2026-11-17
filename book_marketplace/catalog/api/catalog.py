@@ -342,7 +342,7 @@ def get_store_by_profile(profile_id):
 
 
 @frappe.whitelist()
-def create_or_update_store(profile_id, store_name, slug, description=None, contact_phone=None, contact_email=None, address=None, city=None, is_published=0, history=None, key_info=None):
+def create_or_update_store(profile_id, store_name, slug, description=None, contact_phone=None, contact_email=None, address=None, city=None, is_published=None, history=None, key_info=None):
     existing = frappe.db.get_value("BusinessStore", {"business_profile": profile_id}, "name")
     if existing:
         doc = frappe.get_doc("BusinessStore", existing)
@@ -357,7 +357,8 @@ def create_or_update_store(profile_id, store_name, slug, description=None, conta
     doc.contact_email = contact_email
     doc.address = address
     doc.city = city
-    doc.is_published = is_published
+    if is_published is not None:
+        doc.is_published = is_published
     doc.save()
     return {"name": doc.name, "slug": doc.slug, "store_url": f"/store/{doc.slug}"}
 
