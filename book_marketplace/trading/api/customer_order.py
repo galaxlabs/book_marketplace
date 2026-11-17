@@ -232,3 +232,16 @@ def revive_order(order):
     doc.expired_on = None
     doc.save(ignore_permissions=True)
     return {"name": doc.name, "status": doc.status, "reserved_until": str(doc.reserved_until)}
+"""Delete a CANCELLED customer order (owner's rule). Only Cancelled orders; stock was already released when cancelled.
+Appended to trading/api/customer_order.py on dev-b."""
+
+
+@frappe.whitelist()
+def delete_cancelled_order(order):
+    doc = frappe.get_doc("Customer Order", order)
+    if not _may_act_on(doc):
+        frappe.throw(_("Not your order."), frappe.PermissionError)
+    if doc.status != "Cancelled":
+        frappe.throw(_("Only a cancelled order can be deleted."))
+    frappe.delete_doc("Customer Order", order, ignore_permissions=True, force=True)
+    return {"name": order, "deleted": True}
