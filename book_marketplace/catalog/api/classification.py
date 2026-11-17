@@ -106,7 +106,7 @@ def set_book_classification(profile_id, book_id, categories=None, is_bound=0, is
     book.save(ignore_permissions=True)
     return {"name": book.name, "categories": [r.category for r in book.classifications]}
 @frappe.whitelist(allow_guest=True)
-def section_overview():
+def section_overview(lang=None):
     """قسم → موضوعات with book counts. Used by the panel and the public store filters."""
     sections = frappe.get_all(
         "Book Category", filters={"category_type": "Book Type", "parent_book_category": ["is", "set"]},
@@ -127,13 +127,49 @@ def section_overview():
             subjects.append({
                 "name": r.name, "category_name": r.category_name, "category_name_ur": r.category_name_ur,
                 "books": len(book_names_for_categories([r.name])),
-                "children": [{"name": c.name, "category_name": c.category_name} for c in children],
+                "label": label(r.category_name, r.category_name_ur, lang),
+                "children": [{"name": c.name, "category_name": c.category_name,
+                              "label": label(c.category_name, None, lang)} for c in children],
             })
         if not subjects:
             continue
         out.append({
             "name": sec.name, "category_name": sec.category_name, "category_name_ur": sec.category_name_ur,
+            "label": label(sec.category_name, sec.category_name_ur, lang),
             "books": len({b for sj in subjects for b in book_names_for_categories([sj["name"]])}),
             "subjects": subjects,
         })
     return out
+
+
+
+def label(name_en, name_ur=None, lang=None):
+    """Name in the reader's language, from Frappe's Translation doctype. Falls back to the stored Urdu name."""
+    if not lang:
+        return name_en
+    translated = frappe._(name_en, lang=lang)
+    if translated == name_en and lang == "ur" and name_ur:
+        return name_ur
+    return translated
+
+
+@frappe.whitelist(allow_guest=True)
+def department_tree(lang=None):
+    """شعبہ جات: the education tree, nested, with translated labels."""
+    rows = frappe.get_all(
+        "Book Category", filters={"category_type": "Department"},
+        fields=["name", "category_name", "category_name_ur", "parent_book_category"],
+        order_by="category_name asc", limit_page_length=0,
+    )
+    kids = {}
+    for r in rows:
+        kids.setdefault(r.parent_book_category or "", []).append(r)
+
+    def build(parent):
+        return [{
+            "name": r.name, "category_name": r.category_name,
+            "label": label(r.category_name, r.category_name_ur, lang),
+            "children": build(r.name),
+        } for r in kids.get(parent, [])]
+
+    return build("")
