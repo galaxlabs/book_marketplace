@@ -172,8 +172,10 @@ def seller_order_detail(order):
     pays = frappe.get_all("PaymentTransaction", filters={"customer_order": order},
                           fields=["name", "amount", "payment_method", "reference_no", "payment_date", "status", "rejection_reason"],
                           order_by="creation desc")
+    from book_marketplace.trading.api.customer_order import delivery_view
     return {"name": doc.name, "status": doc.status, "total": doc.total, "reserved_until": doc.reserved_until,
-            "buyer": buyer, "items": items, "payments": pays, "buyer_note": doc.buyer_note}
+            "buyer": buyer, "items": items, "payments": pays, "buyer_note": doc.buyer_note,
+            "delivery": delivery_view(doc)}
 
 
 @frappe.whitelist()
@@ -201,9 +203,10 @@ def my_order_detail(order):
                           order_by="is_default desc", limit_page_length=3)
     items = [{"title": frappe.db.get_value("Book", i.book, "title"), "qty": i.qty, "unit_price": i.unit_price,
               "line_total": i.line_total} for i in doc.items]
+    from book_marketplace.trading.api.customer_order import delivery_view
     return {"name": doc.name, "status": doc.status, "total": doc.total, "reserved_until": doc.reserved_until,
             "business_name": frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name"),
-            "items": items, "payment_accounts": bank}
+            "items": items, "payment_accounts": bank, "delivery": delivery_view(doc)}
 """Customer orders v2 payment side (dev-b): manual transitions, shop confirmation (credit or pay on pickup, discount chain),
 credit into khata, and revive for the seller. Appended to trading/api/customer_payment.py."""
 import frappe

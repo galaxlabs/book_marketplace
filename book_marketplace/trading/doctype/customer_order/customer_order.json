@@ -31,7 +31,14 @@
   "amount_received",
   "rounding_discount",
   "credit_due_on",
-  "expired_on"
+  "expired_on",
+  "delivery_mode",
+  "courier_service",
+  "ship_name",
+  "ship_phone",
+  "ship_city",
+  "ship_address",
+  "ship_postal"
  ],
  "fields": [
   {
@@ -176,6 +183,50 @@
    "fieldname": "expired_on",
    "fieldtype": "Datetime",
    "label": "Expired on / میعاد ختم",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_mode",
+   "fieldtype": "Select",
+   "label": "Delivery / ترسیل",
+   "options": "Pickup at shop\nLocal delivery\nCourier",
+   "default": "Pickup at shop",
+   "read_only": 1
+  },
+  {
+   "fieldname": "courier_service",
+   "fieldtype": "Data",
+   "label": "Service / سروس",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ship_name",
+   "fieldtype": "Data",
+   "label": "Receiver name / وصول کنندہ",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ship_phone",
+   "fieldtype": "Data",
+   "label": "Phone / فون",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ship_city",
+   "fieldtype": "Data",
+   "label": "City / شہر",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ship_address",
+   "fieldtype": "Small Text",
+   "label": "Address / پتہ",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ship_postal",
+   "fieldtype": "Data",
+   "label": "Postal code / ڈاک کوڈ",
    "read_only": 1
   }
  ],

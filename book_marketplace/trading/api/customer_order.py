@@ -99,10 +99,45 @@ def basket_view(name, buyer):
     return {"basket": b.name, "grand_total": b.grand_total, "orders": orders}
 
 
-def checkout_for(buyer, client_id, items, choices=None, payment_mode="online"):
+DELIVERY_MODES = {"pickup": "Pickup at shop", "local": "Local delivery", "courier": "Courier"}
+
+
+def _delivery(delivery):
+    """Normalises the buyer's delivery choice. Pickup needs nothing; delivery needs a full address."""
+    if isinstance(delivery, str):
+        delivery = json.loads(delivery) if delivery.strip() else {}
+    delivery = delivery or {}
+    mode = DELIVERY_MODES.get(delivery.get("mode") or "pickup")
+    if not mode:
+        frappe.throw(_("Unknown delivery choice."))
+    out = {"delivery_mode": mode, "courier_service": "", "ship_name": "", "ship_phone": "",
+           "ship_city": "", "ship_address": "", "ship_postal": ""}
+    if mode == "Pickup at shop":
+        return out
+    for key, label in (("name", "name"), ("phone", "phone"), ("city", "city"), ("address", "address")):
+        val = (delivery.get(key) or "").strip()
+        if not val:
+            frappe.throw(_("Please write your {0} for delivery.").format(_(label)))
+        out["ship_" + ("name" if key == "name" else key)] = val
+    out["ship_postal"] = (delivery.get("postal") or "").strip()
+    if mode == "Courier":
+        out["courier_service"] = (delivery.get("service") or "").strip()[:140]
+    else:
+        out["courier_service"] = "Nearest shop / قریب ترین دکان"
+    return out
+
+
+def delivery_view(doc):
+    return {"mode": doc.delivery_mode or "Pickup at shop", "service": doc.courier_service or "",
+            "name": doc.ship_name or "", "phone": doc.ship_phone or "", "city": doc.ship_city or "",
+            "address": doc.ship_address or "", "postal": doc.ship_postal or ""}
+
+
+def checkout_for(buyer, client_id, items, choices=None, payment_mode="online", delivery=None):
     """Checkout core. payment_mode: 'online' (proof, 2 h) or 'manual' (pay at shop / by hand, shop confirms, 24 h)."""
     if payment_mode not in WAIT_STATUS:
         frappe.throw(_("Unknown payment choice."))
+    ship = _delivery(delivery)
     client_id = (client_id or "").strip()
     if client_id:
         existing = frappe.db.get_value("Customer Basket", {"client_id": client_id}, ["name", "buyer_profile"], as_dict=True)
@@ -160,7 +195,7 @@ def checkout_for(buyer, client_id, items, choices=None, payment_mode="online"):
         order = frappe.get_doc({
             "doctype": "Customer Order", "basket": basket.name, "buyer_profile": buyer, "seller_profile": seller,
             "status": WAIT_STATUS[payment_mode], "payment_mode": payment_mode, "payment_status": "Unpaid",
-            "reserved_until": deadline, "subtotal": total, "total": total,
+            "reserved_until": deadline, "subtotal": total, "total": total, **ship,
             "items": [{"book": ln["book"], "qty": ln["qty"], "unit_price": ln["unit_price"],
                        "line_total": ln["qty"] * ln["unit_price"]} for ln in lines],
         })
@@ -171,8 +206,8 @@ def checkout_for(buyer, client_id, items, choices=None, payment_mode="online"):
 
 
 @frappe.whitelist()
-def checkout(client_id=None, items=None, choices=None, payment_mode="online"):
-    return checkout_for(_buyer_from_session(), client_id, items, choices, payment_mode)
+def checkout(client_id=None, items=None, choices=None, payment_mode="online", delivery=None):
+    return checkout_for(_buyer_from_session(), client_id, items, choices, payment_mode, delivery)
 
 
 @frappe.whitelist()
