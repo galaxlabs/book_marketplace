@@ -128,11 +128,10 @@ def find_sellers(text=""):
     if frappe.session.user == "Guest":
         frappe.throw(_("Please log in."), frappe.AuthenticationError)
     t = (text or "").strip()
-    if len(t) < 2:
-        return []
-    rows = frappe.get_all("BusinessProfile", filters={"business_name": ["like", f"%{t}%"]},
+    filters = {"business_name": ["like", f"%{t}%"]} if t else {}
+    rows = frappe.get_all("BusinessProfile", filters=filters,
                           fields=["name", "business_name", "profile_type", "city"],
-                          order_by="business_name asc", limit_page_length=30)
+                          order_by="business_name asc", limit_page_length=1000)
     return [{"business_profile": r.name, "business_name": r.business_name, "profile_type": r.profile_type,
              "city": r.city or ""} for r in rows]
 
