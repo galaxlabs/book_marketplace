@@ -15,12 +15,15 @@ def _profile_of_user(profile_id):
 
 
 def _listed_price(seller, book):
-    """The seller's active price for the book. Only a book the seller lists can be ordered from it."""
+    """The seller's price for the book. A publisher's own published books are orderable even when they are not
+    in its catalog (price: the book's MRP); other books must be listed in the seller's active catalog."""
     row = frappe.db.get_value("BusinessCatalogItem", {"business_profile": seller, "book": book, "is_active": 1},
                               ["selling_price", "trade_price"], as_dict=True)
-    if not row:
-        frappe.throw(_("This seller does not list the book {0}.").format(book))
-    return flt(row.trade_price or row.selling_price)
+    if row:
+        return flt(row.trade_price or row.selling_price)
+    if frappe.db.get_value("Book", book, "publisher") == seller:
+        return flt(frappe.db.get_value("Book", book, "set_mrp"))
+    frappe.throw(_("This seller does not list the book {0}.").format(book))
 
 
 @frappe.whitelist()
@@ -68,19 +71,28 @@ def _view(doc):
 
 @frappe.whitelist()
 def seller_catalog(seller_profile):
-    """Books a seller lists and sells (active catalog), for the buyer's order form. Any logged-in account."""
+    """Everything the seller can supply, for the buyer's order form: all books the seller publishes (its list),
+    plus books it lists in its active catalog. Any logged-in account."""
     if frappe.session.user == "Guest":
         frappe.throw(_("Please log in."), frappe.AuthenticationError)
-    rows = frappe.get_all("BusinessCatalogItem", filters={"business_profile": seller_profile, "is_active": 1},
-                          fields=["book", "selling_price", "trade_price"], order_by="modified desc", limit_page_length=1000)
-    out = []
-    for r in rows:
-        b = frappe.db.get_value("Book", r.book, ["title", "author"], as_dict=True)
-        if not b:
+    listed = {r.book: r for r in frappe.get_all(
+        "BusinessCatalogItem", filters={"business_profile": seller_profile, "is_active": 1},
+        fields=["book", "selling_price", "trade_price"], limit_page_length=0)}
+    published = frappe.get_all("Book", filters={"publisher": seller_profile},
+                               fields=["name", "title", "author", "set_mrp"], limit_page_length=0)
+    seen = {}
+    for b in published:
+        r = listed.get(b.name)
+        price = flt(r.trade_price or r.selling_price) if r else flt(b.set_mrp)
+        seen[b.name] = {"book": b.name, "title": b.title, "author": b.author, "price": price}
+    for book, r in listed.items():
+        if book in seen:
             continue
-        out.append({"book": r.book, "title": b.title, "author": b.author,
-                    "price": flt(r.trade_price or r.selling_price)})
-    return out
+        b = frappe.db.get_value("Book", book, ["title", "author"], as_dict=True)
+        if b:
+            seen[book] = {"book": book, "title": b.title, "author": b.author,
+                          "price": flt(r.trade_price or r.selling_price)}
+    return sorted(seen.values(), key=lambda x: (x["title"] or "").lower())
 
 
 @frappe.whitelist()
