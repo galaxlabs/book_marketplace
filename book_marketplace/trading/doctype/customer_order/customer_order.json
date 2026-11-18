@@ -28,6 +28,8 @@
   "payment_mode",
   "payment_status",
   "discount_chain",
+  "amount_received",
+  "rounding_discount",
   "credit_due_on",
   "expired_on"
  ],
@@ -152,6 +154,18 @@
    "fieldname": "discount_chain",
    "fieldtype": "Data",
    "label": "Discount chain / ڈسکاؤنٹ (مثلاً 40,10,5)"
+  },
+  {
+   "fieldname": "amount_received",
+   "fieldtype": "Currency",
+   "label": "Amount received / وصول شدہ رقم",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rounding_discount",
+   "fieldtype": "Currency",
+   "label": "Rounding discount / گول رقم کی رعایت",
+   "read_only": 1
   },
   {
    "fieldname": "credit_due_on",

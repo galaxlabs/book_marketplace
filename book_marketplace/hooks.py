@@ -255,6 +255,9 @@ doc_events = {
     "Book": {
         "after_save": "book_marketplace.catalog.item_sync.sync_book_to_item",
     },
+    "BusinessCatalogItem": {
+        "after_insert": "book_marketplace.trading.api.customer_portal.on_catalog_item_added",
+    },
 }
 
 scheduler_events = {

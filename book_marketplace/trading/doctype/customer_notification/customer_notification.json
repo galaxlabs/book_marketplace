@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "autoname": "format:CN-{#######}",
+ "creation": "2026-11-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Trading",
+ "name": "Customer Notification",
+ "owner": "Administrator",
+ "modified": "2026-11-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "buyer_profile",
+  "kind",
+  "message",
+  "book",
+  "seller_profile",
+  "is_read",
+  "created_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "buyer_profile",
+   "fieldtype": "Link",
+   "label": "Buyer / خریدار",
+   "options": "BuyerProfile",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "label": "Kind / قسم",
+   "options": "Back in stock\nNew book",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message / پیغام",
+   "reqd": 1
+  },
+  {
+   "fieldname": "book",
+   "fieldtype": "Link",
+   "label": "Book / کتاب",
+   "options": "Book"
+  },
+  {
+   "fieldname": "seller_profile",
+   "fieldtype": "Link",
+   "label": "Shop / دکان",
+   "options": "BusinessProfile"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_read",
+   "fieldtype": "Check",
+   "label": "Read / پڑھا گیا"
+  },
+  {
+   "fieldname": "created_on",
+   "fieldtype": "Datetime",
+   "label": "Created on",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  }
+ ],
+ "istable": 0,
+ "track_changes": 0,
+ "title_field": "message",
+ "sort_field": "created_on",
+ "sort_order": "DESC"
+}

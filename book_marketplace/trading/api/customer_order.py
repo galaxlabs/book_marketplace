@@ -72,6 +72,8 @@ def _reserve(seller, book, qty, ledger, branch):
 
 
 def _release(seller, book, qty):
+    from book_marketplace.trading.api.customer_portal import notify_back_in_stock
+    before = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Available"}, "quantity") or 0
     res = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Reserved"},
                               ["name", "quantity", "branch_location"], as_dict=True)
     if res:
@@ -82,6 +84,7 @@ def _release(seller, book, qty):
     elif res:
         frappe.get_doc({"doctype": "StockLedger", "book": book, "business_profile": seller,
                         "branch_location": res.branch_location, "quantity": qty, "state": "Available"}).insert(ignore_permissions=True)
+    notify_back_in_stock(seller, book, before, int(before) + qty)
 
 
 def basket_view(name, buyer):

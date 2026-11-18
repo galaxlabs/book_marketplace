@@ -238,35 +238,65 @@ def _apply_discount_chain(total, chain):
 
 
 @frappe.whitelist()
-def seller_confirm(order, mode, discount_chain=None):
-    """Shop confirms a manual order: 'credit' (ادھار, one month, into khata) or 'pay_on_pickup' (وصولی پر ادائیگی).
-    Optional successive discounts, e.g. '40,10,5'. The shop decides; the customer never sees 'credit'."""
+def seller_confirm(order, mode, discount_chain=None, received_amount=None, difference=None):
+    """Shop confirms a manual order. mode: 'credit' (ادھار, one month, into khata) or 'pay_on_pickup' (وصولی پر ادائیگی).
+    discount_chain: successive discounts, e.g. '40,10,5'.
+    received_amount: the round figure the shop actually got now (e.g. 15300 for a payable 15355).
+    If it is below the payable amount, `difference` says what the gap is: 'discount' (رعایت) or 'balance' (بقایا).
+    The customer never sees the chain, the rounding or 'credit'."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
     doc = frappe.get_doc("Customer Order", order)
     _assert_profile_owner(doc.seller_profile)
     if mode not in ("credit", "pay_on_pickup"):
         frappe.throw(_("Unknown confirmation."))
+
+    total, chain = flt(doc.subtotal), ""
     if discount_chain is not None:
         total, steps = _apply_discount_chain(doc.subtotal, discount_chain)
-        frappe.db.set_value("Customer Order", order, {"discount_chain": ",".join(str(int(s)) for s in steps), "total": total})
+        chain = ",".join(str(int(s)) for s in steps)
+
+    received, rounding = None, 0
+    if received_amount not in (None, ""):
+        received = flt(received_amount)
+        if received < 0:
+            frappe.throw(_("The amount received cannot be negative."))
+        if received > total:
+            frappe.throw(_("The amount received ({0}) is more than the payable amount ({1}).").format(received, total))
+        gap = total - received
+        if gap > 0:
+            if difference == "discount":
+                rounding = gap
+                total = received
+            elif difference != "balance":
+                frappe.throw(_("The difference of {0} must be marked as discount or as balance.").format(gap))
+    owed = total - (received or 0)
+
     frappe.db.set_value("Customer Order", order, {
-        "payment_status": "Credit" if mode == "credit" else "Due",
-        "credit_due_on": add_days(nowdate(), 30) if mode == "credit" else None,
+        "discount_chain": chain,
+        "total": total,
+        "amount_received": received or 0,
+        "rounding_discount": rounding,
+        "payment_status": "Paid" if owed <= 0 else ("Credit" if mode == "credit" else "Due"),
+        "credit_due_on": add_days(nowdate(), 30) if (mode == "credit" and owed > 0) else None,
     })
     res = _move(order, "Accepted", "seller")
-    if mode == "credit":
-        buyer_name = frappe.db.get_value("BuyerProfile", doc.buyer_profile, "full_name") or doc.buyer_profile
+
+    buyer_name = frappe.db.get_value("BuyerProfile", doc.buyer_profile, "full_name") or doc.buyer_profile
+
+    def khata(entry_type, amount, notes):
         frappe.get_doc({
-            "doctype": "Khata Entry",
-            "business_profile": doc.seller_profile,
-            "party_name": buyer_name,
-            "entry_date": nowdate(),
-            "entry_type": "Credit Given",
-            "amount": frappe.db.get_value("Customer Order", order, "total"),
-            "reference": order,
-            "notes": "Customer order on credit, due in one month",
+            "doctype": "Khata Entry", "business_profile": doc.seller_profile, "party_name": buyer_name,
+            "entry_date": nowdate(), "entry_type": entry_type, "amount": amount, "reference": order, "notes": notes,
         }).insert(ignore_permissions=True)
+
+    if mode == "credit":
+        if total > 0:
+            khata("Credit Given", total, "Customer order on credit, due in one month")
+        if received:
+            khata("Payment Received", received, "Paid at confirmation of a customer order")
+    elif owed > 0:
+        khata("Credit Given", owed, "Balance (بقایا) from a customer order paid on pickup")
     return res
 
 

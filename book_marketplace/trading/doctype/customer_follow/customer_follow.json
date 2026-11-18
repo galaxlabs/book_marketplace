@@ -1,0 +1,79 @@
+{
+ "actions": [],
+ "autoname": "format:CF-{#######}",
+ "creation": "2026-11-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Trading",
+ "name": "Customer Follow",
+ "owner": "Administrator",
+ "modified": "2026-11-18 00:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "buyer_profile",
+  "follow_type",
+  "target",
+  "target_label",
+  "notify",
+  "added_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "buyer_profile",
+   "fieldtype": "Link",
+   "label": "Buyer / خریدار",
+   "options": "BuyerProfile",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "follow_type",
+   "fieldtype": "Select",
+   "label": "Type / قسم",
+   "options": "Book\nAuthor\nCategory\nPublisher\nShop",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "target",
+   "fieldtype": "Data",
+   "label": "Target / ہدف",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "target_label",
+   "fieldtype": "Data",
+   "label": "Name / نام"
+  },
+  {
+   "default": "1",
+   "fieldname": "notify",
+   "fieldtype": "Check",
+   "label": "Notify me / اطلاع دیں"
+  },
+  {
+   "fieldname": "added_on",
+   "fieldtype": "Datetime",
+   "label": "Added on",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  }
+ ],
+ "istable": 0,
+ "track_changes": 0,
+ "title_field": "target_label",
+ "sort_field": "added_on",
+ "sort_order": "DESC"
+}

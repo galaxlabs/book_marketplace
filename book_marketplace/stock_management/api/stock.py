@@ -154,6 +154,7 @@ def set_own_book_quantity(profile_id, book_id, quantity):
         {"business_profile": profile_id, "book": book_id, "branch_location": branch, "state": "Available"},
         "name",
     )
+    before = frappe.db.get_value("StockLedger", existing, "quantity") if existing else 0
     if existing:
         frappe.db.set_value("StockLedger", existing, "quantity", qty)
     else:
@@ -166,6 +167,8 @@ def set_own_book_quantity(profile_id, book_id, quantity):
             "state": "Available",
         })
         doc.insert(ignore_permissions=True)
+    from book_marketplace.trading.api.customer_portal import notify_back_in_stock
+    notify_back_in_stock(profile_id, book_id, before, qty)
     return {"book": book_id, "quantity": qty}
 
 
@@ -190,6 +193,7 @@ def set_catalog_quantity(profile_id, book_id, quantity):
         {"business_profile": profile_id, "book": book_id, "branch_location": branch, "state": "Available"},
         "name",
     )
+    before = frappe.db.get_value("StockLedger", existing, "quantity") if existing else 0
     if existing:
         frappe.db.set_value("StockLedger", existing, "quantity", qty)
     else:
@@ -197,4 +201,6 @@ def set_catalog_quantity(profile_id, book_id, quantity):
             "doctype": "StockLedger", "book": book_id, "business_profile": profile_id,
             "branch_location": branch, "quantity": qty, "state": "Available",
         }).insert(ignore_permissions=True)
+    from book_marketplace.trading.api.customer_portal import notify_back_in_stock
+    notify_back_in_stock(profile_id, book_id, before, qty)
     return {"book": book_id, "quantity": qty}
