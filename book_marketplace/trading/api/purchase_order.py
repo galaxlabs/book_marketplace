@@ -122,6 +122,22 @@ def _seller_books(seller_profile):
 
 
 @frappe.whitelist()
+def find_sellers(text=""):
+    """Business profiles of any type (publisher, bookseller, distributor, agent) whose name contains the text.
+    The order form uses it to find the publisher or shop to order from. Any logged-in account."""
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Please log in."), frappe.AuthenticationError)
+    t = (text or "").strip()
+    if len(t) < 2:
+        return []
+    rows = frappe.get_all("BusinessProfile", filters={"business_name": ["like", f"%{t}%"]},
+                          fields=["name", "business_name", "profile_type", "city"],
+                          order_by="business_name asc", limit_page_length=30)
+    return [{"business_profile": r.name, "business_name": r.business_name, "profile_type": r.profile_type,
+             "city": r.city or ""} for r in rows]
+
+
+@frappe.whitelist()
 def set_dispatch(name, profile_id, items):
     """The seller prepares the order: writes the quantity it sends for each book, then packs and dispatches.
     items: JSON list of {book, sent_qty}. Only the seller, only while the order is Accepted."""
