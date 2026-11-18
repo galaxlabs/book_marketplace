@@ -29,6 +29,7 @@
   "imported",
   "set_mrp",
   "trade_price",
+  "images",
   "own_discount",
   "discount_percent",
   "profile_section",
@@ -199,6 +200,12 @@
    "fieldname": "cover_image",
    "fieldtype": "Attach Image",
    "label": "Cover Image"
+  },
+  {
+   "fieldname": "images",
+   "fieldtype": "Table",
+   "label": "More Images / مزید تصاویر",
+   "options": "Book Image"
   },
   {
    "fieldname": "profile_section",

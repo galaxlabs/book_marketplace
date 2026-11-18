@@ -56,6 +56,7 @@ def get_book(book_id):
         "volume_count": len(volumes) if is_multi else 0,
         "stock_summary": stock_summary,
         "price": price_view(book.set_mrp, publisher_discount(book=book.as_dict())),
+        "images": [{"image": i.image, "caption": i.caption or ""} for i in book.get("images", []) if i.image],
     }
 
 
@@ -414,6 +415,29 @@ def set_book_availability(profile_id, book_id, availability):
     book.availability = availability
     book.save(ignore_permissions=True)
     return {"name": book.name, "availability": availability}
+
+
+@frappe.whitelist()
+def set_book_images(profile_id, book_id, images):
+    """Publisher sets the extra images of its own book. images: JSON list of {image, caption}.
+    The first image in the list becomes the cover only if the book has none."""
+    import json as _json
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+
+    book = frappe.get_doc("Book", book_id)
+    if book.publisher != profile_id:
+        frappe.throw(_("Only the publisher of this book can change its images."), frappe.PermissionError)
+    _assert_profile_owner(profile_id)
+    items = _json.loads(images) if isinstance(images, str) else (images or [])
+    if len(items) > 12:
+        frappe.throw(_("Up to 12 images per book."))
+    book.set("images", [])
+    for it in items:
+        url = (it.get("image") or "").strip()
+        if url:
+            book.append("images", {"image": url, "caption": (it.get("caption") or "").strip()[:140]})
+    book.save(ignore_permissions=True)
+    return {"name": book.name, "count": len(book.images)}
 
 
 @frappe.whitelist()
