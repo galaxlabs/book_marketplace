@@ -443,14 +443,12 @@ def set_book_images(profile_id, book_id, images):
 @frappe.whitelist()
 def add_shop_book(profile_id, title, author, book_type="Single Volume", language="Urdu", set_mrp=None,
                   selling_price=None, binding=None, isbn=None, quantity=0):
-    """A bookseller adds a book it holds (old or out of print too). It is listed in its own shop; no publisher needed.
-    Publishers publish their own list through create_own_book, so this is only for booksellers."""
+    """Any business profile adds a book it holds (old, out of print, or one it printed itself). It is listed in its own shop.
+    The publisher list goes through create_own_book with the matching rule."""
     from frappe.utils import nowdate
     from book_marketplace.auth.api.auth import _assert_profile_owner
     from book_marketplace.stock_management.api import stock as stock_api
 
-    if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Bookseller":
-        frappe.throw(_("Only a bookseller adds its own books. Publishers publish their list."), frappe.PermissionError)
     _assert_profile_owner(profile_id)
     title = (title or "").strip()
     author = (author or "").strip()
