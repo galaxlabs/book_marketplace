@@ -425,8 +425,8 @@ def set_book_images(profile_id, book_id, images):
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
     book = frappe.get_doc("Book", book_id)
-    if book.publisher != profile_id:
-        frappe.throw(_("Only the publisher of this book can change its images."), frappe.PermissionError)
+    if book.publisher != profile_id and book.get("owner_profile") != profile_id:
+        frappe.throw(_("Only the publisher or the bookseller who added this book can change its images."), frappe.PermissionError)
     _assert_profile_owner(profile_id)
     items = _json.loads(images) if isinstance(images, str) else (images or [])
     if len(items) > 12:
@@ -469,6 +469,36 @@ def add_shop_book(profile_id, title, author, book_type="Single Volume", language
     if int(quantity or 0) > 0:
         stock_api.set_own_book_quantity(profile_id, book.name, int(quantity))
     return {"name": book.name, "title": title, "status": "created"}
+
+
+@frappe.whitelist()
+def set_book_subjects(profile_id, book_id, subjects=None, page_count=None, cover_image=None):
+    """The publisher or the bookseller who added a book fills its details later: subjects (many, JSON list of
+    SubjectMaster names), page count and cover picture. Nothing here is required when the book is added."""
+    import json as _json
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+
+    book = frappe.get_doc("Book", book_id)
+    if book.publisher != profile_id and book.get("owner_profile") != profile_id:
+        frappe.throw(_("Only the publisher or the bookseller who added this book can change its details."),
+                     frappe.PermissionError)
+    _assert_profile_owner(profile_id)
+    names = _json.loads(subjects) if isinstance(subjects, str) else (subjects or [])
+    names = [n for n in dict.fromkeys(names) if n]
+    for n in names:
+        if not frappe.db.exists("SubjectMaster", n):
+            frappe.throw(_("Unknown subject: {0}").format(n))
+    book.set("subjects", [])
+    for n in names:
+        book.append("subjects", {"subject": n})
+    if names:
+        book.primary_category = names[0]
+    if page_count not in (None, ""):
+        book.page_count = int(page_count)
+    if cover_image:
+        book.cover_image = cover_image
+    book.save(ignore_permissions=True)
+    return {"name": book.name, "subjects": names, "page_count": book.page_count, "cover_image": book.cover_image or ""}
 
 
 @frappe.whitelist()
