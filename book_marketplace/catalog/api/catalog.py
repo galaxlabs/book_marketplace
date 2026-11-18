@@ -457,10 +457,12 @@ def add_shop_book(profile_id, title, author, book_type="Single Volume", language
     existing = frappe.db.get_value("Book", {"title": title, "author": author}, "name")
     if existing:
         frappe.throw(_("This book is already in the list: {0}. Add it from the list to your shop.").format(existing))
+    is_publisher = frappe.db.get_value("BusinessProfile", profile_id, "profile_type") == "Publisher"
     book = frappe.get_doc({
         "doctype": "Book", "title": title, "author": author, "book_type": book_type or "Single Volume",
         "language": language or "Urdu", "set_mrp": set_mrp, "binding": binding, "isbn": isbn,
-        "owner_profile": profile_id, "global_visibility": 1,
+        "publisher": profile_id if is_publisher else None,
+        "owner_profile": None if is_publisher else profile_id, "global_visibility": 1,
     }).insert(ignore_permissions=True)
     frappe.get_doc({
         "doctype": "BusinessCatalogItem", "business_profile": profile_id, "book": book.name,
