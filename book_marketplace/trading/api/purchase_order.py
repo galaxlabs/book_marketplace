@@ -69,12 +69,29 @@ def _view(doc):
     }
 
 
+def _on_hand(profile_id, book):
+    """The buyer's current stock of a book (all branches, Available)."""
+    if not profile_id:
+        return 0
+    return sum(flt(q) for q in frappe.get_all("StockLedger", filters={"business_profile": profile_id, "book": book,
+                                                                       "state": "Available"}, pluck="quantity"))
+
+
 @frappe.whitelist()
-def seller_catalog(seller_profile):
+def seller_catalog(seller_profile, buyer_profile=None):
     """Everything the seller can supply, for the buyer's order form: all books the seller publishes (its list),
-    plus books it lists in its active catalog. Any logged-in account."""
+    plus books it lists in its active catalog. Each row carries the buyer's on-hand quantity; books the buyer
+    already holds come first, so the buyer can order more in the quantity box. Any logged-in account."""
     if frappe.session.user == "Guest":
         frappe.throw(_("Please log in."), frappe.AuthenticationError)
+    rows = _seller_books(seller_profile)
+    for r in rows:
+        r["on_hand"] = _on_hand(buyer_profile, r["book"])
+    rows.sort(key=lambda x: (x["on_hand"] <= 0, (x["title"] or "").lower()))
+    return rows
+
+
+def _seller_books(seller_profile):
     listed = {r.book: r for r in frappe.get_all(
         "BusinessCatalogItem", filters={"business_profile": seller_profile, "is_active": 1},
         fields=["book", "selling_price", "trade_price"], limit_page_length=0)}
