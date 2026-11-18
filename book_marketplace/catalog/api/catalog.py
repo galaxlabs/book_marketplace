@@ -406,8 +406,8 @@ def set_book_availability(profile_id, book_id, availability):
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
     book = frappe.get_doc("Book", book_id)
-    if book.publisher != profile_id:
-        frappe.throw(_("Only the publisher of this book can change its availability."), frappe.PermissionError)
+    if book.publisher != profile_id and book.get("owner_profile") != profile_id:
+        frappe.throw(_("Only the publisher or the bookseller who added this book can change its availability."), frappe.PermissionError)
     _assert_profile_owner(profile_id)
     allowed = ["Available", "Unavailable", "Out of print", "Forthcoming", "General readers only"]
     if availability not in allowed:
@@ -438,6 +438,39 @@ def set_book_images(profile_id, book_id, images):
             book.append("images", {"image": url, "caption": (it.get("caption") or "").strip()[:140]})
     book.save(ignore_permissions=True)
     return {"name": book.name, "count": len(book.images)}
+
+
+@frappe.whitelist()
+def add_shop_book(profile_id, title, author, book_type="Single Volume", language="Urdu", set_mrp=None,
+                  selling_price=None, binding=None, isbn=None, quantity=0):
+    """A bookseller adds a book it holds (old or out of print too). It is listed in its own shop; no publisher needed.
+    Publishers publish their own list through create_own_book, so this is only for booksellers."""
+    from frappe.utils import nowdate
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    from book_marketplace.stock_management.api import stock as stock_api
+
+    if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Bookseller":
+        frappe.throw(_("Only a bookseller adds its own books. Publishers publish their list."), frappe.PermissionError)
+    _assert_profile_owner(profile_id)
+    title = (title or "").strip()
+    author = (author or "").strip()
+    if not title or not author:
+        frappe.throw(_("Title and author are required."))
+    existing = frappe.db.get_value("Book", {"title": title, "author": author}, "name")
+    if existing:
+        frappe.throw(_("This book is already in the list: {0}. Add it from the list to your shop.").format(existing))
+    book = frappe.get_doc({
+        "doctype": "Book", "title": title, "author": author, "book_type": book_type or "Single Volume",
+        "language": language or "Urdu", "set_mrp": set_mrp, "binding": binding, "isbn": isbn,
+        "owner_profile": profile_id, "global_visibility": 1,
+    }).insert(ignore_permissions=True)
+    frappe.get_doc({
+        "doctype": "BusinessCatalogItem", "business_profile": profile_id, "book": book.name,
+        "selling_price": selling_price or set_mrp, "is_active": 1, "added_on": nowdate(),
+    }).insert(ignore_permissions=True)
+    if int(quantity or 0) > 0:
+        stock_api.set_own_book_quantity(profile_id, book.name, int(quantity))
+    return {"name": book.name, "title": title, "status": "created"}
 
 
 @frappe.whitelist()

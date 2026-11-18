@@ -11,6 +11,7 @@
   "author",
   "author_profile",
   "publisher",
+  "owner_profile",
   "book_type",
   "isbn",
   "barcode",
@@ -82,8 +83,14 @@
    "fieldname": "publisher",
    "fieldtype": "Link",
    "label": "Publisher",
+   "options": "BusinessProfile"
+  },
+  {
+   "fieldname": "owner_profile",
+   "fieldtype": "Link",
+   "label": "Added by bookseller",
    "options": "BusinessProfile",
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "book_type",

@@ -144,9 +144,9 @@ def set_own_book_quantity(profile_id, book_id, quantity):
         frappe.throw(_("Quantity must be a whole number."))
     if qty < 0:
         frappe.throw(_("Quantity cannot be negative."))
-    publisher = frappe.db.get_value("Book", book_id, "publisher")
-    if publisher != profile_id:
-        frappe.throw(_("This book is not published by this business."), frappe.PermissionError)
+    publisher, owner = frappe.db.get_value("Book", book_id, ["publisher", "owner_profile"])
+    if profile_id not in (publisher, owner):
+        frappe.throw(_("This book is not published or added by this business."), frappe.PermissionError)
 
     branch = _default_branch(profile_id)
     existing = frappe.db.get_value(
