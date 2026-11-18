@@ -12,7 +12,8 @@
   "notes",
   "items",
   "total_qty",
-  "total"
+  "total",
+  "dispatched_on"
  ],
  "fields": [
   {
@@ -35,7 +36,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Sent\nAccepted\nRejected\nCancelled",
+   "options": "Sent\nAccepted\nRejected\nCancelled\nDispatched",
    "default": "Sent",
    "in_list_view": 1
   },
@@ -61,6 +62,12 @@
    "fieldname": "total",
    "fieldtype": "Currency",
    "label": "Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "dispatched_on",
+   "fieldtype": "Datetime",
+   "label": "Dispatched on",
    "read_only": 1
   }
  ],

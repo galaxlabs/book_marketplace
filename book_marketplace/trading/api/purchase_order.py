@@ -1,4 +1,5 @@
-"""Phase 1 purchase orders: a shop orders books from a seller (publisher or shop) that lists them.
+"""Purchase orders. Phase 1: a shop orders books from a seller (publisher or shop) that lists them.
+Phase 2: the seller writes the sent quantity per book and dispatches; the order then carries a QR.
 The seller accepts or rejects. Quantities of the agreed order come in phase 2 (dispatch) and phase 3 (receipt)."""
 import json
 
@@ -56,9 +57,58 @@ def _view(doc):
         "seller_name": frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name"),
         "notes": doc.notes or "", "total_qty": doc.total_qty, "total": flt(doc.total),
         "items": [{"book": i.book, "title": frappe.db.get_value("Book", i.book, "title"), "qty": i.qty,
+                   "sent_qty": i.sent_qty if i.sent_qty is not None else None,
                    "unit_price": flt(i.unit_price), "line_total": flt(i.line_total)} for i in doc.items],
         "creation": str(doc.creation),
+        "dispatched_on": str(doc.dispatched_on or ""),
+        # the QR on the dispatched order holds only its number; the buyer scans it to open the invoice
+        "qr": doc.name if doc.status == "Dispatched" else "",
     }
+
+
+@frappe.whitelist()
+def seller_catalog(seller_profile):
+    """Books a seller lists and sells (active catalog), for the buyer's order form. Any logged-in account."""
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Please log in."), frappe.AuthenticationError)
+    rows = frappe.get_all("BusinessCatalogItem", filters={"business_profile": seller_profile, "is_active": 1},
+                          fields=["book", "selling_price", "trade_price"], order_by="modified desc", limit_page_length=1000)
+    out = []
+    for r in rows:
+        b = frappe.db.get_value("Book", r.book, ["title", "author"], as_dict=True)
+        if not b:
+            continue
+        out.append({"book": r.book, "title": b.title, "author": b.author,
+                    "price": flt(r.trade_price or r.selling_price)})
+    return out
+
+
+@frappe.whitelist()
+def set_dispatch(name, profile_id, items):
+    """The seller prepares the order: writes the quantity it sends for each book, then packs and dispatches.
+    items: JSON list of {book, sent_qty}. Only the seller, only while the order is Accepted."""
+    from frappe.utils import now_datetime
+    _profile_of_user(profile_id)
+    doc = frappe.get_doc("Purchase Order Request", name)
+    if profile_id != doc.seller_profile:
+        frappe.throw(_("Only the seller dispatches this order."), frappe.PermissionError)
+    if doc.status != "Accepted":
+        frappe.throw(_("Only an accepted order can be dispatched (now: {0}).").format(doc.status))
+    sent = {r["book"]: int(r.get("sent_qty") or 0) for r in (json.loads(items) if isinstance(items, str) else (items or []))}
+    for row in doc.items:
+        if row.book not in sent:
+            frappe.throw(_("Enter the sent quantity for {0}.").format(row.book))
+        q = sent[row.book]
+        if q < 0 or q > int(row.qty):
+            frappe.throw(_("Sent quantity for {0} must be between 0 and {1}.").format(row.book, row.qty))
+        row.sent_qty = q
+        row.line_total = flt(row.unit_price) * q
+    doc.total_qty = sum(int(i.sent_qty or 0) for i in doc.items)
+    doc.total = sum(flt(i.line_total) for i in doc.items)
+    doc.status = "Dispatched"
+    doc.dispatched_on = now_datetime()
+    doc.save(ignore_permissions=True)
+    return _view(doc)
 
 
 @frappe.whitelist()
