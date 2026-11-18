@@ -501,6 +501,54 @@ def set_book_subjects(profile_id, book_id, subjects=None, page_count=None, cover
     return {"name": book.name, "subjects": names, "page_count": book.page_count, "cover_image": book.cover_image or ""}
 
 
+def _owns_book(book, profile_id):
+    return profile_id in (book.get("publisher"), book.get("owner_profile"))
+
+
+@frappe.whitelist()
+def my_books(profile_id, text=""):
+    """Books this business owns: the ones it published and the ones it added itself. Each row says which."""
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    _assert_profile_owner(profile_id)
+    filters = [["publisher", "=", profile_id]]
+    rows = frappe.get_all("Book", or_filters=[["publisher", "=", profile_id], ["owner_profile", "=", profile_id]],
+                          fields=["name", "title", "author", "publisher", "owner_profile", "cover_image", "page_count"],
+                          order_by="title asc", limit_page_length=1000)
+    t = (text or "").strip().lower()
+    out = []
+    for r in rows:
+        if t and t not in (r.title or "").lower() and t not in (r.author or "").lower():
+            continue
+        out.append({"name": r.name, "title": r.title, "author": r.author or "",
+                    "role": "publisher" if r.publisher == profile_id else "owner",
+                    "cover_image": r.cover_image or "", "page_count": r.page_count or 0})
+    return out
+
+
+@frappe.whitelist()
+def update_book_details(profile_id, book_id, data):
+    """The publisher or the bookseller who added the book edits its details. Other businesses cannot."""
+    import json as _json
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    _assert_profile_owner(profile_id)
+    book = frappe.get_doc("Book", book_id)
+    if not _owns_book(book, profile_id):
+        frappe.throw(_("Only the publisher or the bookseller who added this book can edit it."), frappe.PermissionError)
+    d = _json.loads(data) if isinstance(data, str) else (data or {})
+    for key in ("title", "author"):
+        if key in d and not str(d[key] or "").strip():
+            frappe.throw(_("{0} is required.").format(key.capitalize()))
+    for key in ("title", "author", "language", "book_type", "binding", "isbn", "subtitle", "introduction"):
+        if key in d:
+            book.set(key, (d[key] or "").strip() if isinstance(d[key], str) else d[key])
+    if "page_count" in d and d["page_count"] not in (None, ""):
+        book.page_count = int(d["page_count"])
+    if "cover_image" in d:
+        book.cover_image = d["cover_image"] or None
+    book.save(ignore_permissions=True)
+    return {"name": book.name, "title": book.title, "author": book.author}
+
+
 @frappe.whitelist()
 def create_own_book(profile_id, title, author, book_type="Single Volume", language="Urdu", isbn=None,
                     set_mrp=None, trade_price=None, binding=None, page_count=None, weight=None, colours=None,
