@@ -14,16 +14,27 @@ def _profile_of_user(profile_id):
     _assert_profile_owner(profile_id)
 
 
-def _listed_price(seller, book):
-    """The seller's price for the book. A publisher's own published books are orderable even when they are not
-    in its catalog (price: the book's MRP); other books must be listed in the seller's active catalog."""
+def _price_info(seller, book):
+    """(mrp, discount_percent, net) for a book from a seller.
+    MRP is the printed price (Book.set_mrp). A listed book uses the seller's trade or selling price.
+    A publisher's own book not in its catalog uses the publisher's general discount rate on the MRP.
+    Any other book must be listed by the seller."""
+    mrp = flt(frappe.db.get_value("Book", book, "set_mrp"))
     row = frappe.db.get_value("BusinessCatalogItem", {"business_profile": seller, "book": book, "is_active": 1},
-                              ["selling_price", "trade_price"], as_dict=True)
+                              ["selling_price", "trade_price", "discount_percent"], as_dict=True)
     if row:
-        return flt(row.trade_price or row.selling_price)
+        # a listed book with no price of its own is sold at its MRP
+        net = flt(row.trade_price or row.selling_price) or mrp
+        disc = flt(row.discount_percent) or (round((1 - net / mrp) * 100, 2) if mrp and net < mrp else 0)
+        return mrp, disc, net
     if frappe.db.get_value("Book", book, "publisher") == seller:
-        return flt(frappe.db.get_value("Book", book, "set_mrp"))
+        disc = flt(frappe.db.get_value("BusinessProfile", seller, "default_discount_percent"))
+        return mrp, disc, round(mrp * (1 - disc / 100), 2)
     frappe.throw(_("This seller does not list the book {0}.").format(book))
+
+
+def _listed_price(seller, book):
+    return _price_info(seller, book)[2]
 
 
 @frappe.whitelist()
@@ -92,24 +103,22 @@ def seller_catalog(seller_profile, buyer_profile=None):
 
 
 def _seller_books(seller_profile):
-    listed = {r.book: r for r in frappe.get_all(
+    """Each row: title, author, MRP, the discount rate that applies, the net price, and the estimate basis."""
+    listed = {r.book for r in frappe.get_all(
         "BusinessCatalogItem", filters={"business_profile": seller_profile, "is_active": 1},
-        fields=["book", "selling_price", "trade_price"], limit_page_length=0)}
-    published = frappe.get_all("Book", filters={"publisher": seller_profile},
-                               fields=["name", "title", "author", "set_mrp"], limit_page_length=0)
-    seen = {}
-    for b in published:
-        r = listed.get(b.name)
-        price = flt(r.trade_price or r.selling_price) if r else flt(b.set_mrp)
-        seen[b.name] = {"book": b.name, "title": b.title, "author": b.author, "price": price}
-    for book, r in listed.items():
-        if book in seen:
+        fields=["book"], limit_page_length=0)}
+    published = {b.name: b for b in frappe.get_all("Book", filters={"publisher": seller_profile},
+                                                   fields=["name", "title", "author"], limit_page_length=0)}
+    names = set(published) | listed
+    out = []
+    for name in names:
+        b = published.get(name) or frappe.db.get_value("Book", name, ["name", "title", "author"], as_dict=True)
+        if not b:
             continue
-        b = frappe.db.get_value("Book", book, ["title", "author"], as_dict=True)
-        if b:
-            seen[book] = {"book": book, "title": b.title, "author": b.author,
-                          "price": flt(r.trade_price or r.selling_price)}
-    return sorted(seen.values(), key=lambda x: (x["title"] or "").lower())
+        mrp, disc, net = _price_info(seller_profile, name)
+        out.append({"book": name, "title": b.title, "author": b.author, "mrp": mrp,
+                    "discount_percent": disc, "price": net, "discount_amount": round(mrp - net, 2)})
+    return sorted(out, key=lambda x: (x["title"] or "").lower())
 
 
 @frappe.whitelist()
