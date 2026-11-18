@@ -213,3 +213,26 @@ def my_contacts():
                           fields=["name", "contact_user", "label"], order_by="modified desc")
     return [{"name": r.name, "contact_user": r.contact_user, "label": r.label or "",
              "contact_name": _display(r.contact_user)} for r in rows]
+
+
+def _card(user):
+    """Name and phone of an account: the shop's details if it has a shop, else the buyer's."""
+    bp = frappe.db.get_value("BusinessProfile", {"user": user}, ["business_name", "phone"], as_dict=True)
+    bu = frappe.db.get_value("BuyerProfile", {"user": user}, ["full_name", "phone"], as_dict=True)
+    name = (bp.business_name if bp else None) or (bu.full_name if bu else None) \
+        or frappe.db.get_value("User", user, "full_name") or user
+    phone = (bp.phone if bp else None) or (bu.phone if bu else None) or ""
+    return {"name": name, "phone": phone}
+
+
+@frappe.whitelist()
+def contact_card(conversation):
+    """The other side's name and WhatsApp number. Shown only after the other side has sent a message here."""
+    me = _me()
+    conv = _member(conversation, me)
+    other = conv.user_b if conv.user_a == me else conv.user_a
+    sent = frappe.db.exists("Chat Message", {"conversation": conversation, "sender": other})
+    if not sent:
+        return {"revealed": False}
+    card = _card(other)
+    return {"revealed": True, "name": card["name"], "phone": card["phone"]}
