@@ -150,7 +150,7 @@ def send_message(conversation, body):
 def _shop_users_for_book(book_id):
     """Shops with this book in their active catalog: [{user, business_name, city}]."""
     rows = frappe.db.sql("""
-        select distinct bp.user as user, bp.business_name as business_name, bp.city as city
+        select distinct bp.user as user, bp.name as business_profile, bp.business_name as business_name, bp.city as city
         from `tabBusinessCatalogItem` bci
         join `tabBusinessProfile` bp on bp.name = bci.business_profile
         where bci.book = %s and bci.is_active = 1 and ifnull(bp.user, '') != ''
@@ -166,9 +166,14 @@ def book_shops(book_id):
 
 
 @frappe.whitelist()
-def ask_about_book(book_id, shop_user, body=""):
-    """A question about a book goes only to a shop that holds it in its active catalog."""
+def ask_about_book(book_id, shop_user=None, body="", shop_profile=None):
+    """A question about a book goes only to a shop that holds it in its active catalog.
+    The shop is given as its account (shop_user) or as its business profile (shop_profile)."""
     me = _me()
+    if shop_profile and not shop_user:
+        shop_user = frappe.db.get_value("BusinessProfile", shop_profile, "user")
+    if not shop_user:
+        frappe.throw(_("Choose a shop."))
     if shop_user == me:
         frappe.throw(_("Choose a shop other than your own."))
     holders = {r.user for r in _shop_users_for_book(book_id)}
