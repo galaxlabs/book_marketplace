@@ -1,0 +1,52 @@
+{
+ "actions": [],
+ "creation": "2026-11-18 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "issingle": 1,
+ "module": "Trading",
+ "name": "Kitab AI Settings",
+ "owner": "Administrator",
+ "field_order": [
+  "enabled",
+  "model",
+  "api_key",
+  "instructions"
+ ],
+ "fields": [
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Assistant is on"
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "default": "claude-sonnet-5-5"
+  },
+  {
+   "fieldname": "api_key",
+   "fieldtype": "Password",
+   "label": "API key"
+  },
+  {
+   "fieldname": "instructions",
+   "fieldtype": "Small Text",
+   "label": "Instructions for the assistant"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 0,
+   "delete": 0
+  }
+ ],
+ "track_changes": 1,
+ "states": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

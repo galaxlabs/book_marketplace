@@ -8,7 +8,7 @@ from frappe.utils import flt, now_datetime
 
 from book_marketplace.trading.api.customer_order import _buyer_from_session
 
-FOLLOW_TYPES = ("Book", "Author", "Category", "Publisher", "Shop")
+FOLLOW_TYPES = ("Book", "Author", "Category", "Publisher", "Shop", "User")
 
 
 def _label(ftype, target):
@@ -19,6 +19,8 @@ def _label(ftype, target):
         return (row.category_name_ur or row.category_name) if row else None
     if ftype in ("Publisher", "Shop"):
         return frappe.db.get_value("BusinessProfile", target, "business_name")
+    if ftype == "User":
+        return frappe.db.get_value("BusinessProfile", {"user": target}, "business_name") or target
     return target  # Author: the author's name as written on the book
 
 
@@ -29,6 +31,8 @@ def _target_exists(ftype, target):
         return frappe.db.exists("Book Category", target)
     if ftype in ("Publisher", "Shop"):
         return frappe.db.exists("BusinessProfile", target)
+    if ftype == "User":
+        return frappe.db.exists("User", target) and target != frappe.session.user
     return bool(target)
 
 

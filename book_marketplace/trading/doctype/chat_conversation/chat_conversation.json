@@ -9,7 +9,9 @@
   "user_a",
   "user_b",
   "last_message_at",
-  "last_preview"
+  "last_preview",
+  "read_a",
+  "read_b"
  ],
  "fields": [
   {
@@ -37,6 +39,18 @@
    "fieldname": "last_preview",
    "fieldtype": "Data",
    "label": "Last message"
+  },
+  {
+   "fieldname": "read_a",
+   "fieldtype": "Datetime",
+   "label": "Read up to (A)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "read_b",
+   "fieldtype": "Datetime",
+   "label": "Read up to (B)",
+   "read_only": 1
   }
  ],
  "module": "Trading",
@@ -46,5 +60,5 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 0
+ "track_changes": 1
 }

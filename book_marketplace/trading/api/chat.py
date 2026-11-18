@@ -51,13 +51,21 @@ def _body(text):
     return text
 
 
+def _read_field(conversation, user):
+    """Each side has its own 'read up to' time: read_a for user_a, read_b for user_b."""
+    conv = frappe.db.get_value("Chat Conversation", conversation, ["user_a", "user_b"], as_dict=True)
+    return "read_a" if conv.user_a == user else "read_b"
+
+
 def _post(conversation, sender, body, book=None):
     msg = frappe.get_doc({
         "doctype": "Chat Message", "conversation": conversation, "sender": sender,
         "body": body, "book": book or None,
     }).insert(ignore_permissions=True)
+    now = now_datetime()
     frappe.db.set_value("Chat Conversation", conversation,
-                        {"last_message_at": now_datetime(), "last_preview": body[:140]}, update_modified=True)
+                        {"last_message_at": now, "last_preview": body[:140], _read_field(conversation, sender): now},
+                        update_modified=True)
     return {"name": msg.name, "sender": sender, "body": body, "book": book or None,
             "creation": str(msg.creation)}
 
@@ -79,16 +87,39 @@ def my_conversations(limit=50):
     rows = frappe.get_all(
         "Chat Conversation",
         or_filters=[["user_a", "=", me], ["user_b", "=", me]],
-        fields=["name", "user_a", "user_b", "last_message_at", "last_preview"],
+        fields=["name", "user_a", "user_b", "last_message_at", "last_preview", "read_a", "read_b"],
         order_by="modified desc",
         limit_page_length=int(limit),
     )
     out = []
     for r in rows:
         other = r.user_b if r.user_a == me else r.user_a
+        my_read = r.read_a if r.user_a == me else r.read_b
+        unread = bool(r.last_message_at) and (not my_read or get_datetime(r.last_message_at) > get_datetime(my_read))
         out.append({"name": r.name, "other": other, "other_name": _display(other),
-                    "last_message_at": str(r.last_message_at or ""), "last_preview": r.last_preview or ""})
+                    "last_message_at": str(r.last_message_at or ""), "last_preview": r.last_preview or "",
+                    "unread": bool(unread)})
     return out
+
+
+@frappe.whitelist()
+def mark_read(conversation):
+    """The viewer opened the conversation: everything up to now counts as read (seen)."""
+    me = _me()
+    _member(conversation, me)
+    frappe.db.set_value("Chat Conversation", conversation, _read_field(conversation, me), now_datetime(),
+                        update_modified=False)
+    return {"ok": True}
+
+
+@frappe.whitelist()
+def receipts(conversation):
+    """When the other side last opened this conversation (drives the 'read' tick)."""
+    me = _me()
+    conv = _member(conversation, me)
+    other_field = "read_b" if conv.user_a == me else "read_a"
+    other_read = frappe.db.get_value("Chat Conversation", conversation, other_field)
+    return {"other_read_at": str(other_read or "")}
 
 
 @frappe.whitelist()
