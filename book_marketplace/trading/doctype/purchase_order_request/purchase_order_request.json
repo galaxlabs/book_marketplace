@@ -1,0 +1,75 @@
+{
+ "actions": [],
+ "autoname": "format:PO-{#####}",
+ "creation": "2026-11-19 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "buyer_profile",
+  "seller_profile",
+  "status",
+  "notes",
+  "items",
+  "total_qty",
+  "total"
+ ],
+ "fields": [
+  {
+   "fieldname": "buyer_profile",
+   "fieldtype": "Link",
+   "label": "Buyer (shop)",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "seller_profile",
+   "fieldtype": "Link",
+   "label": "Seller",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Sent\nAccepted\nRejected\nCancelled",
+   "default": "Sent",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Books",
+   "options": "Purchase Order Request Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_qty",
+   "fieldtype": "Int",
+   "label": "Total quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total",
+   "read_only": 1
+  }
+ ],
+ "module": "Trading",
+ "name": "Purchase Order Request",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
