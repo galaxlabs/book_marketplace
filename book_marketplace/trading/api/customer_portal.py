@@ -8,7 +8,7 @@ from frappe.utils import flt, now_datetime
 
 from book_marketplace.trading.api.customer_order import _buyer_from_session
 
-FOLLOW_TYPES = ("Book", "Author", "Category", "Publisher", "Shop", "User")
+FOLLOW_TYPES = ("Book", "Author", "Category", "Publisher", "Shop", "User", "Subject")
 
 
 def _label(ftype, target):
@@ -21,6 +21,8 @@ def _label(ftype, target):
         return frappe.db.get_value("BusinessProfile", target, "business_name")
     if ftype == "User":
         return frappe.db.get_value("BusinessProfile", {"user": target}, "business_name") or target
+    if ftype == "Subject":
+        return frappe.db.get_value("SubjectMaster", target, "subject_name") or target
     return target  # Author: the author's name as written on the book
 
 
@@ -33,6 +35,8 @@ def _target_exists(ftype, target):
         return frappe.db.exists("BusinessProfile", target)
     if ftype == "User":
         return frappe.db.exists("User", target) and target != frappe.session.user
+    if ftype == "Subject":
+        return frappe.db.exists("SubjectMaster", target)
     return bool(target)
 
 
@@ -144,6 +148,22 @@ def _book_context(book):
     return bk, cats
 
 
+def _subject_chain(book):
+    """The book's subjects and every parent subject above them (a topic page includes its sub-topics)."""
+    seeds = frappe.get_all("BookSubject", filters={"parent": book, "parenttype": "Book"}, pluck="subject")
+    primary = frappe.db.get_value("Book", book, "primary_category")
+    if primary:
+        seeds.append(primary)
+    out, seen = [], set()
+    for s_ in seeds:
+        cur = s_
+        while cur and cur not in seen:
+            seen.add(cur)
+            out.append(cur)
+            cur = frappe.db.get_value("SubjectMaster", cur, "parent_subject")
+    return out
+
+
 def _followers(book, seller, kinds):
     """Buyers to tell. kinds: 'Back in stock' (Book follows) or 'New book' (Author, Category, Publisher, Shop follows)."""
     bk, cats = _book_context(book)
@@ -160,16 +180,24 @@ def _followers(book, seller, kinds):
         if seller:
             wanted.append(("Shop", seller))
         wanted += [("Category", c) for c in cats]
+        wanted += [("Subject", x) for x in _subject_chain(book)]
     out = {}
     for ftype, target in wanted:
         for r in frappe.get_all("Customer Follow", filters={"follow_type": ftype, "target": target, "notify": 1},
                                 fields=["buyer_profile"]):
             out.setdefault(r.buyer_profile, ftype)
+    if kinds != "Back in stock" and bk.publisher:
+        pub_user = frappe.db.get_value("BusinessProfile", bk.publisher, "user")
+        pub_buyer = frappe.db.get_value("BuyerProfile", {"user": pub_user}, "name") if pub_user else None
+        if pub_buyer:
+            out.pop(pub_buyer, None)
     return out
 
 
 def _send(buyers, kind, message, book, seller):
     for buyer in buyers:
+        if kind == "New book" and frappe.db.exists("Customer Notification", {"buyer_profile": buyer, "kind": kind, "book": book}):
+            continue
         frappe.get_doc({"doctype": "Customer Notification", "buyer_profile": buyer, "kind": kind, "message": message,
                         "book": book, "seller_profile": seller, "is_read": 0, "created_on": now_datetime()}
                        ).insert(ignore_permissions=True)
@@ -190,10 +218,6 @@ def notify_back_in_stock(seller, book, before, after):
 def on_catalog_item_added(doc, method=None):
     """A shop listed a book: tell buyers who follow its author, publisher, shop or category, if copies are there."""
     if not doc.is_active or not doc.book:
-        return
-    have = frappe.db.get_value("StockLedger", {"business_profile": doc.business_profile, "book": doc.book,
-                                               "state": "Available"}, "quantity") or 0
-    if flt(have) <= 0:
         return
     buyers = _followers(doc.book, doc.business_profile, "New book")
     if not buyers:

@@ -31,7 +31,7 @@
    "fieldname": "follow_type",
    "fieldtype": "Select",
    "label": "Type / قسم",
-   "options": "Book\nAuthor\nCategory\nPublisher\nShop\nUser",
+   "options": "Book\nAuthor\nCategory\nPublisher\nShop\nUser\nSubject",
    "reqd": 1,
    "in_list_view": 1
   },
