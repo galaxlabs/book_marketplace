@@ -635,6 +635,8 @@ def get_store_by_slug(slug):
             "title": book.title if book else "",
             "subtitle": book.subtitle if book else "",
             "author": book.author if book else "",
+            "publisher": book.publisher if book else "",
+            "owner_profile": book.owner_profile if book else "",
             "book_type": book.book_type if book else "",
             "mrp": book.set_mrp if book else None,
             "selling_price": pv["net_price"],
