@@ -88,6 +88,27 @@ def login_with_token(usr, pwd):
 
 
 @frappe.whitelist(allow_guest=True)
+def _ensure_buyer(user_name, full_name, email):
+    name = frappe.db.get_value("BuyerProfile", {"user": user_name}, "name")
+    if not name:
+        name = frappe.get_doc({"doctype": "BuyerProfile", "user": user_name, "full_name": full_name,
+                               "email": email, "status": "Active"}).insert(ignore_permissions=True).name
+    return name
+
+
+def _setup_new_account(user_name, full_name, email, auto_business=True):
+    """Buyer profile for everyone; an approved Bookseller shop unless the signup made its own business;
+    then an in-app notification that the account is ready."""
+    from frappe.utils import now_datetime
+    buyer = _ensure_buyer(user_name, full_name, email)
+    if auto_business and not frappe.db.exists("BusinessProfile", {"user": user_name}):
+        frappe.get_doc({"doctype": "BusinessProfile", "user": user_name, "profile_type": "Bookseller",
+                        "business_name": full_name or email, "status": "Approved"}).insert(ignore_permissions=True)
+    frappe.get_doc({"doctype": "Customer Notification", "buyer_profile": buyer, "kind": "Account",
+                    "message": "آپ کا اکاؤنٹ بن گیا ہے، اور آپ کی دکان کی پروفائل تیار ہے۔ / Your account is ready and your shop profile is set up.",
+                    "is_read": 0, "created_on": now_datetime()}).insert(ignore_permissions=True)
+
+
 def signup(email, password, full_name, business_name=None, profile_type=None, terms_accepted=0, purpose="sale"):
     if not terms_accepted:
         frappe.throw(_("You must accept the terms and conditions to sign up."))
@@ -128,10 +149,12 @@ def signup(email, password, full_name, business_name=None, profile_type=None, te
             "status": "Active",
         })
         buyer.insert(ignore_permissions=True)
+        _setup_new_account(user.name, full_name, email, auto_business=True)
         return {"user": user.name, "profile": None, "status": "Active", "purpose": "purchase"}
 
     if not business_name or not profile_type:
-        return {"user": user.name, "profile": None, "status": "Setup Required", "purpose": "sale"}
+        _setup_new_account(user.name, full_name, email, auto_business=True)
+    return {"user": user.name, "profile": None, "status": "Setup Required", "purpose": "sale"}
 
     profile = frappe.get_doc({
         "doctype": "BusinessProfile",
@@ -144,6 +167,7 @@ def signup(email, password, full_name, business_name=None, profile_type=None, te
     active_terms = frappe.get_all("SignupTerms", filters={"is_active": 1}, fields=["name"], limit=1)
     if active_terms:
         frappe.db.set_value("BusinessProfile", profile.name, "accepted_terms", active_terms[0].name)
+    _setup_new_account(user.name, full_name, email, auto_business=False)
     return {"user": user.name, "profile": profile.name, "status": "Pending", "purpose": "sale"}
 
 

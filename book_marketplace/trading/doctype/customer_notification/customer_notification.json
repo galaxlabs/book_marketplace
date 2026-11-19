@@ -32,7 +32,7 @@
    "fieldname": "kind",
    "fieldtype": "Select",
    "label": "Kind / قسم",
-   "options": "Back in stock\nNew book",
+   "options": "Back in stock\nNew book\nAccount",
    "reqd": 1,
    "in_list_view": 1
   },
