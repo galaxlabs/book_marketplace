@@ -91,14 +91,14 @@ def add_book_category(profile_id, category_name, category_type="Subject", parent
 @frappe.whitelist()
 def set_book_classification(profile_id, book_id, categories=None, is_bound=0, is_set=0,
                             volume_count=None, part_count=None):
-    """Owner publisher (or admin) sets the categories, subjects and limits of a book."""
+    """Owner (publisher or the bookseller who added the book) sets the categories and limits."""
     book = frappe.get_doc("Book", book_id)
     if not frappe.session.user or frappe.session.user == "Guest":
         frappe.throw(_("Login required."), frappe.PermissionError)
     _check_publisher_or_admin(profile_id)
     from book_marketplace.auth.api.auth import _is_admin
-    if not _is_admin() and book.publisher != profile_id:
-        frappe.throw(_("Only the publisher of this book can change it."), frappe.PermissionError)
+    if not _is_admin() and profile_id not in (book.publisher, book.get("owner_profile")):
+        frappe.throw(_("Only the publisher or the bookseller who added this book can change it."), frappe.PermissionError)
     set_rows(book, categories if isinstance(categories, list) else [c for c in (categories or "").split(",")])
     book.is_bound = 1 if int(is_bound or 0) else 0
     book.is_set = 1 if int(is_set or 0) else 0
