@@ -690,6 +690,7 @@ def get_store_by_slug(slug):
             "religious_segment": book.religious_segment if book else "",
             "introduction": book.introduction if book else "",
             "stock": stock,
+            "categories": frappe.get_all("BookClassification", filters={"parent": item.book, "parenttype": "Book"}, pluck="category") if book else [],
         })
     store.catalog = catalog
     store.catalog_count = len(catalog)
