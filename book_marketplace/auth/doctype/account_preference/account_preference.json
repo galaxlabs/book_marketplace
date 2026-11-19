@@ -1,0 +1,48 @@
+{
+ "actions": [],
+ "autoname": "field:user",
+ "creation": "2026-11-20 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "language",
+  "theme_name",
+  "colors"
+ ],
+ "module": "Auth",
+ "name": "Account Preference",
+ "owner": "Administrator",
+ "permissions": [],
+ "track_changes": 1,
+ "states": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "language",
+   "fieldtype": "Select",
+   "label": "Language",
+   "options": "ur\nen",
+   "default": "ur"
+  },
+  {
+   "fieldname": "theme_name",
+   "fieldtype": "Data",
+   "label": "Theme"
+  },
+  {
+   "fieldname": "colors",
+   "fieldtype": "Long Text",
+   "label": "Colors (JSON)"
+  }
+ ]
+}
