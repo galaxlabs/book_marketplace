@@ -35,6 +35,11 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "received_qty",
+   "fieldtype": "Int",
+   "label": "Received Qty"
+  },
+  {
    "fieldname": "unit_price",
    "fieldtype": "Currency",
    "label": "Unit price",

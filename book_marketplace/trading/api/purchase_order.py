@@ -1,6 +1,7 @@
 """Purchase orders. Phase 1: a shop orders books from a seller (publisher or shop) that lists them.
 Phase 2: the seller writes the sent quantity per book and dispatches; the order then carries a QR.
-The seller accepts or rejects. Quantities of the agreed order come in phase 2 (dispatch) and phase 3 (receipt)."""
+The seller accepts or rejects. Phase 3: the buyer receives (received quantities, stock goes into its shop).
+Phase 4: the agreed invoice is made from the received quantities; a short delivery is flagged for the seller."""
 import json
 
 import frappe
@@ -72,11 +73,19 @@ def _view(doc):
         "notes": doc.notes or "", "total_qty": doc.total_qty, "total": flt(doc.total),
         "items": [{"book": i.book, "title": frappe.db.get_value("Book", i.book, "title"), "qty": i.qty,
                    "sent_qty": i.sent_qty if i.sent_qty is not None else None,
+                   "received_qty": i.received_qty if i.received_qty is not None else None,
                    "unit_price": flt(i.unit_price), "line_total": flt(i.line_total)} for i in doc.items],
         "creation": str(doc.creation),
         "dispatched_on": str(doc.dispatched_on or ""),
         # the QR on the dispatched order holds only its number; the buyer scans it to open the invoice
-        "qr": doc.name if doc.status == "Dispatched" else "",
+        "qr": doc.name if doc.status in ("Dispatched", "Received", "Short") else "",
+        "received_on": str(doc.received_on or ""),
+        "invoice_no": doc.invoice_no or "",
+        "invoice_total": flt(doc.invoice_total),
+        # a short delivery (received less than sent) is flagged so the seller sees it in its list
+        "difference": doc.status == "Short",
+        "difference_qty": sum(int(i.sent_qty or 0) - int(i.received_qty or 0) for i in doc.items
+                              if i.received_qty is not None and i.sent_qty is not None),
     }
 
 
@@ -201,3 +210,60 @@ def respond_purchase_order(name, profile_id, decision):
     doc.status = decision
     doc.save(ignore_permissions=True)
     return _view(doc)
+
+
+def _add_stock(profile_id, book, qty):
+    """Put received books into the buyer's own shop stock (its main branch)."""
+    if qty <= 0:
+        return
+    from book_marketplace.stock_management.api.stock import _default_branch
+    branch = _default_branch(profile_id)
+    existing = frappe.db.get_value(
+        "StockLedger",
+        {"business_profile": profile_id, "book": book, "branch_location": branch, "state": "Available"},
+        ["name", "quantity"], as_dict=True,
+    )
+    if existing:
+        frappe.db.set_value("StockLedger", existing.name, "quantity", flt(existing.quantity) + qty)
+    else:
+        frappe.get_doc({
+            "doctype": "StockLedger", "book": book, "business_profile": profile_id,
+            "branch_location": branch, "quantity": qty, "state": "Available",
+        }).insert(ignore_permissions=True)
+
+
+@frappe.whitelist()
+def receive_purchase_order(name, profile_id, items):
+    """The buyer receives a dispatched order. items: JSON list of {book, received_qty}, each between 0 and the sent quantity.
+    The received books go into the buyer's stock, and the agreed invoice is made from what was received."""
+    from frappe.utils import now_datetime
+    _profile_of_user(profile_id)
+    doc = frappe.get_doc("Purchase Order Request", name)
+    if profile_id != doc.buyer_profile:
+        frappe.throw(_("Only the buyer receives this order."), frappe.PermissionError)
+    if doc.status != "Dispatched":
+        frappe.throw(_("Only a dispatched order can be received (now: {0}).").format(doc.status))
+    got = {r["book"]: int(r.get("received_qty") or 0) for r in (json.loads(items) if isinstance(items, str) else (items or []))}
+    short = False
+    for row in doc.items:
+        if row.book not in got:
+            frappe.throw(_("Enter the received quantity for {0}.").format(row.book))
+        q = got[row.book]
+        sent = int(row.sent_qty or 0)
+        if q < 0 or q > sent:
+            frappe.throw(_("Received quantity for {0} must be between 0 and {1}.").format(row.book, sent))
+        if q < sent:
+            short = True
+        row.received_qty = q
+        row.line_total = flt(row.unit_price) * q
+    for row in doc.items:
+        _add_stock(profile_id, row.book, int(row.received_qty or 0))
+    doc.total_qty = sum(int(i.received_qty or 0) for i in doc.items)
+    doc.total = sum(flt(i.line_total) for i in doc.items)
+    doc.invoice_total = doc.total
+    doc.invoice_no = f"INV-{doc.name}"
+    doc.received_on = now_datetime()
+    doc.status = "Short" if short else "Received"
+    doc.save(ignore_permissions=True)
+    return _view(doc)
+

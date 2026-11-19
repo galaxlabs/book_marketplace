@@ -36,7 +36,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Sent\nAccepted\nRejected\nCancelled\nDispatched",
+   "options": "Sent\nAccepted\nRejected\nCancelled\nDispatched\nReceived\nShort",
    "default": "Sent",
    "in_list_view": 1
   },
@@ -68,6 +68,23 @@
    "fieldname": "dispatched_on",
    "fieldtype": "Datetime",
    "label": "Dispatched on",
+   "read_only": 1
+  },
+  {
+   "fieldname": "received_on",
+   "fieldtype": "Datetime",
+   "label": "Received On"
+  },
+  {
+   "fieldname": "invoice_no",
+   "fieldtype": "Data",
+   "label": "Invoice No",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_total",
+   "fieldtype": "Currency",
+   "label": "Agreed Invoice Total",
    "read_only": 1
   }
  ],
