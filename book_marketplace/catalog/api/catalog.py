@@ -540,7 +540,7 @@ def update_book_details(profile_id, book_id, data):
     for key in ("title", "author"):
         if key in d and not str(d[key] or "").strip():
             frappe.throw(_("{0} is required.").format(key.capitalize()))
-    for key in ("title", "author", "language", "book_type", "binding", "isbn", "subtitle", "introduction"):
+    for key in ("title", "author", "title_en", "author_en", "language", "book_type", "binding", "isbn", "subtitle", "introduction"):
         if key in d:
             book.set(key, (d[key] or "").strip() if isinstance(d[key], str) else d[key])
     if "page_count" in d and d["page_count"] not in (None, ""):
