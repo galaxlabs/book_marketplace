@@ -87,7 +87,17 @@ def login_with_token(usr, pwd):
     return {"api_key": user_doc.api_key, "api_secret": api_secret, "token": f"{user_doc.api_key}:{api_secret}", "me": get_me()}
 
 
-@frappe.whitelist(allow_guest=True)
+def _grant_profile_role(user_name, profile_type):
+    """An approved business profile needs the matching Frappe role to save its store and catalog."""
+    if not user_name or not profile_type:
+        return
+    ensure_role(profile_type)
+    user = frappe.get_doc("User", user_name)
+    if not any(r.role == profile_type for r in user.roles):
+        user.append("roles", {"role": profile_type})
+        user.save(ignore_permissions=True)
+
+
 def _ensure_buyer(user_name, full_name, email):
     name = frappe.db.get_value("BuyerProfile", {"user": user_name}, "name")
     if not name:
@@ -104,6 +114,7 @@ def _setup_new_account(user_name, full_name, email, auto_business=True):
     if auto_business and not frappe.db.exists("BusinessProfile", {"user": user_name}):
         frappe.get_doc({"doctype": "BusinessProfile", "user": user_name, "profile_type": "Bookseller",
                         "business_name": full_name or email, "status": "Approved"}).insert(ignore_permissions=True)
+        _grant_profile_role(user_name, "Bookseller")
     frappe.get_doc({"doctype": "Customer Notification", "buyer_profile": buyer, "kind": "Account",
                     "message": "آپ کا اکاؤنٹ بن گیا ہے، اور آپ کی دکان کی پروفائل تیار ہے۔ / Your account is ready and your shop profile is set up.",
                     "is_read": 0, "created_on": now_datetime()}).insert(ignore_permissions=True)

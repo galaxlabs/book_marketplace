@@ -2,7 +2,7 @@
 import frappe
 from frappe import _
 
-from book_marketplace.auth.api.auth import PROFILE_TYPES, is_profile_type_enabled
+from book_marketplace.auth.api.auth import PROFILE_TYPES, _grant_profile_role, is_profile_type_enabled
 
 
 def _me():
@@ -40,10 +40,12 @@ def set_profile_type(profile_type, active=1, business_name=""):
         if existing:
             if existing.status != "Approved":
                 frappe.db.set_value("BusinessProfile", existing.name, "status", "Approved")
+            _grant_profile_role(user, profile_type)
             name = existing.name
         else:
             base = frappe.db.get_value("BusinessProfile", {"user": user}, "business_name") or \
                 frappe.db.get_value("User", user, "full_name") or user
+            _grant_profile_role(user, profile_type)
             name = frappe.get_doc({"doctype": "BusinessProfile", "user": user, "profile_type": profile_type,
                                    "business_name": (business_name or base).strip()[:140],
                                    "status": "Approved"}).insert(ignore_permissions=True).name
