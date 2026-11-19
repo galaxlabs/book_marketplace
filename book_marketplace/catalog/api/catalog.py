@@ -767,6 +767,13 @@ def search_stores(text=None, city=None, profile_type=None, limit=60, offset=0):
             continue
         if needle and needle not in (s.store_name or "").lower() and needle not in (s.business_name or "").lower():
             continue
+        # Card details: the shop's logo, its book count and contact details (same count as the shop page).
+        s.logo = frappe.db.get_value("BusinessProfile", s.business_profile, "logo") or ""
+        s.catalog_count = len(_store_items(s.business_profile, s.profile_type))
+        contact = frappe.db.get_value("BusinessStore", s.name, ["contact_phone", "contact_email", "address", "map_link"], as_dict=True) or {}
+        s.contact_phone = contact.get("contact_phone") or ""
+        s.contact_email = contact.get("contact_email") or ""
+        s.address = contact.get("address") or ""
         out.append(s)
     out.sort(key=lambda x: (x.profile_type != "Publisher", x.store_name or ""))
     start = int(offset or 0)
