@@ -99,6 +99,9 @@ def set_book_classification(profile_id, book_id, categories=None, is_bound=0, is
     from book_marketplace.auth.api.auth import _is_admin
     if not _is_admin() and profile_id not in (book.publisher, book.get("owner_profile")):
         frappe.throw(_("Only the publisher or the bookseller who added this book can change it."), frappe.PermissionError)
+    import json as _json
+    if isinstance(categories, str) and categories.strip().startswith("["):
+        categories = _json.loads(categories)
     set_rows(book, categories if isinstance(categories, list) else [c for c in (categories or "").split(",")])
     book.is_bound = 1 if int(is_bound or 0) else 0
     book.is_set = 1 if int(is_set or 0) else 0
