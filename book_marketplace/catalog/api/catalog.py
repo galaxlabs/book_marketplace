@@ -21,7 +21,7 @@ def search(text=None, subject=None, publisher=None, author=None, language=None, 
         "Book",
         filters=filters,
         fields=[
-            "name", "title", "subtitle", "author", "author_profile", "publisher",
+            "name", "title", "title_en", "subtitle", "author", "author_en", "author_profile", "publisher",
             "book_type", "isbn", "language", "set_mrp", "primary_category",
             "genre", "religious_segment", "introduction", "creation"
         ],
