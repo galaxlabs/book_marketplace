@@ -561,6 +561,27 @@ def update_book_details(profile_id, book_id, data):
         book.page_count = int(d["page_count"])
     if "cover_image" in d:
         book.cover_image = d["cover_image"] or None
+    if "set_mrp" in d and str(d["set_mrp"] or "").strip() != "":
+        book.set_mrp = float(d["set_mrp"])
+    for key in ("is_set", "is_bound"):
+        if key in d:
+            book.set(key, 1 if int(d[key] or 0) else 0)
+    for key in ("volume_count", "part_count"):
+        if key in d:
+            raw = str(d[key] if d[key] is not None else "").strip()
+            book.set(key, int(raw) if raw.isdigit() else None)
+    if "volumes" in d:
+        # the volume rows of a multi-volume book (one row per volume; the set name is the book's name)
+        rows = _json.loads(d["volumes"]) if isinstance(d["volumes"], str) else (d["volumes"] or [])
+        book.set("volumes", [])
+        for r in rows:
+            book.append("volumes", {
+                "volume_number": int(r.get("volume_number") or 0) or None,
+                "title": (r.get("title") or "").strip() or None,
+                "isbn": (r.get("isbn") or "").strip() or None,
+                "volume_mrp": float(r.get("volume_mrp") or 0) or None,
+                "loose_sale": 1 if r.get("loose_sale") else 0,
+            })
     book.save(ignore_permissions=True)
     return {"name": book.name, "title": book.title, "author": book.author}
 
