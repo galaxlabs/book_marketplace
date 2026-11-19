@@ -84,8 +84,11 @@ def _view(doc):
         "invoice_total": flt(doc.invoice_total),
         # a short delivery (received less than sent) is flagged so the seller sees it in its list
         "difference": doc.status == "Short",
-        "difference_qty": sum(int(i.sent_qty or 0) - int(i.received_qty or 0) for i in doc.items
-                              if i.received_qty is not None and i.sent_qty is not None),
+        # shortage: books sent but not received; extra: books received above what was sent
+        "difference_qty": sum(max(int(i.sent_qty or 0) - int(i.received_qty or 0), 0) for i in doc.items
+                              if i.received_qty is not None),
+        "extra_qty": sum(max(int(i.received_qty or 0) - int(i.sent_qty or 0), 0) for i in doc.items
+                         if i.received_qty is not None),
     }
 
 
@@ -234,8 +237,9 @@ def _add_stock(profile_id, book, qty):
 
 @frappe.whitelist()
 def receive_purchase_order(name, profile_id, items):
-    """The buyer receives a dispatched order. items: JSON list of {book, received_qty}, each between 0 and the sent quantity.
-    The received books go into the buyer's stock, and the agreed invoice is made from what was received."""
+    """The buyer receives a dispatched order. items: JSON list of {book, received_qty} (0 or more; can be more than sent).
+    The received books go into the buyer's stock, and the agreed invoice is made from what was received.
+    Fewer than sent marks the order Short; more than sent is recorded as extra (invoiced at the agreed price)."""
     from frappe.utils import now_datetime
     _profile_of_user(profile_id)
     doc = frappe.get_doc("Purchase Order Request", name)
@@ -250,8 +254,8 @@ def receive_purchase_order(name, profile_id, items):
             frappe.throw(_("Enter the received quantity for {0}.").format(row.book))
         q = got[row.book]
         sent = int(row.sent_qty or 0)
-        if q < 0 or q > sent:
-            frappe.throw(_("Received quantity for {0} must be between 0 and {1}.").format(row.book, sent))
+        if q < 0:
+            frappe.throw(_("Received quantity for {0} cannot be negative.").format(row.book))
         if q < sent:
             short = True
         row.received_qty = q
