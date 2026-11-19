@@ -590,11 +590,14 @@ def get_store_by_slug(slug):
         return None
     profile = frappe.db.get_value(
         "BusinessProfile", store.business_profile,
-        ["business_name", "profile_type", "city"],
+        ["business_name", "profile_type", "city", "logo", "banner_image"],
         as_dict=True,
     )
     store.business_name = profile.business_name if profile else ""
     store.profile_type = profile.profile_type if profile else ""
+    # The business profile's logo and banner (uploaded in the business panel) show on the shop page.
+    store.logo = (profile.logo if profile else "") or ""
+    store.banner_image = (profile.banner_image if profile else "") or store.banner_image or ""
     items = _store_items(store.business_profile, store.profile_type)
     catalog, cache = [], {}
     for item in items:
