@@ -109,6 +109,7 @@ def _setup_new_account(user_name, full_name, email, auto_business=True):
                     "is_read": 0, "created_on": now_datetime()}).insert(ignore_permissions=True)
 
 
+@frappe.whitelist(allow_guest=True)
 def signup(email, password, full_name, business_name=None, profile_type=None, terms_accepted=0, purpose="sale"):
     if not terms_accepted:
         frappe.throw(_("You must accept the terms and conditions to sign up."))
