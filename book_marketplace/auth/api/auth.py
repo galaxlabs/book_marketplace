@@ -149,7 +149,7 @@ def signup(email, password, full_name, business_name=None, profile_type=None, te
             "status": "Active",
         })
         buyer.insert(ignore_permissions=True)
-        _setup_new_account(user.name, full_name, email, auto_business=True)
+        _setup_new_account(user.name, full_name, email, auto_business=False)
         return {"user": user.name, "profile": None, "status": "Active", "purpose": "purchase"}
 
     if not business_name or not profile_type:
