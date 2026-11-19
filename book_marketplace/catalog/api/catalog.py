@@ -508,6 +508,20 @@ def _owns_book(book, profile_id):
 
 
 @frappe.whitelist()
+def own_shop_books():
+    """Book names the signed-in account holds itself: in its own shop catalogue, or published/added by its business profiles."""
+    if not frappe.session.user or frappe.session.user == "Guest":
+        return []
+    profiles = frappe.get_all("BusinessProfile", filters={"user": frappe.session.user}, pluck="name", limit_page_length=0)
+    if not profiles:
+        return []
+    names = set(frappe.get_all("BusinessCatalogItem", filters={"business_profile": ["in", profiles]}, pluck="book", limit_page_length=0))
+    names |= set(frappe.get_all("Book", filters={"publisher": ["in", profiles]}, pluck="name", limit_page_length=0))
+    names |= set(frappe.get_all("Book", filters={"owner_profile": ["in", profiles]}, pluck="name", limit_page_length=0))
+    return sorted(n for n in names if n)
+
+
+@frappe.whitelist()
 def my_books(profile_id, text=""):
     """Books this business owns: the ones it published and the ones it added itself. Each row says which."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
