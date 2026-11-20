@@ -192,13 +192,14 @@ def react(message, emoji):
         frappe.throw(_("Message not found."))
     _member(row.conversation, me)
     data = _reactions_map(row.reactions)
+    had_this = me in (data.get(emoji) or [])  # tapping the same emoji again removes it
     for key in list(data):
         users = [u for u in data[key] if u != me]
         if users:
             data[key] = users
         else:
             data.pop(key)
-    if not any(me in (v or []) for v in data.values()):
+    if not had_this:
         data.setdefault(emoji, []).append(me)
     frappe.db.set_value("Chat Message", message, "reactions", frappe.as_json(data), update_modified=False)
     return {"reactions": data}
