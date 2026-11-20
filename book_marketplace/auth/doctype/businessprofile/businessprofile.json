@@ -168,6 +168,11 @@
    "label": "City"
   },
   {
+   "fieldname": "invoice_prefix",
+   "fieldtype": "Data",
+   "label": "Invoice Prefix"
+  },
+  {
    "fieldname": "country",
    "fieldtype": "Link",
    "label": "Country",

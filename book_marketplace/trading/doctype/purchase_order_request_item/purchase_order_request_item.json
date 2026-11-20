@@ -40,6 +40,11 @@
    "label": "Received Qty"
   },
   {
+   "fieldname": "damaged_qty",
+   "fieldtype": "Int",
+   "label": "Damaged / Return Qty"
+  },
+  {
    "fieldname": "unit_price",
    "fieldtype": "Currency",
    "label": "Unit price",

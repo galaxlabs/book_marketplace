@@ -36,7 +36,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Sent\nAccepted\nRejected\nCancelled\nDispatched\nReceived\nShort",
+   "options": "Sent\nAccepted\nRejected\nCancelled\nDispatched\nAwaiting Agreement\nReceived\nShort",
    "default": "Sent",
    "in_list_view": 1
   },
@@ -74,6 +74,29 @@
    "fieldname": "received_on",
    "fieldtype": "Datetime",
    "label": "Received On"
+  },
+  {
+   "fieldname": "receipt_submitted_on",
+   "fieldtype": "Datetime",
+   "label": "Receipt Submitted On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "agreed_on",
+   "fieldtype": "Datetime",
+   "label": "Agreed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receipt_note",
+   "fieldtype": "Small Text",
+   "label": "Dispute Note"
+  },
+  {
+   "fieldname": "khata_posted",
+   "fieldtype": "Check",
+   "label": "Khata Posted",
+   "read_only": 1
   },
   {
    "fieldname": "invoice_no",

@@ -74,12 +74,17 @@ def _view(doc):
         "items": [{"book": i.book, "title": frappe.db.get_value("Book", i.book, "title"), "qty": i.qty,
                    "sent_qty": i.sent_qty if i.sent_qty is not None else None,
                    "received_qty": i.received_qty if i.received_qty is not None else None,
+                   "damaged_qty": int(i.damaged_qty or 0),
                    "unit_price": flt(i.unit_price), "line_total": flt(i.line_total)} for i in doc.items],
         "creation": str(doc.creation),
         "dispatched_on": str(doc.dispatched_on or ""),
         # the QR on the dispatched order holds only its number; the buyer scans it to open the invoice
         "qr": doc.name if doc.status in ("Dispatched", "Received", "Short") else "",
         "received_on": str(doc.received_on or ""),
+        "receipt_submitted_on": str(doc.receipt_submitted_on or ""),
+        "agreed_on": str(doc.agreed_on or ""),
+        "receipt_note": doc.receipt_note or "",
+        "damaged_qty": sum(int(i.damaged_qty or 0) for i in doc.items),
         "invoice_no": doc.invoice_no or "",
         "invoice_total": flt(doc.invoice_total),
         # a short delivery (received less than sent) is flagged so the seller sees it in its list
@@ -237,37 +242,117 @@ def _add_stock(profile_id, book, qty):
 
 @frappe.whitelist()
 def receive_purchase_order(name, profile_id, items):
-    """The buyer receives a dispatched order. items: JSON list of {book, received_qty} (0 or more; can be more than sent).
-    The received books go into the buyer's stock, and the agreed invoice is made from what was received.
-    Fewer than sent marks the order Short; more than sent is recorded as extra (invoiced at the agreed price)."""
+    """The buyer records what arrived. items: JSON list of {book, received_qty, damaged_qty}.
+    received_qty may be more or less than sent; damaged_qty are copies returned to the seller (not stocked, not billed).
+    Nothing is stocked or billed yet: the seller must agree (agree_receipt). Status becomes Awaiting Agreement."""
     from frappe.utils import now_datetime
     _profile_of_user(profile_id)
     doc = frappe.get_doc("Purchase Order Request", name)
     if profile_id != doc.buyer_profile:
-        frappe.throw(_("Only the buyer receives this order."), frappe.PermissionError)
-    if doc.status != "Dispatched":
+        frappe.throw(_("Only the buyer records the receipt."), frappe.PermissionError)
+    if doc.status not in ("Dispatched", "Awaiting Agreement"):
         frappe.throw(_("Only a dispatched order can be received (now: {0}).").format(doc.status))
-    got = {r["book"]: int(r.get("received_qty") or 0) for r in (json.loads(items) if isinstance(items, str) else (items or []))}
-    short = False
+    rows = json.loads(items) if isinstance(items, str) else (items or [])
+    got = {r["book"]: (int(r.get("received_qty") or 0), int(r.get("damaged_qty") or 0)) for r in rows}
     for row in doc.items:
         if row.book not in got:
             frappe.throw(_("Enter the received quantity for {0}.").format(row.book))
-        q = got[row.book]
-        sent = int(row.sent_qty or 0)
+        q, dmg = got[row.book]
         if q < 0:
             frappe.throw(_("Received quantity for {0} cannot be negative.").format(row.book))
-        if q < sent:
-            short = True
+        if dmg < 0 or dmg > q:
+            frappe.throw(_("Damaged quantity for {0} must be between 0 and the received quantity.").format(row.book))
         row.received_qty = q
-        row.line_total = flt(row.unit_price) * q
-    for row in doc.items:
-        _add_stock(profile_id, row.book, int(row.received_qty or 0))
-    doc.total_qty = sum(int(i.received_qty or 0) for i in doc.items)
-    doc.total = sum(flt(i.line_total) for i in doc.items)
-    doc.invoice_total = doc.total
-    doc.invoice_no = f"INV-{doc.name}"
-    doc.received_on = now_datetime()
-    doc.status = "Short" if short else "Received"
+        row.damaged_qty = dmg
+    doc.receipt_submitted_on = now_datetime()
+    doc.status = "Awaiting Agreement"
     doc.save(ignore_permissions=True)
     return _view(doc)
 
+
+@frappe.whitelist()
+def agree_receipt(name, profile_id):
+    """The seller agrees to the buyer's count. Only then: stock goes to the buyer, the invoice is final,
+    and the khata shows the amount on both sides (seller: to receive; buyer: to pay)."""
+    from frappe.utils import now_datetime
+    _profile_of_user(profile_id)
+    doc = frappe.get_doc("Purchase Order Request", name)
+    if profile_id != doc.seller_profile:
+        frappe.throw(_("Only the seller agrees to the receipt."), frappe.PermissionError)
+    if doc.status != "Awaiting Agreement":
+        frappe.throw(_("Only a receipt waiting for agreement can be agreed (now: {0}).").format(doc.status))
+    if doc.khata_posted:
+        frappe.throw(_("This receipt is already posted."))
+    short = False
+    for row in doc.items:
+        good = int(row.received_qty or 0) - int(row.damaged_qty or 0)
+        if good < int(row.sent_qty or 0):
+            short = True
+        row.line_total = flt(row.unit_price) * good
+    for row in doc.items:
+        _add_stock(doc.buyer_profile, row.book, int(row.received_qty or 0) - int(row.damaged_qty or 0))
+    doc.total_qty = sum(int(i.received_qty or 0) - int(i.damaged_qty or 0) for i in doc.items)
+    doc.total = sum(flt(i.line_total) for i in doc.items)
+    doc.invoice_total = doc.total
+    prefix = frappe.db.get_value("BusinessProfile", doc.seller_profile, "invoice_prefix") or "INV"
+    doc.invoice_no = f"{prefix}-{doc.name}"
+    doc.received_on = now_datetime()
+    doc.agreed_on = now_datetime()
+    doc.status = "Short" if short else "Received"
+    if flt(doc.total) > 0:
+        _post_khata(doc)
+    doc.khata_posted = 1
+    doc.save(ignore_permissions=True)
+    return _view(doc)
+
+
+@frappe.whitelist()
+def dispute_receipt(name, profile_id, note):
+    """The seller does not agree: the order goes back to Dispatched; the buyer records the count again."""
+    _profile_of_user(profile_id)
+    doc = frappe.get_doc("Purchase Order Request", name)
+    if profile_id != doc.seller_profile:
+        frappe.throw(_("Only the seller answers the receipt."), frappe.PermissionError)
+    if doc.status != "Awaiting Agreement":
+        frappe.throw(_("Only a receipt waiting for agreement can be disputed (now: {0}).").format(doc.status))
+    if not (note or "").strip():
+        frappe.throw(_("Write why the seller does not agree."))
+    doc.receipt_note = note.strip()
+    doc.status = "Dispatched"
+    doc.save(ignore_permissions=True)
+    return _view(doc)
+
+
+def _post_khata(doc):
+    """Both sides see the agreed amount: seller 'Credit Given' (party owes), buyer 'Credit Taken' (owes party)."""
+    seller_name = frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name") or doc.seller_profile
+    buyer_name = frappe.db.get_value("BusinessProfile", doc.buyer_profile, "business_name") or doc.buyer_profile
+    amount = flt(doc.invoice_total)
+    for profile, party, entry_type in (
+        (doc.seller_profile, buyer_name, "Credit Given"),
+        (doc.buyer_profile, seller_name, "Credit Taken"),
+    ):
+        frappe.get_doc({
+            "doctype": "Khata Entry", "business_profile": profile, "party_name": party,
+            "entry_type": entry_type, "amount": amount, "entry_date": frappe.utils.nowdate(),
+            "reference": doc.invoice_no, "notes": f"Agreed receipt {doc.name}",
+        }).insert(ignore_permissions=True)
+
+
+@frappe.whitelist()
+def return_summary(profile_id):
+    """Seller view: damaged copies to return, per buyer city and book, from receipts on the seller's side."""
+    _profile_of_user(profile_id)
+    rows = frappe.db.sql("""
+        select b.city as city, i.book as book, sum(i.damaged_qty) as damaged
+        from `tabPurchase Order Request Item` i
+        inner join `tabPurchase Order Request` p on p.name = i.parent
+        inner join `tabBusinessProfile` b on b.name = p.buyer_profile
+        where p.seller_profile = %s and p.status in ('Awaiting Agreement', 'Received', 'Short')
+          and ifnull(i.damaged_qty, 0) > 0
+        group by b.city, i.book
+        order by b.city, i.book
+    """, (profile_id,), as_dict=True)
+    for r in rows:
+        r["title"] = frappe.db.get_value("Book", r["book"], "title")
+    return rows
