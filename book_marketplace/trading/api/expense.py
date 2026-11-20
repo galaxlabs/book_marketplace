@@ -6,14 +6,27 @@ from frappe.utils import add_days, add_months, flt, getdate, nowdate
 
 from book_marketplace.auth.api.auth import _assert_profile_owner
 
-CATEGORIES = ("Salaries", "Warehouse Rent", "Electricity", "Gas", "Transport", "Other")
+DEFAULT_CATEGORIES = ("Salaries", "Warehouse Rent", "Electricity", "Gas", "Transport", "Other")
+CATEGORIES = DEFAULT_CATEGORIES  # kept for the panel's suggestion list
+
+
+def _clean_category(category):
+    """A shop may use its own department names. A name that matches a default (any case) uses the default."""
+    name = " ".join((category or "").split())
+    if not name:
+        frappe.throw(_("Write the expense category."))
+    if len(name) > 60:
+        frappe.throw(_("Category name is too long (60 characters at most)."))
+    for c in DEFAULT_CATEGORIES:
+        if c.lower() == name.lower():
+            return c
+    return name
 
 
 @frappe.whitelist()
 def add_expense(business_profile, category, amount, expense_date=None, note=None):
     _assert_profile_owner(business_profile)
-    if category not in CATEGORIES:
-        frappe.throw(_("Unknown expense category."))
+    category = _clean_category(category)
     if flt(amount) <= 0:
         frappe.throw(_("Amount must be greater than zero."))
     doc = frappe.get_doc({
@@ -56,11 +69,13 @@ def expense_summary(business_profile, month=None):
         filters={"business_profile": business_profile, "expense_date": ["between", [first, last]]},
         fields=["category", "amount"], limit_page_length=0,
     )
-    per = {c: 0.0 for c in CATEGORIES}
+    per = {c: 0.0 for c in DEFAULT_CATEGORIES}
     for r in rows:
         per[r.category] = per.get(r.category, 0.0) + flt(r.amount)
+    own = sorted(c for c in per if c not in DEFAULT_CATEGORIES)
+    order = list(DEFAULT_CATEGORIES) + own
     return {
         "month": str(first)[:7],
-        "categories": [{"category": c, "amount": round(per[c], 2)} for c in CATEGORIES],
+        "categories": [{"category": c, "amount": round(per[c], 2)} for c in order],
         "total": round(sum(per.values()), 2),
     }
