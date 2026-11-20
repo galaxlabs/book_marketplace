@@ -200,19 +200,15 @@ def publisher_books(profile_id, publishers, text=None, limit=50, offset=0, avail
         return {"books": [], "total": 0}
     limit = min(frappe.utils.cint(limit) or 50, 200)
     offset = frappe.utils.cint(offset)
-    listed_books = frappe.get_all(
-        "BusinessCatalogItem",
-        filters={"business_profile": ["in", publishers], "is_active": 1},
-        pluck="book", limit_page_length=0,
-    )
-    filters = {"name": ["in", listed_books or [""]], "publisher": ["in", publishers], "global_visibility": 1}
+    # Every visible book of the chosen publishers (the publisher's own catalog rows are not needed).
+    filters = {"publisher": ["in", publishers], "global_visibility": 1}
     if frappe.utils.cint(available_only):
         # only the books this shop itself holds in stock (Available, quantity above zero)
         held = {}
         for row in frappe.get_all("StockLedger", filters={"business_profile": profile_id, "state": "Available"},
                                   fields=["book", "quantity"], limit_page_length=0):
             held[row.book] = held.get(row.book, 0) + float(row.quantity or 0)
-        in_stock = [b for b in (listed_books or []) if held.get(b, 0) > 0]
+        in_stock = [b for b, q in held.items() if q > 0]
         filters["name"] = ["in", in_stock or [""]]
     or_filters = _offer_text_filter(text) if text else None
     total = len(frappe.get_all("Book", filters=filters, or_filters=or_filters, pluck="name", limit_page_length=0))
