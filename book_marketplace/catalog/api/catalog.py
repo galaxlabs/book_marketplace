@@ -179,10 +179,8 @@ def list_publishers():
     pubs = frappe.get_all("BusinessProfile", filters={"profile_type": "Publisher", "status": "Approved"},
                           fields=["name", "business_name", "city", "default_discount_percent"],
                           order_by="business_name asc")
-    counts = dict(frappe.db.sql("""select bci.business_profile, count(*) from `tabBusinessCatalogItem` bci
-        inner join `tabBook` b on b.name = bci.book
-        where bci.is_active = 1 and b.publisher = bci.business_profile and b.global_visibility = 1
-        group by bci.business_profile"""))
+    counts = dict(frappe.db.sql("""select publisher, count(*) from `tabBook`
+        where global_visibility = 1 and ifnull(publisher, '') != '' group by publisher"""))
     out = []
     for p in pubs:
         n = counts.get(p.name, 0)
