@@ -21,14 +21,14 @@ from frappe.utils import add_months, flt, now_datetime
 
 from book_marketplace.auth.api.auth import _assert_profile_owner
 
-SHORT_WINDOW = 14
-SHORT_LIMIT = 12
+SHORT_AFTER = 10  # shortage rule applies once a shop has this many received orders (since the last restriction)
+SHORT_SHARE = 0.60
 DISPUTE_AFTER = 10
 DISPUTE_SHARE = 0.60
 LADDER_MONTHS = [1, 2, 4, 8, 16]
-VERIFIED_MIN_CLOSED = 10
-VERIFIED_MIN_STARS = 4.0
-VERIFIED_MIN_RATINGS = 5
+# The verified badge is a paid premium service. Its rule (plan, price, who grants it) is not decided yet,
+# so no shop gets the badge automatically. Ratings and their average still show.
+VERIFIED_BADGE_ENABLED = False
 PRICE_PATTERN = re.compile(r"(\bpkr\b|\brs\.?\b|\bprice\b|روپے|روپیہ|قیمت)", re.IGNORECASE)
 ABUSIVE_WORDS = []  # the owner supplies the list; empty means only the price rule is active
 MAX_COMMENT = 500
@@ -79,7 +79,8 @@ def _impose(profile, kind, reason, sources):
 
 
 def check_shortage(profile):
-    """Shortage rule. Counts only orders received after the last shortage restriction."""
+    """Shortage rule. Counts only orders received after the last shortage restriction.
+    Applies when at least SHORT_AFTER orders were received and SHORT_SHARE of them came short."""
     if _active(profile):
         return None
     filters = {"buyer_profile": profile, "status": ["in", ["Received", "Short"]]}
@@ -87,13 +88,13 @@ def check_shortage(profile):
     if since:
         filters["agreed_on"] = [">", since]
     rows = frappe.get_all("Purchase Order Request", filters=filters, fields=["name", "status"],
-                          order_by="agreed_on desc", limit_page_length=SHORT_WINDOW)
-    if len(rows) < SHORT_WINDOW:
+                          order_by="agreed_on desc", limit_page_length=0)
+    if len(rows) < SHORT_AFTER:
         return None
     shorts = sum(1 for r in rows if r.status == "Short")
-    if shorts < SHORT_LIMIT:
+    if shorts / len(rows) < SHORT_SHARE:
         return None
-    return _impose(profile, "Shortage", _("{0} of the last {1} orders were received short.").format(shorts, SHORT_WINDOW),
+    return _impose(profile, "Shortage", _("{0} of {1} orders were received short.").format(shorts, len(rows)),
                    [r.name for r in rows])
 
 
@@ -205,13 +206,9 @@ def _ratings_for(profile):
 
 
 def _is_verified(profile):
+    if not VERIFIED_BADGE_ENABLED:
+        return False  # paid premium badge: rule pending the owner's decision
     ratings = _ratings_for(profile)
-    if _closed_orders(profile) < VERIFIED_MIN_CLOSED:
-        return False
-    if len(ratings) < VERIFIED_MIN_RATINGS:
-        return False
-    if sum(flt(r.stars) for r in ratings) / len(ratings) < VERIFIED_MIN_STARS:
-        return False
     if _active(profile):
         return False
     if frappe.db.exists("Shop Feedback", {"business_profile": profile, "kind": "Report", "status": "Open"}):
