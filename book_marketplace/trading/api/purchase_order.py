@@ -93,6 +93,7 @@ def _view(doc):
         "expires_on": str(_expiry(doc) or ""),
         "invoice_no": doc.invoice_no or "",
         "transporter": doc.transporter or "",
+        "rated": bool(frappe.db.exists("Shop Rating", {"purchase_order": doc.name})),
         "bilty_no": doc.bilty_no or "",
         "rider_name": doc.rider_name or "",
         "rider_phone": doc.rider_phone or "",
