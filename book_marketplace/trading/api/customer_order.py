@@ -33,10 +33,10 @@ def _offers(book):
     cands = {}
     for r in frappe.get_all("BusinessCatalogItem", filters={"book": book, "is_active": 1},
                             fields=["business_profile", "selling_price", "discount_percent"]):
-        cands[r.business_profile] = (flt(r.selling_price) or flt(bk.set_mrp), flt(r.discount_percent))
-    if bk.publisher and bk.publisher not in cands:
-        pb = frappe.db.get_value("Book", book, ["publisher", "own_discount", "discount_percent"], as_dict=True)
-        cands[bk.publisher] = (flt(bk.set_mrp), publisher_discount(book=pb))
+        disc = flt(r.discount_percent)
+        if not disc and r.business_profile == bk.publisher:
+            disc = publisher_discount(book_id=book)
+        cands[r.business_profile] = (flt(r.selling_price) or flt(bk.set_mrp), disc)
     out = []
     for seller, (list_price, pct) in cands.items():
         if not _store_open(seller):

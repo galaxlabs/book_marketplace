@@ -29,6 +29,7 @@
   "print_quality",
   "colours",
   "availability",
+  "is_discontinued",
   "imported",
   "set_mrp",
   "trade_price",
@@ -195,6 +196,11 @@
    "label": "Availability / دستیابی",
    "options": "Available\nUnavailable\nOut of print\nForthcoming\nGeneral readers only",
    "default": "Available"
+  },
+  {
+   "fieldname": "is_discontinued",
+   "fieldtype": "Check",
+   "label": "Discontinued (no more production) / پیداوار بند"
   },
   {
    "fieldname": "imported",
