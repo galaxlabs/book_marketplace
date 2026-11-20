@@ -57,17 +57,42 @@ def _read_field(conversation, user):
     return "read_a" if conv.user_a == user else "read_b"
 
 
-def _post(conversation, sender, body, book=None):
+ALLOWED_REACTIONS = ("👍", "❤️", "😂", "😮", "😢", "🙏", "🔥")
+MAX_FILE_BYTES = 10 * 1024 * 1024
+
+
+def _attachment(file_name, sender):
+    """The file must be one this sender uploaded (private), and not larger than the limit."""
+    if not file_name:
+        return None
+    row = frappe.db.get_value("File", file_name, ["name", "owner", "is_private", "file_size"], as_dict=True)
+    if not row or row.owner != sender:
+        frappe.throw(_("Attachment not found."))
+    if frappe.utils.cint(row.file_size) > MAX_FILE_BYTES:
+        frappe.throw(_("Attachment is too large (10 MB at most)."))
+    return row.name
+
+
+def _reactions_map(raw):
+    try:
+        data = frappe.parse_json(raw) if raw else {}
+    except Exception:
+        data = {}
+    return data if isinstance(data, dict) else {}
+
+
+def _post(conversation, sender, body, book=None, attachment=None):
     msg = frappe.get_doc({
         "doctype": "Chat Message", "conversation": conversation, "sender": sender,
-        "body": body, "book": book or None,
+        "body": body, "book": book or None, "attachment": attachment or None,
     }).insert(ignore_permissions=True)
     now = now_datetime()
+    preview = body[:140] if body else ("📎 " + (frappe.db.get_value("File", attachment, "file_name") or "file") if attachment else "")
     frappe.db.set_value("Chat Conversation", conversation,
-                        {"last_message_at": now, "last_preview": body[:140], _read_field(conversation, sender): now},
+                        {"last_message_at": now, "last_preview": preview, _read_field(conversation, sender): now},
                         update_modified=True)
     return {"name": msg.name, "sender": sender, "body": body, "book": book or None,
-            "creation": str(msg.creation)}
+            "attachment": attachment or None, "reactions": {}, "creation": str(msg.creation)}
 
 
 @frappe.whitelist()
@@ -132,19 +157,65 @@ def messages(conversation, after=None, limit=100):
         filters["creation"] = [">", get_datetime(after)]
     rows = frappe.get_all(
         "Chat Message", filters=filters,
-        fields=["name", "sender", "body", "book", "creation"],
+        fields=["name", "sender", "body", "book", "attachment", "reactions", "creation"],
         order_by="creation asc", limit_page_length=int(limit),
     )
     for r in rows:
         r["creation"] = str(r["creation"])
+        r["reactions"] = _reactions_map(r.get("reactions"))
+        if r.get("attachment"):
+            r["attachment_name"] = frappe.db.get_value("File", r["attachment"], "file_name") or "file"
     return rows
 
 
 @frappe.whitelist()
-def send_message(conversation, body):
+def send_message(conversation, body="", attachment=None):
     me = _me()
     conv = _member(conversation, me)
-    return _post(conversation, me, _body(body))
+    text = (body or "").strip()
+    file_name = _attachment(attachment, me)
+    if not text and not file_name:
+        frappe.throw(_("Write a message or attach a file."))
+    if len(text) > MAX_BODY:
+        frappe.throw(_("Message is too long (max {0} characters).").format(MAX_BODY))
+    return _post(conversation, me, text, attachment=file_name)
+
+
+@frappe.whitelist()
+def react(message, emoji):
+    """Adds or removes this user's reaction (one emoji per user per message: a tap on the same one removes it)."""
+    me = _me()
+    if emoji not in ALLOWED_REACTIONS:
+        frappe.throw(_("This reaction is not available."))
+    row = frappe.db.get_value("Chat Message", message, ["conversation", "reactions"], as_dict=True)
+    if not row:
+        frappe.throw(_("Message not found."))
+    _member(row.conversation, me)
+    data = _reactions_map(row.reactions)
+    for key in list(data):
+        users = [u for u in data[key] if u != me]
+        if users:
+            data[key] = users
+        else:
+            data.pop(key)
+    if not any(me in (v or []) for v in data.values()):
+        data.setdefault(emoji, []).append(me)
+    frappe.db.set_value("Chat Message", message, "reactions", frappe.as_json(data), update_modified=False)
+    return {"reactions": data}
+
+
+@frappe.whitelist()
+def attachment_download(message):
+    """The file of one message, only for the two people in its conversation."""
+    me = _me()
+    row = frappe.db.get_value("Chat Message", message, ["conversation", "attachment"], as_dict=True)
+    if not row or not row.attachment:
+        frappe.throw(_("No attachment on this message."))
+    _member(row.conversation, me)
+    f = frappe.get_doc("File", row.attachment)
+    frappe.local.response.filename = f.file_name
+    frappe.local.response.filecontent = f.get_content()
+    frappe.local.response.type = "download"
 
 
 def _shop_users_for_book(book_id):
@@ -236,3 +307,9 @@ def contact_card(conversation):
         return {"revealed": False}
     card = _card(other)
     return {"revealed": True, "name": card["name"], "phone": card["phone"]}
+
+
+@frappe.whitelist()
+def me():
+    """The signed-in account (the page marks its own reactions and messages with it)."""
+    return {"user": _me()}

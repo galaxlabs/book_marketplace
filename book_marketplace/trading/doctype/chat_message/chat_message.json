@@ -9,7 +9,9 @@
   "conversation",
   "sender",
   "body",
-  "book"
+  "book",
+  "attachment",
+  "reactions"
  ],
  "fields": [
   {
@@ -39,6 +41,17 @@
    "fieldtype": "Link",
    "label": "Book (asked about)",
    "options": "Book"
+  },
+  {
+   "fieldname": "attachment",
+   "fieldtype": "Link",
+   "label": "Attachment",
+   "options": "File"
+  },
+  {
+   "fieldname": "reactions",
+   "fieldtype": "Long Text",
+   "label": "Reactions (JSON)"
   }
  ],
  "module": "Trading",
