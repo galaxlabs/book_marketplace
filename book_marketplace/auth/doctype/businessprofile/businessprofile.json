@@ -16,6 +16,7 @@
   "business_description",
   "public_message",
   "status",
+  "verified_badge",
   "parent_publisher",
   "accepted_terms",
   "enable_fbr",
@@ -87,6 +88,12 @@
    "label": "Status",
    "options": "Pending\nApproved\nRejected\nInactive",
    "default": "Pending"
+  },
+  {
+   "fieldname": "verified_badge",
+   "fieldtype": "Check",
+   "label": "Verified Badge",
+   "description": "Paid premium badge. Set only by an admin (manual for now); shops cannot change it."
   },
   {
    "fieldname": "parent_publisher",

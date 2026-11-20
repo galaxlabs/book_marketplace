@@ -26,9 +26,6 @@ SHORT_SHARE = 0.60
 DISPUTE_AFTER = 10
 DISPUTE_SHARE = 0.60
 LADDER_MONTHS = [1, 2, 4, 8, 16]
-# The verified badge is a paid premium service. Its rule (plan, price, who grants it) is not decided yet,
-# so no shop gets the badge automatically. Ratings and their average still show.
-VERIFIED_BADGE_ENABLED = False
 PRICE_PATTERN = re.compile(r"(\bpkr\b|\brs\.?\b|\bprice\b|روپے|روپیہ|قیمت)", re.IGNORECASE)
 ABUSIVE_WORDS = []  # the owner supplies the list; empty means only the price rule is active
 MAX_COMMENT = 500
@@ -206,9 +203,10 @@ def _ratings_for(profile):
 
 
 def _is_verified(profile):
-    if not VERIFIED_BADGE_ENABLED:
-        return False  # paid premium badge: rule pending the owner's decision
-    ratings = _ratings_for(profile)
+    """Paid premium badge. Set by an admin on the business profile (verified_badge); shops cannot set it.
+    A shop with an active restriction or an open report loses the badge until that is cleared."""
+    if not frappe.db.get_value("BusinessProfile", profile, "verified_badge"):
+        return False
     if _active(profile):
         return False
     if frappe.db.exists("Shop Feedback", {"business_profile": profile, "kind": "Report", "status": "Open"}):
