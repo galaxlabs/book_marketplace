@@ -1,0 +1,109 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:FB-{#####}",
+ "creation": "2026-11-20 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "kind",
+  "author_user",
+  "author_profile",
+  "column_break_f",
+  "status",
+  "hidden",
+  "hidden_reason",
+  "text",
+  "created_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Business Profile",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "label": "Kind",
+   "options": "Comment\nLike\nReport",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "author_user",
+   "fieldtype": "Data",
+   "label": "Author (user)",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "author_profile",
+   "fieldtype": "Link",
+   "label": "Author Business",
+   "options": "BusinessProfile"
+  },
+  {
+   "fieldname": "column_break_f",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nClosed",
+   "default": "Open",
+   "in_list_view": 1,
+   "description": "Reports stay Open until an admin closes them."
+  },
+  {
+   "fieldname": "hidden",
+   "fieldtype": "Check",
+   "label": "Hidden"
+  },
+  {
+   "fieldname": "hidden_reason",
+   "fieldtype": "Data",
+   "label": "Hidden Because"
+  },
+  {
+   "fieldname": "text",
+   "fieldtype": "Small Text",
+   "label": "Text / متن"
+  },
+  {
+   "fieldname": "created_on",
+   "fieldtype": "Datetime",
+   "label": "Created On",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "modified": "2026-11-20 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Trading",
+ "name": "Shop Feedback",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

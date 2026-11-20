@@ -1,0 +1,132 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:RSTR-{YYYY}-{#####}",
+ "creation": "2026-11-20 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "kind",
+  "level",
+  "status",
+  "column_break_r",
+  "starts_on",
+  "ends_on",
+  "reason",
+  "section_appeal",
+  "appeal_status",
+  "appeal_note",
+  "appeal_response",
+  "appeal_on",
+  "source_orders"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Shop / Business Profile",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "label": "Kind / قسم",
+   "options": "Shortage\nDispute",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "level",
+   "fieldtype": "Int",
+   "label": "Level / مرحلہ",
+   "in_list_view": 1,
+   "description": "1 to 5 on the ladder of 1, 2, 4, 8 and 16 months."
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nEnded\nLifted",
+   "default": "Active",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_r",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "starts_on",
+   "fieldtype": "Datetime",
+   "label": "Starts On"
+  },
+  {
+   "fieldname": "ends_on",
+   "fieldtype": "Datetime",
+   "label": "Ends On"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason / وجہ"
+  },
+  {
+   "fieldname": "section_appeal",
+   "fieldtype": "Section Break",
+   "label": "Appeal / اپیل"
+  },
+  {
+   "fieldname": "appeal_status",
+   "fieldtype": "Select",
+   "label": "Appeal Status",
+   "options": "None\nPending\nAccepted\nRejected",
+   "default": "None"
+  },
+  {
+   "fieldname": "appeal_note",
+   "fieldtype": "Small Text",
+   "label": "Shop's Appeal"
+  },
+  {
+   "fieldname": "appeal_response",
+   "fieldtype": "Small Text",
+   "label": "Decision Note"
+  },
+  {
+   "fieldname": "appeal_on",
+   "fieldtype": "Datetime",
+   "label": "Appeal On"
+  },
+  {
+   "fieldname": "source_orders",
+   "fieldtype": "Small Text",
+   "label": "Orders Counted (names)"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "modified": "2026-11-20 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Trading",
+ "name": "Shop Restriction",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

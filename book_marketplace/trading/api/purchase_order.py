@@ -8,6 +8,8 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from book_marketplace.trading.api import policy
+
 
 def _profile_of_user(profile_id):
     """The profile must belong to the logged-in account (admins may act for any profile)."""
@@ -42,6 +44,7 @@ def _listed_price(seller, book):
 def create_purchase_order(buyer_profile, seller_profile, items, notes=""):
     """items: JSON list of {book, qty}. The price is the seller's listed price (trade price if it has one)."""
     _profile_of_user(buyer_profile)
+    policy.assert_can_order(buyer_profile)
     if buyer_profile == seller_profile:
         frappe.throw(_("Choose another business for the order."))
     if not frappe.db.exists("BusinessProfile", seller_profile):
@@ -89,6 +92,10 @@ def _view(doc):
         "buyer_response_on": str(doc.buyer_response_on or ""),
         "expires_on": str(_expiry(doc) or ""),
         "invoice_no": doc.invoice_no or "",
+        "transporter": doc.transporter or "",
+        "bilty_no": doc.bilty_no or "",
+        "rider_name": doc.rider_name or "",
+        "rider_phone": doc.rider_phone or "",
         "invoice_total": flt(doc.invoice_total),
         # a short delivery (received less than sent) is flagged so the seller sees it in its list
         "difference": doc.status == "Short",
@@ -109,7 +116,7 @@ def _on_hand(profile_id, book):
 
 
 @frappe.whitelist()
-def seller_catalog(seller_profile, buyer_profile=None):
+def seller_catalog(seller_profile, buyer_profile=None, available_only=0):
     """Everything the seller can supply, for the buyer's order form: all books the seller publishes (its list),
     plus books it lists in its active catalog. Each row carries the buyer's on-hand quantity; books the buyer
     already holds come first, so the buyer can order more in the quantity box. Any logged-in account."""
@@ -118,6 +125,8 @@ def seller_catalog(seller_profile, buyer_profile=None):
     rows = _seller_books(seller_profile)
     for r in rows:
         r["on_hand"] = _on_hand(buyer_profile, r["book"])
+    if int(available_only or 0):
+        rows = [r for r in rows if _on_hand(seller_profile, r["book"]) > 0]
     rows.sort(key=lambda x: (x["on_hand"] <= 0, (x["title"] or "").lower()))
     return rows
 
@@ -157,7 +166,7 @@ def find_sellers(text=""):
 
 
 @frappe.whitelist()
-def set_dispatch(name, profile_id, items):
+def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider_name=None, rider_phone=None):
     """The seller prepares the order: writes the quantity it sends for each book, then packs and dispatches.
     items: JSON list of {book, sent_qty}. Only the seller, only while the order is Accepted."""
     from frappe.utils import now_datetime
@@ -178,6 +187,10 @@ def set_dispatch(name, profile_id, items):
         row.line_total = flt(row.unit_price) * q
     doc.total_qty = sum(int(i.sent_qty or 0) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
+    doc.transporter = (transporter or "").strip()[:140]
+    doc.bilty_no = (bilty_no or "").strip()[:60]
+    doc.rider_name = (rider_name or "").strip()[:140]
+    doc.rider_phone = (rider_phone or "").strip()[:40]
     doc.status = "Dispatched"
     doc.dispatched_on = now_datetime()
     doc.save(ignore_permissions=True)
@@ -306,6 +319,7 @@ def agree_receipt(name, profile_id):
         _post_khata(doc)
     doc.khata_posted = 1
     doc.save(ignore_permissions=True)
+    policy.after_receipt(doc.buyer_profile)
     return _view(doc)
 
 
@@ -323,6 +337,7 @@ def dispute_receipt(name, profile_id, note):
     doc.receipt_note = note.strip()
     doc.status = "Dispatched"
     doc.save(ignore_permissions=True)
+    policy.after_receipt(doc.buyer_profile)
     return _view(doc)
 
 
@@ -398,8 +413,12 @@ def expire_stale_receipts():
         filters={"status": "Awaiting Agreement", "receipt_submitted_on": ["<=", cutoff]},
         pluck="name",
     )
+    buyers = set()
     for n in names:
         doc = frappe.get_doc("Purchase Order Request", n)
         doc.status = "Expired"
         doc.save(ignore_permissions=True)
+        buyers.add(doc.buyer_profile)
+    for b in buyers:
+        policy.after_receipt(b)
     return len(names)
