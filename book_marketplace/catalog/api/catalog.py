@@ -174,8 +174,9 @@ def add_many_to_catalog(profile_id, items):
 
 @frappe.whitelist()
 def list_publishers():
-    """Publishers whose books a shop can add, with the count of visible books and the general discount."""
-    pubs = frappe.get_all("BusinessProfile", filters={"profile_type": "Publisher"},
+    """Every approved publisher, with the count of its visible books (0 if none yet) and the general discount.
+    The shop uses the stock filter on the order form to narrow books to those it can get now."""
+    pubs = frappe.get_all("BusinessProfile", filters={"profile_type": "Publisher", "status": "Approved"},
                           fields=["name", "business_name", "city", "default_discount_percent"],
                           order_by="business_name asc")
     counts = dict(frappe.db.sql("""select bci.business_profile, count(*) from `tabBusinessCatalogItem` bci
@@ -185,9 +186,8 @@ def list_publishers():
     out = []
     for p in pubs:
         n = counts.get(p.name, 0)
-        if n:
-            out.append({"name": p.name, "business_name": p.business_name, "city": p.city,
-                        "default_discount_percent": _pct(p.default_discount_percent), "books": n})
+        out.append({"name": p.name, "business_name": p.business_name, "city": p.city,
+                    "default_discount_percent": _pct(p.default_discount_percent), "books": n})
     return out
 
 
