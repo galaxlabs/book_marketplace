@@ -314,3 +314,14 @@ def contact_card(conversation):
 def me():
     """The signed-in account (the page marks its own reactions and messages with it)."""
     return {"user": _me()}
+
+
+@frappe.whitelist()
+def admin_contacts():
+    """Every admin account (System Manager), so that everyone can message the admin from the chat directory."""
+    _me()
+    users = frappe.get_all(
+        "Has Role", filters={"role": "System Manager", "parenttype": "User"}, pluck="parent", limit_page_length=0)
+    rows = frappe.get_all("User", filters={"name": ["in", users or [""]], "enabled": 1, "name": ["!=", "Guest"]},
+                          fields=["name", "full_name"], order_by="full_name asc", limit_page_length=0)
+    return [{"user": r.name, "name": r.full_name or r.name} for r in rows]
