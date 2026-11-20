@@ -85,6 +85,9 @@ def _view(doc):
         "agreed_on": str(doc.agreed_on or ""),
         "receipt_note": doc.receipt_note or "",
         "damaged_qty": sum(int(i.damaged_qty or 0) for i in doc.items),
+        "buyer_response": doc.buyer_response or "",
+        "buyer_response_on": str(doc.buyer_response_on or ""),
+        "expires_on": str(_expiry(doc) or ""),
         "invoice_no": doc.invoice_no or "",
         "invoice_total": flt(doc.invoice_total),
         # a short delivery (received less than sent) is flagged so the seller sees it in its list
@@ -356,3 +359,47 @@ def return_summary(profile_id):
     for r in rows:
         r["title"] = frappe.db.get_value("Book", r["book"], "title")
     return rows
+
+
+def _expiry(doc):
+    """An order waiting for the seller's agreement ends 14 days after the receipt was recorded."""
+    if doc.status == "Awaiting Agreement" and doc.receipt_submitted_on:
+        return frappe.utils.add_days(doc.receipt_submitted_on, 14)
+    return None
+
+
+@frappe.whitelist()
+def respond_to_dispute(name, profile_id, response):
+    """The shop explains its position after the seller disputed the receipt. The seller sees it with the order."""
+    from frappe.utils import now_datetime
+    _profile_of_user(profile_id)
+    doc = frappe.get_doc("Purchase Order Request", name)
+    if profile_id != doc.buyer_profile:
+        frappe.throw(_("Only the buyer answers the dispute."), frappe.PermissionError)
+    if doc.status not in ("Dispatched", "Awaiting Agreement"):
+        frappe.throw(_("A response can be written only while the order is open (now: {0}).").format(doc.status))
+    if not doc.receipt_note:
+        frappe.throw(_("A response is needed only after the seller disputes the receipt."))
+    text = (response or "").strip()
+    if not text:
+        frappe.throw(_("Write your explanation."))
+    doc.buyer_response = text
+    doc.buyer_response_on = now_datetime()
+    doc.save(ignore_permissions=True)
+    return _view(doc)
+
+
+def expire_stale_receipts():
+    """Daily job: a receipt not agreed within 14 days expires. No stock, no invoice, no khata entry."""
+    from frappe.utils import add_days, now_datetime
+    cutoff = add_days(now_datetime(), -14)
+    names = frappe.get_all(
+        "Purchase Order Request",
+        filters={"status": "Awaiting Agreement", "receipt_submitted_on": ["<=", cutoff]},
+        pluck="name",
+    )
+    for n in names:
+        doc = frappe.get_doc("Purchase Order Request", n)
+        doc.status = "Expired"
+        doc.save(ignore_permissions=True)
+    return len(names)

@@ -36,7 +36,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Sent\nAccepted\nRejected\nCancelled\nDispatched\nAwaiting Agreement\nReceived\nShort",
+   "options": "Sent\nAccepted\nRejected\nCancelled\nDispatched\nAwaiting Agreement\nReceived\nShort\nExpired",
    "default": "Sent",
    "in_list_view": 1
   },
@@ -96,6 +96,17 @@
    "fieldname": "khata_posted",
    "fieldtype": "Check",
    "label": "Khata Posted",
+   "read_only": 1
+  },
+  {
+   "fieldname": "buyer_response",
+   "fieldtype": "Small Text",
+   "label": "Shop Response To Dispute"
+  },
+  {
+   "fieldname": "buyer_response_on",
+   "fieldtype": "Datetime",
+   "label": "Shop Response On",
    "read_only": 1
   },
   {

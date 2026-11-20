@@ -261,7 +261,7 @@ doc_events = {
 }
 
 scheduler_events = {
-    "daily": [],
+    "daily": ["book_marketplace.trading.api.purchase_order.expire_stale_receipts"],
     "hourly": [],
     "cron": {
         "*/10 * * * *": ["book_marketplace.trading.api.customer_order.expire_overdue"],
