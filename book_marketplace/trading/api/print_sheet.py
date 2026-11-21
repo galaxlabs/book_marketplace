@@ -24,6 +24,8 @@ def purchase_order_print(name, profile_id):
             "requested_qty": int(i.qty or 0),
             "sent_qty": int(i.sent_qty or 0),
             "unit_price": flt(i.unit_price),
+            "option_label": i.get("option_label") or "",
+            "item_option": i.get("item_option") or "",
         })
     return {
         "name": doc.name,

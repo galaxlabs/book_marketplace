@@ -53,6 +53,7 @@ def create_purchase_order(buyer_profile, seller_profile, items, notes=""):
     rows = [r for r in rows if r.get("book") and int(r.get("qty") or 0) > 0]
     if not rows:
         frappe.throw(_("Add at least one book with a quantity."))
+    from book_marketplace.catalog.api import item_options as io
     doc = frappe.get_doc({
         "doctype": "Purchase Order Request", "buyer_profile": buyer_profile, "seller_profile": seller_profile,
         "status": "Sent", "notes": (notes or "").strip()[:500],
@@ -60,11 +61,29 @@ def create_purchase_order(buyer_profile, seller_profile, items, notes=""):
     for r in rows:
         price = _listed_price(seller_profile, r["book"])
         qty = int(r["qty"])
-        doc.append("items", {"book": r["book"], "qty": qty, "unit_price": price, "line_total": price * qty})
+        line = {"book": r["book"], "qty": qty}
+        sells_options = io.owner_of(r["book"]) == seller_profile and io.has_options(r["book"])
+        if r.get("option"):
+            if not sells_options:
+                frappe.throw(_("This seller does not sell options of this item."))
+            opt = io.get_option(r["book"], r["option"])
+            if flt(opt.price):
+                mrp, disc, _net = _price_info(seller_profile, r["book"])
+                price = round(flt(opt.price) * (1 - flt(disc) / 100), 2)
+            line.update({"item_option": opt.name, "option_label": io.label_of(opt)})
+        elif sells_options:
+            frappe.throw(_("Choose the size / colour of {0}.").format(frappe.db.get_value("Book", r["book"], "title")))
+        line.update({"unit_price": price, "line_total": price * qty})
+        doc.append("items", line)
     doc.total_qty = sum(int(i.qty) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
     doc.insert(ignore_permissions=True)
     return _view(doc)
+
+
+def _key(book, option):
+    """One order line: the item and its chosen option (the same item can be ordered in two sizes)."""
+    return f"{book}|{option or ''}"
 
 
 def _view(doc):
@@ -75,6 +94,7 @@ def _view(doc):
         "seller_name": frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name"),
         "notes": doc.notes or "", "total_qty": doc.total_qty, "total": flt(doc.total),
         "items": [{"book": i.book, "title": frappe.db.get_value("Book", i.book, "title"), "qty": i.qty,
+                   "item_option": i.get("item_option") or "", "option_label": i.get("option_label") or "",
                    "sent_qty": i.sent_qty if i.sent_qty is not None else None,
                    "received_qty": i.received_qty if i.received_qty is not None else None,
                    "damaged_qty": int(i.damaged_qty or 0),
@@ -158,8 +178,13 @@ def _seller_books(seller_profile):
         if not b:
             continue
         mrp, disc, net = _price_info(seller_profile, name)
-        out.append({"book": name, "title": b.title, "author": b.author, "mrp": mrp,
-                    "discount_percent": disc, "price": net, "discount_amount": round(mrp - net, 2)})
+        row = {"book": name, "title": b.title, "author": b.author, "mrp": mrp,
+               "discount_percent": disc, "price": net, "discount_amount": round(mrp - net, 2)}
+        from book_marketplace.catalog.api import item_options as io
+        if io.owner_of(name) == seller_profile and io.has_options(name):
+            row["options"] = [{**o, "net_price": round((o["price"] or mrp) * (1 - flt(disc) / 100), 2)}
+                              for o in io.options_of(name)]
+        out.append(row)
     return sorted(out, key=lambda x: (x["title"] or "").lower())
 
 
@@ -190,15 +215,21 @@ def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider
         frappe.throw(_("Only the seller dispatches this order."), frappe.PermissionError)
     if doc.status != "Accepted":
         frappe.throw(_("Only an accepted order can be dispatched (now: {0}).").format(doc.status))
-    sent = {r["book"]: int(r.get("sent_qty") or 0) for r in (json.loads(items) if isinstance(items, str) else (items or []))}
+    sent = {_key(r.get("book"), r.get("item_option")): int(r.get("sent_qty") or 0)
+            for r in (json.loads(items) if isinstance(items, str) else (items or []))}
+    from book_marketplace.catalog.api import item_options as io
     for row in doc.items:
-        if row.book not in sent:
+        k = _key(row.book, row.get("item_option"))
+        if k not in sent:
             frappe.throw(_("Enter the sent quantity for {0}.").format(row.book))
-        q = sent[row.book]
+        q = sent[k]
         if q < 0 or q > int(row.qty):
             frappe.throw(_("Sent quantity for {0} must be between 0 and {1}.").format(row.book, row.qty))
         row.sent_qty = q
         row.line_total = flt(row.unit_price) * q
+        if row.get("item_option") and q:
+            io.take(row.book, row.item_option, q)
+            io.take_shop_stock(doc.seller_profile, row.book, q)
     doc.total_qty = sum(int(i.sent_qty or 0) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
     doc.transporter = (transporter or "").strip()[:140]
@@ -308,11 +339,13 @@ def receive_purchase_order(name, profile_id, items):
     if doc.status not in ("Dispatched", "Awaiting Agreement"):
         frappe.throw(_("Only a dispatched order can be received (now: {0}).").format(doc.status))
     rows = json.loads(items) if isinstance(items, str) else (items or [])
-    got = {r["book"]: (int(r.get("received_qty") or 0), int(r.get("damaged_qty") or 0)) for r in rows}
+    got = {_key(r.get("book"), r.get("item_option")): (int(r.get("received_qty") or 0), int(r.get("damaged_qty") or 0))
+           for r in rows}
     for row in doc.items:
-        if row.book not in got:
+        k = _key(row.book, row.get("item_option"))
+        if k not in got:
             frappe.throw(_("Enter the received quantity for {0}.").format(row.book))
-        q, dmg = got[row.book]
+        q, dmg = got[k]
         if q < 0:
             frappe.throw(_("Received quantity for {0} cannot be negative.").format(row.book))
         if dmg < 0 or dmg > q:

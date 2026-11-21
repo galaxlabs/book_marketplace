@@ -71,8 +71,11 @@ def _reserve(seller, book, qty, ledger, branch):
     return True
 
 
-def _release(seller, book, qty):
+def _release(seller, book, qty, option=None):
     from book_marketplace.trading.api.customer_portal import notify_back_in_stock
+    if option:
+        from book_marketplace.catalog.api import item_options as io
+        io.give_back(book, option, qty)
     before = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Available"}, "quantity") or 0
     res = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Reserved"},
                               ["name", "quantity", "branch_location"], as_dict=True)
@@ -150,18 +153,32 @@ def checkout_for(buyer, client_id, items, choices=None, payment_mode="online", d
     if isinstance(choices, str):
         choices = json.loads(choices) if choices.strip() else {}
     choices = choices or {}
+    from book_marketplace.catalog.api import item_options as io
     merged = {}
     for it in items or []:
-        book, qty = it.get("book"), int(it.get("qty") or 0)
+        book, qty, option = it.get("book"), int(it.get("qty") or 0), (it.get("option") or "")
         if not book or qty < 1:
             frappe.throw(_("Each item needs a book and a quantity of at least 1."))
-        merged[book] = merged.get(book, 0) + qty
+        if not option and io.has_options(book):
+            return {"ok": False, "needs_option": True, "book": book, "options": io.options_of(book)}
+        merged[(book, option)] = merged.get((book, option), 0) + qty
     if not merged:
         frappe.throw(_("The basket is empty."))
 
     plan, problems = {}, []
-    for book, qty in merged.items():
+    for (book, option), qty in merged.items():
         offers = _offers(book)
+        opt = None
+        if option:
+            # a chosen size / colour is sold by the shop that owns the item, from that option's own stock
+            opt = io.get_option(book, option)
+            owner = io.owner_of(book)
+            offers = [dict(o, have=min(o["have"], int(opt.stock_qty or 0))) for o in offers if o["seller"] == owner]
+            if flt(opt.price):
+                from book_marketplace.catalog.api.catalog import price_view
+                for o in offers:
+                    pct = frappe.db.get_value("BusinessCatalogItem", {"business_profile": o["seller"], "book": book}, "discount_percent")
+                    o["unit_price"] = price_view(flt(opt.price), flt(pct))["net_price"] or flt(opt.price)
         ok = [o for o in offers if o["have"] >= qty]
         if not ok:
             problems.append({"book": book, "reason": "not_enough_stock",
@@ -176,7 +193,8 @@ def checkout_for(buyer, client_id, items, choices=None, payment_mode="online", d
             problems.append({"book": book, "reason": "choice_not_available"})
             continue
         plan.setdefault(pick["seller"], []).append({"book": book, "qty": qty, "unit_price": pick["unit_price"],
-                                                    "ledger": pick["ledger"], "branch": pick["branch"]})
+                                                    "ledger": pick["ledger"], "branch": pick["branch"],
+                                                    "option": option, "label": io.label_of(opt) if opt else ""})
     if problems:
         return {"ok": False, "problems": problems}
 
@@ -190,6 +208,8 @@ def checkout_for(buyer, client_id, items, choices=None, payment_mode="online", d
             if not _reserve(seller, ln["book"], ln["qty"], ln["ledger"], ln["branch"]):
                 frappe.db.rollback()
                 return {"ok": False, "problems": [{"book": ln["book"], "reason": "not_enough_stock"}]}
+            if ln["option"]:
+                io.take(ln["book"], ln["option"], ln["qty"])
         total = sum(ln["qty"] * ln["unit_price"] for ln in lines)
         grand += total
         order = frappe.get_doc({
@@ -197,7 +217,8 @@ def checkout_for(buyer, client_id, items, choices=None, payment_mode="online", d
             "status": WAIT_STATUS[payment_mode], "payment_mode": payment_mode, "payment_status": "Unpaid",
             "reserved_until": deadline, "subtotal": total, "total": total, **ship,
             "items": [{"book": ln["book"], "qty": ln["qty"], "unit_price": ln["unit_price"],
-                       "line_total": ln["qty"] * ln["unit_price"]} for ln in lines],
+                       "line_total": ln["qty"] * ln["unit_price"],
+                       "item_option": ln["option"] or None, "option_label": ln["label"] or None} for ln in lines],
         })
         order.insert(ignore_permissions=True)
         orders.append({"name": order.name, "seller": seller, "total": total})
@@ -223,9 +244,9 @@ def expire_overdue():
                          fields=["name", "seller_profile"])
     for o in due:
         items = frappe.get_all("Customer Order Item", filters={"parent": o.name, "parenttype": "Customer Order"},
-                               fields=["book", "qty"])
+                               fields=["book", "qty", "item_option"])
         for it in items:
-            _release(o.seller_profile, it.book, int(it.qty))
+            _release(o.seller_profile, it.book, int(it.qty), it.item_option)
         frappe.db.set_value("Customer Order", o.name, {"status": "Expired", "expired_on": now_datetime()})
     return len(due)
 
@@ -262,9 +283,12 @@ def revive_order(order):
     if short:
         frappe.throw(_("Not enough copies to revive this order: {0}").format(
             ", ".join(f"{frappe.db.get_value('Book', s['book'], 'title')} ({s['available']})" for s in short)))
+    from book_marketplace.catalog.api import item_options as io
     for it, led in ledgers:
         if not _reserve(doc.seller_profile, it.book, int(it.qty), led.name, led.branch_location):
             frappe.throw(_("Stock changed; please try again."))
+        if it.get("item_option"):
+            io.take(it.book, it.item_option, int(it.qty))
     doc.status = WAIT_STATUS[mode]
     doc.reserved_until = add_to_date(now_datetime(), hours=HOURS[mode])
     doc.expired_on = None

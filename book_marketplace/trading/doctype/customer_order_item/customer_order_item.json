@@ -14,7 +14,10 @@
   "variant",
   "qty",
   "unit_price",
-  "line_total"
+  "line_total",
+  "option_col",
+  "item_option",
+  "option_label"
  ],
  "fields": [
   {
@@ -48,6 +51,23 @@
    "fieldname": "line_total",
    "fieldtype": "Currency",
    "label": "Line total / کل",
+   "read_only": 1
+  },
+  {
+   "fieldname": "option_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item_option",
+   "fieldtype": "Data",
+   "label": "Option id",
+   "read_only": 1
+  },
+  {
+   "fieldname": "option_label",
+   "fieldtype": "Data",
+   "label": "Option (size, colour ...)",
+   "in_list_view": 1,
    "read_only": 1
   }
  ],

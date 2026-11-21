@@ -56,7 +56,7 @@ def _move(order, to, actor, reason=None):
     doc.save(ignore_permissions=True)
     if to in RELEASING:
         for it in doc.items:
-            _release(doc.seller_profile, it.book, int(it.qty))
+            _release(doc.seller_profile, it.book, int(it.qty), it.get("item_option"))
     if to == "Delivered":
         for it in doc.items:
             _consume_reserved(doc.seller_profile, it.book, int(it.qty))
@@ -168,6 +168,7 @@ def seller_order_detail(order):
     _assert_profile_owner(doc.seller_profile)
     buyer = frappe.db.get_value("BuyerProfile", doc.buyer_profile, ["full_name", "phone", "email"], as_dict=True) or {}
     items = [{"book": i.book, "title": frappe.db.get_value("Book", i.book, "title"), "qty": i.qty,
+              "option_label": i.get("option_label") or "",
               "unit_price": i.unit_price, "line_total": i.line_total} for i in doc.items]
     pays = frappe.get_all("PaymentTransaction", filters={"customer_order": order},
                           fields=["name", "amount", "payment_method", "reference_no", "payment_date", "status", "rejection_reason"],
