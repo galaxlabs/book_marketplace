@@ -11,7 +11,10 @@
   "quantity",
   "rate",
   "amount",
-  "notes"
+  "notes",
+  "option_col",
+  "item_option",
+  "option_label"
  ],
  "fields": [
   {
@@ -55,6 +58,23 @@
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "Notes"
+  },
+  {
+   "fieldname": "option_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item_option",
+   "fieldtype": "Data",
+   "label": "Option id",
+   "read_only": 1
+  },
+  {
+   "fieldname": "option_label",
+   "fieldtype": "Data",
+   "label": "Option (size, colour ...)",
+   "in_list_view": 1,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,

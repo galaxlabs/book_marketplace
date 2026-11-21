@@ -90,11 +90,24 @@ def create_sale(seller, items, customer_name=None, customer_phone=None, payment_
     items = [it for it in (items or []) if it.get("book")]
     if not items:
         frappe.throw(_("Add at least one book."))
+    from book_marketplace.catalog.api import item_options as io
     plan = []
     for it in items:
         qty = int(it.get("quantity") or 0)
         if qty <= 0:
             frappe.throw(_("Quantity must be at least 1."))
+        # an item this shop sells by size / colour: the size is required and its own stock must cover the sale
+        sells_options = io.owner_of(it["book"]) == seller and io.has_options(it["book"])
+        it["_label"] = ""
+        if it.get("option"):
+            if not sells_options:
+                frappe.throw(_("This item has no size / colour choice in your shop."))
+            opt = io.get_option(it["book"], it["option"])
+            if int(opt.stock_qty or 0) < qty:
+                frappe.throw(_("Only {0} left of {1}.").format(int(opt.stock_qty or 0), io.label_of(opt)))
+            it["_label"] = io.label_of(opt)
+        elif sells_options:
+            frappe.throw(_("Choose the size / colour of {0}.").format(frappe.db.get_value("Book", it["book"], "title")))
         ledger, have = _tracked_quantity(seller, it["book"])
         if ledger is not None and qty > have:
             title = frappe.db.get_value("Book", it["book"], "title")
@@ -110,14 +123,18 @@ def create_sale(seller, items, customer_name=None, customer_phone=None, payment_
         "status": "Received",
         "payment_status": payment_status or "Paid",
         "items": [
-            {"book": it["book"], "quantity": qty, "rate": float(it.get("rate") or 0)}
+            {"book": it["book"], "quantity": qty, "rate": float(it.get("rate") or 0),
+             "item_option": it.get("option") or None, "option_label": it["_label"] or None}
             for it, qty, _l, _h in plan
         ],
     })
     doc.insert(ignore_permissions=True)
+    # the same item in two sizes is two lines: the shop stock goes down by each line in turn
     for it, qty, ledger, have in plan:
+        if it.get("option"):
+            io.take(it["book"], it["option"], qty)
         if ledger is not None:
-            frappe.db.set_value("StockLedger", ledger, "quantity", have - qty)
+            frappe.db.sql("update `tabStockLedger` set quantity = greatest(quantity - %s, 0) where name=%s", (qty, ledger))
     return {"name": doc.name, "total_amount": doc.total_amount, "status": doc.status}
 
 
