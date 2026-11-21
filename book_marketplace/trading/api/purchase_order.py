@@ -90,6 +90,7 @@ def _view(doc):
         "damaged_qty": sum(int(i.damaged_qty or 0) for i in doc.items),
         "buyer_response": doc.buyer_response or "",
         "buyer_response_on": str(doc.buyer_response_on or ""),
+        "buyer_response_image": doc.buyer_response_image or "",
         "expires_on": str(_expiry(doc) or ""),
         "invoice_no": doc.invoice_no or "",
         "transporter": doc.transporter or "",
@@ -385,7 +386,7 @@ def _expiry(doc):
 
 
 @frappe.whitelist()
-def respond_to_dispute(name, profile_id, response):
+def respond_to_dispute(name, profile_id, response, image=None):
     """The shop explains its position after the seller disputed the receipt. The seller sees it with the order."""
     from frappe.utils import now_datetime
     _profile_of_user(profile_id)
@@ -399,7 +400,10 @@ def respond_to_dispute(name, profile_id, response):
     text = (response or "").strip()
     if not text:
         frappe.throw(_("Write your explanation."))
+    if image and not (str(image).startswith("/files/") or str(image).startswith("https://")):
+        frappe.throw(_("The photo must be an uploaded file."))
     doc.buyer_response = text
+    doc.buyer_response_image = (image or None)
     doc.buyer_response_on = now_datetime()
     doc.save(ignore_permissions=True)
     return _view(doc)

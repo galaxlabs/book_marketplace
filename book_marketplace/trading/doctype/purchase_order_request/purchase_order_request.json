@@ -14,6 +14,16 @@
   "total_qty",
   "total",
   "dispatched_on",
+  "received_on",
+  "receipt_submitted_on",
+  "agreed_on",
+  "receipt_note",
+  "khata_posted",
+  "buyer_response",
+  "buyer_response_on",
+  "buyer_response_image",
+  "invoice_no",
+  "invoice_total",
   "transporter",
   "bilty_no",
   "rider_name",
@@ -112,6 +122,11 @@
    "fieldtype": "Datetime",
    "label": "Shop Response On",
    "read_only": 1
+  },
+  {
+   "fieldname": "buyer_response_image",
+   "fieldtype": "Attach Image",
+   "label": "Buyer Response Photo"
   },
   {
    "fieldname": "invoice_no",
