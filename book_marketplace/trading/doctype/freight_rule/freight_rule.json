@@ -1,0 +1,136 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:FR-{#####}",
+ "creation": "2026-11-21 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "rule_name",
+  "scenario",
+  "city",
+  "min_copies",
+  "max_copies",
+  "min_total",
+  "priority",
+  "column_break_f",
+  "charge_type",
+  "amount",
+  "payer",
+  "seller_share",
+  "active"
+ ],
+ "fields": [
+  {
+   "fieldname": "rule_name",
+   "fieldtype": "Data",
+   "label": "Rule Name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "scenario",
+   "fieldtype": "Select",
+   "label": "Scenario",
+   "options": "Any\nPublisher office to shop door\nPublisher office to transport to shop city\nPublisher office to publisher city transport office",
+   "default": "Any",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City (blank = any)",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "min_copies",
+   "fieldtype": "Int",
+   "label": "Minimum copies (0 = none)",
+   "default": "0"
+  },
+  {
+   "fieldname": "max_copies",
+   "fieldtype": "Int",
+   "label": "Maximum copies (0 = no limit)",
+   "default": "0"
+  },
+  {
+   "fieldname": "min_total",
+   "fieldtype": "Currency",
+   "label": "Minimum order total (0 = none)",
+   "default": "0"
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Int",
+   "label": "Priority (higher wins)",
+   "default": "0",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_f",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "charge_type",
+   "fieldtype": "Select",
+   "label": "Charge Type",
+   "options": "Fixed\nPer Copy\nPercent of Total",
+   "reqd": 1,
+   "default": "Fixed",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Float",
+   "label": "Amount",
+   "default": "0",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "payer",
+   "fieldtype": "Select",
+   "label": "Who Pays",
+   "options": "Buyer\nSeller\nSplit",
+   "reqd": 1,
+   "default": "Buyer",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "seller_share",
+   "fieldtype": "Percent",
+   "label": "Seller Share % (for Split)",
+   "default": "0"
+  },
+  {
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "modified": "2026-11-21 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Trading",
+ "name": "Freight Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

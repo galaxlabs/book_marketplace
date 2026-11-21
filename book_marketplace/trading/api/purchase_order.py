@@ -91,6 +91,9 @@ def _view(doc):
         "buyer_response": doc.buyer_response or "",
         "buyer_response_on": str(doc.buyer_response_on or ""),
         "buyer_response_image": doc.buyer_response_image or "",
+        "freight_scenario": doc.freight_scenario or "", "freight_rule": doc.freight_rule or "",
+        "freight_total": flt(doc.freight_total), "freight_buyer_share": flt(doc.freight_buyer_share),
+        "freight_seller_share": flt(doc.freight_seller_share),
         "expires_on": str(_expiry(doc) or ""),
         "invoice_no": doc.invoice_no or "",
         "transporter": doc.transporter or "",
@@ -168,7 +171,7 @@ def find_sellers(text=""):
 
 
 @frappe.whitelist()
-def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider_name=None, rider_phone=None):
+def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider_name=None, rider_phone=None, freight_scenario=None):
     """The seller prepares the order: writes the quantity it sends for each book, then packs and dispatches.
     items: JSON list of {book, sent_qty}. Only the seller, only while the order is Accepted."""
     from frappe.utils import now_datetime
@@ -191,6 +194,17 @@ def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider
     doc.total = sum(flt(i.line_total) for i in doc.items)
     doc.transporter = (transporter or "").strip()[:140]
     doc.bilty_no = (bilty_no or "").strip()[:60]
+    # freight: quoted by the active freight rules for the scenario the seller picked
+    from book_marketplace.trading.api.transport_policy import quote_freight
+    scenario = (freight_scenario or "").strip()
+    if scenario:
+        city = frappe.db.get_value("BusinessProfile", doc.buyer_profile, "city") or ""
+        q = quote_freight(scenario, city, doc.total_qty, doc.total)
+        doc.freight_scenario = scenario
+        doc.freight_rule = q["rule"] or ""
+        doc.freight_total = q["total"]
+        doc.freight_buyer_share = q["buyer_share"]
+        doc.freight_seller_share = q["seller_share"]
     doc.rider_name = (rider_name or "").strip()[:140]
     doc.rider_phone = (rider_phone or "").strip()[:40]
     doc.status = "Dispatched"
@@ -311,7 +325,7 @@ def agree_receipt(name, profile_id):
         _add_stock(doc.buyer_profile, row.book, int(row.received_qty or 0) - int(row.damaged_qty or 0))
     doc.total_qty = sum(int(i.received_qty or 0) - int(i.damaged_qty or 0) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
-    doc.invoice_total = doc.total
+    doc.invoice_total = flt(doc.total) + flt(doc.freight_buyer_share)
     prefix = frappe.db.get_value("BusinessProfile", doc.seller_profile, "invoice_prefix") or "INV"
     doc.invoice_no = f"{prefix}-{doc.name}"
     doc.received_on = now_datetime()

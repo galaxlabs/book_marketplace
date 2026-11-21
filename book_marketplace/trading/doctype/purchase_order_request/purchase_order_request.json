@@ -27,7 +27,12 @@
   "transporter",
   "bilty_no",
   "rider_name",
-  "rider_phone"
+  "rider_phone",
+  "freight_scenario",
+  "freight_rule",
+  "freight_total",
+  "freight_buyer_share",
+  "freight_seller_share"
  ],
  "fields": [
   {
@@ -159,6 +164,31 @@
    "fieldname": "rider_phone",
    "fieldtype": "Data",
    "label": "Rider Phone"
+  },
+  {
+   "fieldname": "freight_scenario",
+   "fieldtype": "Data",
+   "label": "Freight Scenario"
+  },
+  {
+   "fieldname": "freight_rule",
+   "fieldtype": "Data",
+   "label": "Freight Rule"
+  },
+  {
+   "fieldname": "freight_total",
+   "fieldtype": "Currency",
+   "label": "Freight Total"
+  },
+  {
+   "fieldname": "freight_buyer_share",
+   "fieldtype": "Currency",
+   "label": "Freight Paid by Buyer"
+  },
+  {
+   "fieldname": "freight_seller_share",
+   "fieldtype": "Currency",
+   "label": "Freight Paid by Seller"
   }
  ],
  "module": "Trading",
