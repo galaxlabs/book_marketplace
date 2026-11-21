@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:AR-{#####}",
+ "creation": "2026-11-21 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "announcement",
+  "business_profile",
+  "read_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "announcement",
+   "fieldtype": "Link",
+   "label": "Announcement",
+   "options": "Admin Announcement",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Shop",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "read_on",
+   "fieldtype": "Datetime",
+   "label": "Read On"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "modified": "2026-11-21 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Trading",
+ "name": "Announcement Read",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

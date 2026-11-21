@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:BP-{#####}",
+ "creation": "2026-11-21 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "status",
+  "body",
+  "image",
+  "column_break_b",
+  "reports",
+  "hidden_reason",
+  "created_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Shop",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nHidden",
+   "default": "Open",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Small Text",
+   "label": "Post / پوسٹ",
+   "reqd": 1
+  },
+  {
+   "fieldname": "image",
+   "fieldtype": "Attach Image",
+   "label": "Image"
+  },
+  {
+   "fieldname": "column_break_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reports",
+   "fieldtype": "Int",
+   "label": "Reports",
+   "default": "0"
+  },
+  {
+   "fieldname": "hidden_reason",
+   "fieldtype": "Data",
+   "label": "Hidden Because"
+  },
+  {
+   "fieldname": "created_on",
+   "fieldtype": "Datetime",
+   "label": "Created On"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "modified": "2026-11-21 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Trading",
+ "name": "Shop Board Post",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
