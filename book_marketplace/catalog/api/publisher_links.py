@@ -50,3 +50,20 @@ def publisher_stockists(profile_id):
     return [{"shop": r.shop, "user": (info.get(r.shop) or frappe._dict()).get("user") or "",
              "business_name": (info.get(r.shop) or frappe._dict()).get("business_name") or r.shop,
              "city": (info.get(r.shop) or frappe._dict()).get("city") or "", "books": r.books} for r in rows]
+
+
+@frappe.whitelist()
+def remove_publisher_books(profile_id, publisher):
+    """Takes every book of one publisher off this shop's list. The books stay with the publisher.
+    A publisher's own books are not removed here (it unpublishes them instead)."""
+    _assert_profile_owner(profile_id)
+    if publisher == profile_id:
+        frappe.throw(_("A publisher cannot remove its own books from its list."))
+    items = frappe.db.sql("""
+        SELECT bci.name FROM `tabBusinessCatalogItem` bci
+        INNER JOIN `tabBook` b ON b.name = bci.book
+        WHERE bci.business_profile = %s AND b.publisher = %s
+    """, (profile_id, publisher), as_dict=True)
+    for it in items:
+        frappe.delete_doc("BusinessCatalogItem", it.name, ignore_permissions=True)
+    return {"removed": len(items)}

@@ -339,6 +339,10 @@ def dispute_receipt(name, profile_id, note):
     doc.receipt_note = note.strip()
     doc.status = "Dispatched"
     doc.save(ignore_permissions=True)
+    from book_marketplace.trading.api.notifications import notify
+    notify(doc.buyer_profile, _("Receipt disputed: {0}").format(doc.name),
+           _("The seller does not agree with your count. Write your explanation (and a photo if you have one)."),
+           "/purchase-orders", kind="dispute")
     policy.after_receipt(doc.buyer_profile)
     return _view(doc)
 
@@ -419,11 +423,16 @@ def expire_stale_receipts():
         pluck="name",
     )
     buyers = set()
+    from book_marketplace.trading.api.notifications import notify
     for n in names:
         doc = frappe.get_doc("Purchase Order Request", n)
         doc.status = "Expired"
         doc.save(ignore_permissions=True)
         buyers.add(doc.buyer_profile)
+        for side in (doc.buyer_profile, doc.seller_profile):
+            notify(side, _("Order expired: {0}").format(doc.name),
+                   _("The receipt was not agreed within 14 days. No stock or khata change was made."),
+                   "/purchase-orders", kind="expiry")
     for b in buyers:
         policy.after_receipt(b)
     return len(names)
