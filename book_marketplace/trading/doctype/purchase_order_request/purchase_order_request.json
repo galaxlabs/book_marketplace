@@ -32,7 +32,8 @@
   "freight_rule",
   "freight_total",
   "freight_buyer_share",
-  "freight_seller_share"
+  "freight_seller_share",
+  "transport_company"
  ],
  "fields": [
   {
@@ -189,6 +190,12 @@
    "fieldname": "freight_seller_share",
    "fieldtype": "Currency",
    "label": "Freight Paid by Seller"
+  },
+  {
+   "fieldname": "transport_company",
+   "fieldtype": "Link",
+   "label": "Transport Company",
+   "options": "Transport Company"
   }
  ],
  "module": "Trading",

@@ -195,6 +195,7 @@ def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider
     doc.total_qty = sum(int(i.sent_qty or 0) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
     doc.transporter = (transporter or "").strip()[:140]
+    doc.transport_company = frappe.db.get_value("Transport Company", {"name_of_company": doc.transporter}, "name") or None
     doc.bilty_no = (bilty_no or "").strip()[:60]
     # freight: quoted by the active freight rules for the scenario the seller picked
     from book_marketplace.trading.api.transport_policy import quote_freight

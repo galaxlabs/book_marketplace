@@ -11,7 +11,8 @@
   "phone",
   "added_by",
   "status",
-  "notes"
+  "notes",
+  "offices"
  ],
  "fields": [
   {
@@ -51,6 +52,12 @@
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "Notes"
+  },
+  {
+   "fieldname": "offices",
+   "fieldtype": "Table",
+   "label": "Offices",
+   "options": "Transport Office"
   }
  ],
  "index_web_pages_for_search": 0,
