@@ -95,6 +95,18 @@ def _post(conversation, sender, body, book=None, attachment=None):
             "attachment": attachment or None, "reactions": {}, "creation": str(msg.creation)}
 
 
+def _kind(user):
+    """admin, publisher, shop or user: used for the message filters."""
+    if "System Manager" in frappe.get_roles(user):
+        return "admin"
+    ptype = frappe.db.get_value("BusinessProfile", {"user": user}, "profile_type")
+    if ptype == "Publisher":
+        return "publisher"
+    if ptype:
+        return "shop"
+    return "user"
+
+
 @frappe.whitelist()
 def start_conversation(user):
     me = _me()
@@ -121,9 +133,13 @@ def my_conversations(limit=50):
         other = r.user_b if r.user_a == me else r.user_a
         my_read = r.read_a if r.user_a == me else r.read_b
         unread = bool(r.last_message_at) and (not my_read or get_datetime(r.last_message_at) > get_datetime(my_read))
+        count_filters = {"conversation": r.name, "sender": ["!=", me]}
+        if my_read:
+            count_filters["creation"] = [">", get_datetime(my_read)]
+        unread_count = frappe.db.count("Chat Message", count_filters)
         out.append({"name": r.name, "other": other, "other_name": _display(other),
                     "last_message_at": str(r.last_message_at or ""), "last_preview": r.last_preview or "",
-                    "unread": bool(unread)})
+                    "unread": bool(unread), "unread_count": unread_count, "kind": _kind(other)})
     return out
 
 
