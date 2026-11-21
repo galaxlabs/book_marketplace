@@ -8,6 +8,8 @@ from frappe import _
 from frappe.utils import get_system_timezone, now_datetime
 
 THEMES = ("white", "indigo", "ink-gold", "custom")
+# an account that has not picked a zone reads times in Pakistan time
+DEFAULT_ZONE = "Asia/Karachi"
 
 
 def _me():
@@ -24,13 +26,13 @@ def my_preferences():
     server_zone = get_system_timezone()
     if not row:
         return {"language": "ur", "theme_name": "white", "colors": {}, "brand_display": "both",
-                "time_zone": server_zone, "server_time_zone": server_zone}
+                "time_zone": DEFAULT_ZONE, "server_time_zone": server_zone}
     try:
         colors = json.loads(row.colors or "{}")
     except ValueError:
         colors = {}
     return {"language": row.language or "ur", "theme_name": row.theme_name or "white", "colors": colors,
-            "brand_display": row.brand_display or "both", "time_zone": row.time_zone or server_zone,
+            "brand_display": row.brand_display or "both", "time_zone": row.time_zone or DEFAULT_ZONE,
             "server_time_zone": server_zone}
 
 
@@ -66,4 +68,4 @@ def save_preferences(language="ur", theme_name="white", colors=None, brand_displ
         doc.time_zone = time_zone
     doc.save(ignore_permissions=True)
     return {"language": language, "theme_name": theme_name, "colors": clean, "brand_display": doc.brand_display or "both",
-            "time_zone": doc.time_zone or get_system_timezone(), "saved_on": str(now_datetime())}
+            "time_zone": doc.time_zone or DEFAULT_ZONE, "saved_on": str(now_datetime())}
