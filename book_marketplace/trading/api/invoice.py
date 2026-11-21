@@ -22,8 +22,8 @@ def _party(profile_id):
         "city": row.get("city") or "",
         "phone": row.get("phone") or "",
         "email": row.get("email") or "",
-        # the tax number is printed only when the profile has it switched on
-        "ntn": (row.get("fbr_ntn") or "") if row.get("enable_fbr") else "",
+        # the tax number is printed whenever the business has written it in its profile
+        "ntn": row.get("fbr_ntn") or "",
         "logo": row.get("logo") or "",
     }
 

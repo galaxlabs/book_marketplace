@@ -4,7 +4,7 @@ from frappe.utils import flt
 
 
 BUYER_FIELDS = ["name", "user", "avatar", "full_name", "phone", "email", "default_address", "city", "country", "status"]
-SELLER_FIELDS = ["name", "user", "profile_type", "business_name", "status", "logo", "banner_image", "business_description", "public_message", "phone", "email", "address", "city", "country"]
+SELLER_FIELDS = ["name", "user", "profile_type", "business_name", "status", "logo", "banner_image", "business_description", "public_message", "phone", "email", "address", "city", "country", "fbr_ntn"]
 PAYMENT_FIELDS = ["name", "order", "buyer_profile", "seller_profile", "amount", "payment_method", "reference_no", "payment_date", "screenshot", "notes", "status", "creation"]
 
 
@@ -58,8 +58,15 @@ def update_buyer_profile(full_name=None, phone=None, email=None, default_address
 
 
 @frappe.whitelist()
-def update_business_profile(profile_id, business_name=None, logo=None, banner_image=None, business_description=None, public_message=None, phone=None, email=None, address=None, city=None, country=None):
+def update_business_profile(profile_id, business_name=None, logo=None, banner_image=None, business_description=None, public_message=None, phone=None, email=None, address=None, city=None, country=None, fbr_ntn=None):
     doc = _get_owned_business_profile(profile_id)
+    if fbr_ntn is not None:
+        # the tax number (NTN): printed on the letterhead whenever it is filled in
+        import re
+        ntn = (fbr_ntn or "").strip()
+        if ntn and not re.fullmatch(r"[0-9][0-9-]{5,19}", ntn):
+            frappe.throw(_("Write the NTN as digits, for example 1234567-8."))
+        doc.fbr_ntn = ntn or None
     for field, value in {
         "business_name": business_name,
         "logo": logo,
