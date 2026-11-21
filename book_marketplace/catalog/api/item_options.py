@@ -28,7 +28,10 @@ def options_of(book):
     rows = frappe.get_all("Item Option", filters={"parent": book, "parenttype": "Book"},
                           fields=["name", "size", "colour", "style", "amount", "unit", "price", "stock_qty"],
                           order_by="idx asc", limit_page_length=0)
-    return [{"id": r.name, "label": label_of(r), "price": flt(r.price), "stock": cint(r.stock_qty)} for r in rows]
+    # size / colour / style / amount apart, so a store page can show one row of choices per attribute
+    return [{"id": r.name, "label": label_of(r), "price": flt(r.price), "stock": cint(r.stock_qty),
+             "size": r.size or "", "colour": r.colour or "", "style": r.style or "",
+             "amount": (f"{flt(r.amount):g} {r.unit or ''}".strip() if flt(r.amount) else "")} for r in rows]
 
 
 def get_option(book, option_id):
