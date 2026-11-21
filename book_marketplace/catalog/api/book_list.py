@@ -7,7 +7,7 @@ from book_marketplace.auth.api.auth import _assert_profile_owner
 
 
 @frappe.whitelist()
-def book_list(profile_id, text="", availability="all", published="all", limit=50, offset=0):
+def book_list(profile_id, text="", availability="all", published="all", limit=50, offset=0, item_type=""):
     _assert_profile_owner(profile_id)
     limit = min(frappe.utils.cint(limit) or 50, 200)
     offset = frappe.utils.cint(offset)
@@ -28,12 +28,14 @@ def book_list(profile_id, text="", availability="all", published="all", limit=50
         held[row.book] = held.get(row.book, 0) + float(row.quantity or 0)
 
     books = frappe.get_all("Book", filters={"name": ["in", list(names)]},
-                           fields=["name", "title", "author", "publisher"],
+                           fields=["name", "title", "author", "publisher", "item_type"],
                            order_by="title asc", limit_page_length=0)
     t = (text or "").strip().lower()
     out = []
     for b in books:
         if t and t not in (b.title or "").lower() and t not in (b.author or "").lower():
+            continue
+        if item_type and (b.item_type or "Book") != item_type:
             continue
         qty = held.get(b.name, 0)
         cat = catalog.get(b.name)
@@ -47,6 +49,6 @@ def book_list(profile_id, text="", availability="all", published="all", limit=50
         if published == "unpublished" and is_published:
             continue
         out.append({"name": b.name, "title": b.title, "author": b.author or "", "publisher": b.publisher or "",
-                    "quantity": qty, "available": qty > 0, "published": is_published,
+                    "quantity": qty, "available": qty > 0, "published": is_published, "item_type": b.item_type or "Book",
                     "catalog_item": cat.name if cat else None})
     return {"books": out[offset:offset + limit], "total": len(out)}

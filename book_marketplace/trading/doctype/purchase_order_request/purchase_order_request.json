@@ -33,7 +33,18 @@
   "freight_total",
   "freight_buyer_share",
   "freight_seller_share",
-  "transport_company"
+  "transport_company",
+  "packing_section",
+  "same_city",
+  "cartons",
+  "packets",
+  "bundles",
+  "tape_status",
+  "packing_col",
+  "packing_charge",
+  "labour_charge",
+  "station_cost",
+  "packing_paid_by"
  ],
  "fields": [
   {
@@ -196,6 +207,63 @@
    "fieldtype": "Link",
    "label": "Transport Company",
    "options": "Transport Company"
+  },
+  {
+   "fieldname": "packing_section",
+   "fieldtype": "Section Break",
+   "label": "Packing / پیکنگ"
+  },
+  {
+   "fieldname": "same_city",
+   "fieldtype": "Check",
+   "label": "Same city (no packing rules)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cartons",
+   "fieldtype": "Int",
+   "label": "Cartons / کارٹن"
+  },
+  {
+   "fieldname": "packets",
+   "fieldtype": "Int",
+   "label": "Packets / parcels / پیکٹ"
+  },
+  {
+   "fieldname": "bundles",
+   "fieldtype": "Int",
+   "label": "Bundles / بنڈل"
+  },
+  {
+   "fieldname": "tape_status",
+   "fieldtype": "Select",
+   "label": "Tape / پٹی",
+   "options": "\nAlready taped\nTaped by us"
+  },
+  {
+   "fieldname": "packing_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "packing_charge",
+   "fieldtype": "Currency",
+   "label": "Tape and packets"
+  },
+  {
+   "fieldname": "labour_charge",
+   "fieldtype": "Currency",
+   "label": "Labour"
+  },
+  {
+   "fieldname": "station_cost",
+   "fieldtype": "Currency",
+   "label": "Shop to station (sender)"
+  },
+  {
+   "fieldname": "packing_paid_by",
+   "fieldtype": "Select",
+   "label": "Tape and labour paid by",
+   "options": "\nBuyer\nSeller"
   }
  ],
  "module": "Trading",

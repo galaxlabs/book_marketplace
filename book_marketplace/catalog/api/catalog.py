@@ -3,8 +3,11 @@ from frappe import _
 
 
 @frappe.whitelist(allow_guest=True)
-def search(text=None, subject=None, publisher=None, author=None, language=None, board=None, book_type=None, limit=20, offset=0):
+def search(text=None, subject=None, publisher=None, author=None, language=None, board=None, book_type=None, limit=20, offset=0,
+           item_type=None):
     filters = {"global_visibility": 1}
+    if item_type:
+        filters["item_type"] = item_type
     if text:
         filters["title"] = ["like", f"%{text}%"]
     if publisher:
@@ -23,7 +26,7 @@ def search(text=None, subject=None, publisher=None, author=None, language=None, 
         fields=[
             "name", "title", "title_en", "subtitle", "author", "author_en", "author_profile", "publisher",
             "book_type", "isbn", "language", "set_mrp", "primary_category",
-            "genre", "religious_segment", "introduction", "creation"
+            "genre", "religious_segment", "introduction", "creation", "item_type"
         ],
         limit=limit,
         start=offset,
@@ -296,7 +299,7 @@ def list_catalog(profile_id, active_only=True):
         book = frappe.db.get_value(
             "Book", item.book,
             ["title", "author", "book_type", "set_mrp", "trade_price", "language", "genre", "religious_segment",
-             "publisher", "own_discount", "discount_percent", "is_discontinued"],
+             "publisher", "own_discount", "discount_percent", "is_discontinued", "item_type"],
             as_dict=True,
         ) or frappe._dict()
         listed.add(item.book)
@@ -306,6 +309,7 @@ def list_catalog(profile_id, active_only=True):
             "book_title": book.title or "",
             "book_author": book.author or "",
             "book_type": book.book_type or "",
+            "item_type": book.get("item_type") or "Book",
             "book_mrp": book.set_mrp,
             "book_trade_price": book.trade_price,
             "language": book.language or "",
@@ -525,7 +529,7 @@ def my_books(profile_id, text=""):
     _assert_profile_owner(profile_id)
     filters = [["publisher", "=", profile_id]]
     rows = frappe.get_all("Book", or_filters=[["publisher", "=", profile_id], ["owner_profile", "=", profile_id]],
-                          fields=["name", "title", "author", "publisher", "owner_profile", "cover_image", "page_count"],
+                          fields=["name", "title", "author", "publisher", "owner_profile", "cover_image", "page_count", "item_type"],
                           order_by="title asc", limit_page_length=1000)
     t = (text or "").strip().lower()
     out = []
@@ -534,7 +538,8 @@ def my_books(profile_id, text=""):
             continue
         out.append({"name": r.name, "title": r.title, "author": r.author or "",
                     "role": "publisher" if r.publisher == profile_id else "owner",
-                    "cover_image": r.cover_image or "", "page_count": r.page_count or 0})
+                    "cover_image": r.cover_image or "", "page_count": r.page_count or 0,
+                    "item_type": r.item_type or "Book"})
     return out
 
 
@@ -548,9 +553,19 @@ def update_book_details(profile_id, book_id, data):
     if not _owns_book(book, profile_id):
         frappe.throw(_("Only the publisher or the bookseller who added this book can edit it."), frappe.PermissionError)
     d = _json.loads(data) if isinstance(data, str) else (data or {})
-    for key in ("title", "author"):
-        if key in d and not str(d[key] or "").strip():
-            frappe.throw(_("{0} is required.").format(key.capitalize()))
+    if "item_type" in d:
+        # the owner can change what kind of item it is (a book, stationery, a gift, ...)
+        allowed = (frappe.get_meta("Book").get_field("item_type").options or "Book").split("\n")
+        if d["item_type"] not in allowed:
+            frappe.throw(_("Unknown item type."))
+        book.item_type = d["item_type"]
+    is_book = (book.get("item_type") or "Book") == "Book"
+    if "title" in d and not str(d["title"] or "").strip():
+        frappe.throw(_("Title is required."))
+    if is_book and "author" in d and not str(d["author"] or "").strip():
+        frappe.throw(_("Author is required."))
+    if is_book and "item_type" in d and not str(d.get("author") or book.author or "").strip():
+        frappe.throw(_("Author is required for a book."))
     for key in ("title", "author", "title_en", "author_en", "language", "book_type", "binding", "isbn", "subtitle", "introduction", "description"):
         if key in d:
             book.set(key, (d[key] or "").strip() if isinstance(d[key], str) else d[key])
@@ -584,6 +599,81 @@ def update_book_details(profile_id, book_id, data):
             })
     book.save(ignore_permissions=True)
     return {"name": book.name, "title": book.title, "author": book.author}
+
+
+ITEM_UNITS = ("", "ml", "litre", "g", "kg", "piece", "dozen", "sheet", "ream", "inch", "cm")
+ITEM_STYLES = ("", "Plain", "Fancy", "Premium")
+
+
+@frappe.whitelist()
+def set_item_options(profile_id, book_id, options=None, pack_lines=None):
+    """The owner of a non-book item lists its choices: size, colour, style, amount (3 ml ... 100 ml), each with its
+    own price and stock, and what a pack holds. The shop's stock of the item is the sum of the options' stock,
+    and its listed price is the lowest option price ("from")."""
+    import json as _json
+    from frappe.utils import cint, flt
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    from book_marketplace.stock_management.api import stock as stock_api
+
+    _assert_profile_owner(profile_id)
+    book = frappe.get_doc("Book", book_id)
+    if not _owns_book(book, profile_id):
+        frappe.throw(_("Only the shop that added this item can change its options."), frappe.PermissionError)
+    if (book.get("item_type") or "Book") == "Book":
+        frappe.throw(_("Options are for items other than books. A book uses volumes and variants."))
+    rows = _json.loads(options) if isinstance(options, str) else (options or [])
+    lines = _json.loads(pack_lines) if isinstance(pack_lines, str) else (pack_lines or [])
+    if len(rows) > 200:
+        frappe.throw(_("Too many options (200 at most)."))
+
+    clean, seen = [], set()
+    for r in rows:
+        size = " ".join(str(r.get("size") or "").split())[:60]
+        colour = " ".join(str(r.get("colour") or "").split())[:60]
+        style = str(r.get("style") or "").strip()
+        unit = str(r.get("unit") or "").strip()
+        amount = flt(r.get("amount"))
+        price = flt(r.get("price"))
+        stock = cint(r.get("stock_qty"))
+        if style not in ITEM_STYLES:
+            frappe.throw(_("Unknown style: {0}").format(style))
+        if unit not in ITEM_UNITS:
+            frappe.throw(_("Unknown unit: {0}").format(unit))
+        if amount < 0 or price < 0 or stock < 0:
+            frappe.throw(_("Amount, price and stock cannot be negative."))
+        if not (size or colour or style or amount):
+            continue  # an empty row
+        if amount and not unit:
+            frappe.throw(_("Choose the unit for {0} (ml, g, piece, ...).").format(amount))
+        key = (size.lower(), colour.lower(), style, amount, unit)
+        if key in seen:
+            frappe.throw(_("The same option is written twice: {0}").format(" ".join(x for x in (size, colour, style, f"{amount:g} {unit}" if amount else "") if x)))
+        seen.add(key)
+        clean.append({"size": size or None, "colour": colour or None, "style": style or None,
+                      "amount": amount or None, "unit": unit or None, "price": price or None, "stock_qty": stock})
+
+    pack = []
+    for ln in lines:
+        name = " ".join(str(ln.get("pack_item") or "").split())[:120]
+        if name:
+            pack.append({"pack_item": name, "pack_qty": max(cint(ln.get("pack_qty")) or 1, 1)})
+
+    book.set("item_options", clean)
+    book.set("pack_lines", pack)
+    prices = [r["price"] for r in clean if r["price"]]
+    if prices:
+        book.set_mrp = min(prices)
+    book.save(ignore_permissions=True)
+
+    if clean:
+        stock_api.set_own_book_quantity(profile_id, book.name, sum(r["stock_qty"] for r in clean))
+    if prices:
+        item = frappe.db.get_value("BusinessCatalogItem", {"business_profile": profile_id, "book": book.name}, "name")
+        if item:
+            frappe.db.set_value("BusinessCatalogItem", item, "selling_price", min(prices))
+    return {"name": book.name, "options": [o.as_dict() for o in book.item_options],
+            "pack_lines": [x.as_dict() for x in book.pack_lines],
+            "stock": sum(r["stock_qty"] for r in clean), "from_price": min(prices) if prices else None}
 
 
 @frappe.whitelist()

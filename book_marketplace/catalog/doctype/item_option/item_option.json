@@ -1,0 +1,75 @@
+{
+ "actions": [],
+ "creation": "2026-11-21 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "size",
+  "colour",
+  "style",
+  "col_break_1",
+  "amount",
+  "unit",
+  "price",
+  "stock_qty"
+ ],
+ "fields": [
+  {
+   "fieldname": "size",
+   "fieldtype": "Data",
+   "label": "Size / سائز",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "colour",
+   "fieldtype": "Data",
+   "label": "Colour / رنگ",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "style",
+   "fieldtype": "Select",
+   "label": "Style / قسم",
+   "options": "\nPlain\nFancy\nPremium",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Float",
+   "label": "Amount / مقدار",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Select",
+   "label": "Unit",
+   "options": "\nml\nlitre\ng\nkg\npiece\ndozen\nsheet\nream\ninch\ncm",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "price",
+   "fieldtype": "Currency",
+   "label": "Price / قیمت",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "stock_qty",
+   "fieldtype": "Int",
+   "label": "Stock / تعداد",
+   "in_list_view": 1
+  }
+ ],
+ "istable": 1,
+ "module": "Catalog",
+ "name": "Item Option",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

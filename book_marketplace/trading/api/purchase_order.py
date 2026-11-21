@@ -102,6 +102,11 @@ def _view(doc):
         "rider_name": doc.rider_name or "",
         "rider_phone": doc.rider_phone or "",
         "invoice_total": flt(doc.invoice_total),
+        "packing": {"same_city": bool(doc.get("same_city")), "cartons": int(doc.get("cartons") or 0),
+                    "packets": int(doc.get("packets") or 0), "bundles": int(doc.get("bundles") or 0),
+                    "tape_status": doc.get("tape_status") or "", "packing_charge": flt(doc.get("packing_charge")),
+                    "labour_charge": flt(doc.get("labour_charge")), "station_cost": flt(doc.get("station_cost")),
+                    "paid_by": doc.get("packing_paid_by") or ""},
         "freight_per_copy_buyer": round(flt(doc.freight_buyer_share) / int(doc.total_qty), 2) if int(doc.total_qty or 0) else 0,
         "freight_per_copy_seller": round(flt(doc.freight_seller_share) / int(doc.total_qty), 2) if int(doc.total_qty or 0) else 0,
         # a short delivery (received less than sent) is flagged so the seller sees it in its list
@@ -173,7 +178,8 @@ def find_sellers(text=""):
 
 
 @frappe.whitelist()
-def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider_name=None, rider_phone=None, freight_scenario=None):
+def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider_name=None, rider_phone=None, freight_scenario=None,
+                 cartons=None, packets=None, bundles=None, tape_status=None):
     """The seller prepares the order: writes the quantity it sends for each book, then packs and dispatches.
     items: JSON list of {book, sent_qty}. Only the seller, only while the order is Accepted."""
     from frappe.utils import now_datetime
@@ -210,6 +216,16 @@ def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider
         doc.freight_seller_share = q["seller_share"]
     doc.rider_name = (rider_name or "").strip()[:140]
     doc.rider_phone = (rider_phone or "").strip()[:40]
+    # packing: what was sent (cartons, packets, bundles) and its charges under the seller's packing rules
+    from book_marketplace.trading.api import packing
+    doc.same_city = 1 if packing.is_same_city(doc.seller_profile, doc.buyer_profile) else 0
+    doc.cartons = max(int(cartons or 0), 0)
+    doc.packets = max(int(packets or 0), 0)
+    doc.bundles = max(int(bundles or 0), 0)
+    doc.tape_status = (tape_status or "") if doc.cartons else ""
+    c = packing.charges(packing.settings_of(doc.seller_profile), doc.cartons, doc.packets, doc.tape_status, doc.same_city)
+    doc.packing_charge, doc.labour_charge, doc.station_cost = c["packing_charge"], c["labour_charge"], c["station_cost"]
+    doc.packing_paid_by = c["packing_paid_by"]
     doc.status = "Dispatched"
     doc.dispatched_on = now_datetime()
     doc.save(ignore_permissions=True)
@@ -379,6 +395,27 @@ def _post_khata(doc):
             "reference": doc.invoice_no, "notes": f"Agreed receipt {doc.name}",
         }).insert(ignore_permissions=True)
     _post_freight(doc)
+    _post_packing(doc)
+
+
+def _post_packing(doc):
+    """Tape, packets and labour: billed to the buyer (khata both sides) or the seller's expense, by the seller's rule.
+    The shop-to-station cost is always the seller's expense."""
+    work = flt(doc.get("packing_charge")) + flt(doc.get("labour_charge"))
+    seller_name = frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name") or doc.seller_profile
+    buyer_name = frappe.db.get_value("BusinessProfile", doc.buyer_profile, "business_name") or doc.buyer_profile
+    note = f"Packing on {doc.name}: {int(doc.get('cartons') or 0)} cartons, {int(doc.get('packets') or 0)} packets"
+    if work > 0 and doc.get("packing_paid_by") == "Buyer":
+        for profile, party, entry_type in ((doc.seller_profile, buyer_name, "Credit Given"),
+                                           (doc.buyer_profile, seller_name, "Credit Taken")):
+            frappe.get_doc({"doctype": "Khata Entry", "business_profile": profile, "party_name": party,
+                            "entry_type": entry_type, "amount": work, "entry_date": frappe.utils.nowdate(),
+                            "reference": doc.name, "notes": note}).insert(ignore_permissions=True)
+    seller_cost = flt(doc.get("station_cost")) + (work if doc.get("packing_paid_by") == "Seller" else 0)
+    if seller_cost > 0:
+        frappe.get_doc({"doctype": "Shop Expense", "business_profile": doc.seller_profile, "category": "Packing",
+                        "amount": seller_cost, "expense_date": frappe.utils.getdate(frappe.utils.nowdate()),
+                        "note": (note + " (incl. shop to station)")[:300]}).insert(ignore_permissions=True)
 
 
 def _post_freight(doc):

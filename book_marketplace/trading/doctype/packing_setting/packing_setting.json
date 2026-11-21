@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "autoname": "field:business_profile",
+ "creation": "2026-11-21 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "packet_max_books",
+  "books_per_packet",
+  "col_break_1",
+  "carton_books",
+  "page_basis",
+  "charges_section",
+  "tape_charge",
+  "packing_labour",
+  "packet_charge",
+  "col_break_2",
+  "load_labour",
+  "station_cost",
+  "charge_packing_to_buyer"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Business",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "packet_max_books",
+   "fieldtype": "Int",
+   "label": "Packet below this many books",
+   "default": "25",
+   "description": "Fewer books than this go as packets / parcels; more go in cartons."
+  },
+  {
+   "fieldname": "books_per_packet",
+   "fieldtype": "Int",
+   "label": "Books per packet",
+   "default": "10"
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "carton_books",
+   "fieldtype": "Int",
+   "label": "Books per carton",
+   "default": "100"
+  },
+  {
+   "fieldname": "page_basis",
+   "fieldtype": "Int",
+   "label": "Counted as books of this many pages",
+   "default": "200",
+   "description": "A 400-page book counts as two 200-page books when cartons and packets are worked out."
+  },
+  {
+   "fieldname": "charges_section",
+   "fieldtype": "Section Break",
+   "label": "Charges"
+  },
+  {
+   "fieldname": "tape_charge",
+   "fieldtype": "Currency",
+   "label": "Tape per carton (when we tape it)"
+  },
+  {
+   "fieldname": "packing_labour",
+   "fieldtype": "Currency",
+   "label": "Packing labour per carton (when we tape it)"
+  },
+  {
+   "fieldname": "packet_charge",
+   "fieldtype": "Currency",
+   "label": "Charge per packet / parcel"
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "load_labour",
+   "fieldtype": "Currency",
+   "label": "Load / unload labour per carton (already taped)"
+  },
+  {
+   "fieldname": "station_cost",
+   "fieldtype": "Currency",
+   "label": "Shop to transport station (per order)",
+   "description": "Always the sender's cost."
+  },
+  {
+   "fieldname": "charge_packing_to_buyer",
+   "fieldtype": "Check",
+   "label": "Bill tape, labour and packets to the buyer",
+   "default": "1"
+  }
+ ],
+ "module": "Trading",
+ "name": "Packing Setting",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "export": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
