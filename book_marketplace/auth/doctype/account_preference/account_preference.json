@@ -9,7 +9,8 @@
   "language",
   "theme_name",
   "colors",
-  "brand_display"
+  "brand_display",
+  "time_zone"
  ],
  "module": "Auth",
  "name": "Account Preference",
@@ -51,6 +52,13 @@
    "label": "Header brand display",
    "options": "both\nlogo\nname",
    "default": "both"
+  },
+  {
+   "fieldname": "time_zone",
+   "fieldtype": "Data",
+   "label": "Time Zone",
+   "default": "Asia/Karachi",
+   "description": "IANA name, for example Asia/Karachi. Times in the panel are shown in this zone."
   }
  ]
 }

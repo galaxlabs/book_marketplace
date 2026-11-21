@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "item_type",
   "title_en",
   "author",
   "author_en",
@@ -70,6 +71,15 @@
    "unique": 0
   },
   {
+   "fieldname": "item_type",
+   "fieldtype": "Select",
+   "label": "Item Type",
+   "default": "Book",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "options": "Book\nStationery\nGift\nPerfume & Attar\nCap (Topi)\nTasbih\nPrayer Mat\nGift Box\nPaper & Printing\nOther"
+  },
+  {
    "fieldname": "title_en",
    "fieldtype": "Data",
    "label": "Title (English)"
@@ -83,7 +93,8 @@
    "fieldname": "author",
    "fieldtype": "Data",
    "label": "Author",
-   "reqd": 1
+   "reqd": 0,
+   "mandatory_depends_on": "eval:(doc.item_type || \"Book\") == \"Book\""
   },
   {
    "fieldname": "author_profile",

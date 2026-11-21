@@ -1,9 +1,11 @@
 """A signed-in account keeps its own look (theme and colors) and language. Other accounts never see them."""
 import json
 
+from zoneinfo import available_timezones
+
 import frappe
 from frappe import _
-from frappe.utils import now_datetime
+from frappe.utils import get_system_timezone, now_datetime
 
 THEMES = ("white", "indigo", "ink-gold", "custom")
 
@@ -17,18 +19,23 @@ def _me():
 @frappe.whitelist()
 def my_preferences():
     user = _me()
-    row = frappe.db.get_value("Account Preference", user, ["language", "theme_name", "colors", "brand_display"], as_dict=True)
+    row = frappe.db.get_value("Account Preference", user, ["language", "theme_name", "colors", "brand_display", "time_zone"], as_dict=True)
+    # server_time_zone: the zone the server writes its times in, so the panel can show them in the account's zone
+    server_zone = get_system_timezone()
     if not row:
-        return {"language": "ur", "theme_name": "white", "colors": {}, "brand_display": "both"}
+        return {"language": "ur", "theme_name": "white", "colors": {}, "brand_display": "both",
+                "time_zone": server_zone, "server_time_zone": server_zone}
     try:
         colors = json.loads(row.colors or "{}")
     except ValueError:
         colors = {}
-    return {"language": row.language or "ur", "theme_name": row.theme_name or "white", "colors": colors, "brand_display": row.brand_display or "both"}
+    return {"language": row.language or "ur", "theme_name": row.theme_name or "white", "colors": colors,
+            "brand_display": row.brand_display or "both", "time_zone": row.time_zone or server_zone,
+            "server_time_zone": server_zone}
 
 
 @frappe.whitelist()
-def save_preferences(language="ur", theme_name="white", colors=None, brand_display=None):
+def save_preferences(language="ur", theme_name="white", colors=None, brand_display=None, time_zone=None):
     user = _me()
     if language not in ("ur", "en"):
         frappe.throw(_("Unknown language."))
@@ -52,5 +59,11 @@ def save_preferences(language="ur", theme_name="white", colors=None, brand_displ
         if brand_display not in ("both", "logo", "name"):
             frappe.throw(_("Unknown header display."))
         doc.brand_display = brand_display
+    if time_zone is not None:
+        # changed only when sent; must be a real zone name such as Asia/Karachi
+        if time_zone not in available_timezones():
+            frappe.throw(_("Unknown time zone."))
+        doc.time_zone = time_zone
     doc.save(ignore_permissions=True)
-    return {"language": language, "theme_name": theme_name, "colors": clean, "brand_display": doc.brand_display or "both", "saved_on": str(now_datetime())}
+    return {"language": language, "theme_name": theme_name, "colors": clean, "brand_display": doc.brand_display or "both",
+            "time_zone": doc.time_zone or get_system_timezone(), "saved_on": str(now_datetime())}

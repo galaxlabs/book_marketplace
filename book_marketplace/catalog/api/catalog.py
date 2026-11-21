@@ -426,8 +426,8 @@ def set_book_images(profile_id, book_id, images):
 
 
 @frappe.whitelist()
-def add_shop_book(profile_id, title, author, book_type="Single Volume", language="Urdu", set_mrp=None,
-                  selling_price=None, binding=None, isbn=None, quantity=0):
+def add_shop_book(profile_id, title, author=None, book_type="Single Volume", language="Urdu", set_mrp=None,
+                  selling_price=None, binding=None, isbn=None, quantity=0, item_type="Book"):
     """Any business profile adds a book it holds (old, out of print, or one it printed itself). It is listed in its own shop.
     The publisher list goes through create_own_book with the matching rule."""
     from frappe.utils import nowdate
@@ -437,14 +437,26 @@ def add_shop_book(profile_id, title, author, book_type="Single Volume", language
     _assert_profile_owner(profile_id)
     title = (title or "").strip()
     author = (author or "").strip()
-    if not title or not author:
-        frappe.throw(_("Title and author are required."))
-    existing = frappe.db.get_value("Book", {"title": title, "author": author}, "name")
-    if existing:
-        frappe.throw(_("This book is already in the list: {0}. Add it from the list to your shop.").format(existing))
+    item_type = (item_type or "Book").strip()
+    allowed = (frappe.get_meta("Book").get_field("item_type").options or "Book").split("\n")
+    if item_type not in allowed:
+        frappe.throw(_("Unknown item type."))
+    is_book = item_type == "Book"
+    if not title or (is_book and not author):
+        frappe.throw(_("Title and author are required.") if is_book else _("Item name is required."))
+    if is_book:
+        existing = frappe.db.get_value("Book", {"title": title, "author": author}, "name")
+        if existing:
+            frappe.throw(_("This book is already in the list: {0}. Add it from the list to your shop.").format(existing))
+    else:
+        # other goods (stationery, gifts, ...) belong to the shop that adds them; the same name twice in one shop is refused
+        existing = frappe.db.get_value("Book", {"title": title, "item_type": item_type, "owner_profile": profile_id}, "name")
+        if existing:
+            frappe.throw(_("This item is already in your shop: {0}.").format(existing))
     is_publisher = frappe.db.get_value("BusinessProfile", profile_id, "profile_type") == "Publisher"
     book = frappe.get_doc({
-        "doctype": "Book", "title": title, "author": author, "book_type": book_type or "Single Volume",
+        "doctype": "Book", "title": title, "item_type": item_type, "author": author or None,
+        "book_type": book_type or "Single Volume",
         "language": language or "Urdu", "set_mrp": set_mrp, "binding": binding, "isbn": isbn,
         "publisher": profile_id if is_publisher else None,
         "owner_profile": None if is_publisher else profile_id, "global_visibility": 1,
