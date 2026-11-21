@@ -99,10 +99,10 @@ def _kind(user):
     """admin, publisher, shop or user: used for the message filters."""
     if "System Manager" in frappe.get_roles(user):
         return "admin"
-    ptype = frappe.db.get_value("BusinessProfile", {"user": user}, "profile_type")
-    if ptype == "Publisher":
+    types = frappe.get_all("BusinessProfile", filters={"user": user}, pluck="profile_type", limit_page_length=0)
+    if "Publisher" in types:
         return "publisher"
-    if ptype:
+    if types:
         return "shop"
     return "user"
 
