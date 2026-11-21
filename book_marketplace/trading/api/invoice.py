@@ -94,5 +94,6 @@ def get_invoice(name, profile_id):
         "damaged_qty": sum(l["damaged_qty"] for l in lines),
         "subtotal": round(subtotal, 2),
         "total": round(flt(doc.invoice_total), 2),
+        "freight": {"scenario": doc.freight_scenario or "", "transporter": doc.transporter or "", "buyer_share": flt(doc.freight_buyer_share), "seller_share": flt(doc.freight_seller_share), "payer_is_buyer": flt(doc.freight_buyer_share) > 0},
         "note": doc.receipt_note or "",
     }

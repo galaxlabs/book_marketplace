@@ -102,6 +102,8 @@ def _view(doc):
         "rider_name": doc.rider_name or "",
         "rider_phone": doc.rider_phone or "",
         "invoice_total": flt(doc.invoice_total),
+        "freight_per_copy_buyer": round(flt(doc.freight_buyer_share) / int(doc.total_qty), 2) if int(doc.total_qty or 0) else 0,
+        "freight_per_copy_seller": round(flt(doc.freight_seller_share) / int(doc.total_qty), 2) if int(doc.total_qty or 0) else 0,
         # a short delivery (received less than sent) is flagged so the seller sees it in its list
         "difference": doc.status == "Short",
         # shortage: books sent but not received; extra: books received above what was sent
@@ -325,7 +327,7 @@ def agree_receipt(name, profile_id):
         _add_stock(doc.buyer_profile, row.book, int(row.received_qty or 0) - int(row.damaged_qty or 0))
     doc.total_qty = sum(int(i.received_qty or 0) - int(i.damaged_qty or 0) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
-    doc.invoice_total = flt(doc.total) + flt(doc.freight_buyer_share)
+    doc.invoice_total = flt(doc.total)  # goods only; the freight is posted separately (khata and expenses)
     prefix = frappe.db.get_value("BusinessProfile", doc.seller_profile, "invoice_prefix") or "INV"
     doc.invoice_no = f"{prefix}-{doc.name}"
     doc.received_on = now_datetime()
@@ -365,7 +367,7 @@ def _post_khata(doc):
     """Both sides see the agreed amount: seller 'Credit Given' (party owes), buyer 'Credit Taken' (owes party)."""
     seller_name = frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name") or doc.seller_profile
     buyer_name = frappe.db.get_value("BusinessProfile", doc.buyer_profile, "business_name") or doc.buyer_profile
-    amount = flt(doc.invoice_total)
+    amount = flt(doc.total)
     for profile, party, entry_type in (
         (doc.seller_profile, buyer_name, "Credit Given"),
         (doc.buyer_profile, seller_name, "Credit Taken"),
@@ -374,6 +376,28 @@ def _post_khata(doc):
             "doctype": "Khata Entry", "business_profile": profile, "party_name": party,
             "entry_type": entry_type, "amount": amount, "entry_date": frappe.utils.nowdate(),
             "reference": doc.invoice_no, "notes": f"Agreed receipt {doc.name}",
+        }).insert(ignore_permissions=True)
+    _post_freight(doc)
+
+
+def _post_freight(doc):
+    """The payer of the freight owes the transport company (khata) and records a Transport expense.
+    Each payer's per-copy freight is shown on the order, so its cost can be read per book."""
+    company = (doc.transporter or "").strip() or "Transport"
+    for payer, share in ((doc.buyer_profile, flt(doc.freight_buyer_share)),
+                         (doc.seller_profile, flt(doc.freight_seller_share))):
+        if share <= 0:
+            continue
+        note = f"Freight on {doc.name} ({doc.freight_scenario or ''})"
+        frappe.get_doc({
+            "doctype": "Khata Entry", "business_profile": payer, "party_name": company,
+            "entry_type": "Credit Taken", "amount": share, "entry_date": frappe.utils.nowdate(),
+            "reference": doc.name, "notes": note,
+        }).insert(ignore_permissions=True)
+        frappe.get_doc({
+            "doctype": "Shop Expense", "business_profile": payer, "category": "Transport",
+            "amount": share, "expense_date": frappe.utils.getdate(frappe.utils.nowdate()),
+            "note": note[:300],
         }).insert(ignore_permissions=True)
 
 
