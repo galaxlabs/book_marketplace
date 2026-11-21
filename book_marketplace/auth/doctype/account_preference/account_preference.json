@@ -8,7 +8,8 @@
   "user",
   "language",
   "theme_name",
-  "colors"
+  "colors",
+  "brand_display"
  ],
  "module": "Auth",
  "name": "Account Preference",
@@ -43,6 +44,13 @@
    "fieldname": "colors",
    "fieldtype": "Long Text",
    "label": "Colors (JSON)"
+  },
+  {
+   "fieldname": "brand_display",
+   "fieldtype": "Select",
+   "label": "Header brand display",
+   "options": "both\nlogo\nname",
+   "default": "both"
   }
  ]
 }

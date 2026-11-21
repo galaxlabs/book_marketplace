@@ -17,18 +17,18 @@ def _me():
 @frappe.whitelist()
 def my_preferences():
     user = _me()
-    row = frappe.db.get_value("Account Preference", user, ["language", "theme_name", "colors"], as_dict=True)
+    row = frappe.db.get_value("Account Preference", user, ["language", "theme_name", "colors", "brand_display"], as_dict=True)
     if not row:
-        return {"language": "ur", "theme_name": "white", "colors": {}}
+        return {"language": "ur", "theme_name": "white", "colors": {}, "brand_display": "both"}
     try:
         colors = json.loads(row.colors or "{}")
     except ValueError:
         colors = {}
-    return {"language": row.language or "ur", "theme_name": row.theme_name or "white", "colors": colors}
+    return {"language": row.language or "ur", "theme_name": row.theme_name or "white", "colors": colors, "brand_display": row.brand_display or "both"}
 
 
 @frappe.whitelist()
-def save_preferences(language="ur", theme_name="white", colors=None):
+def save_preferences(language="ur", theme_name="white", colors=None, brand_display=None):
     user = _me()
     if language not in ("ur", "en"):
         frappe.throw(_("Unknown language."))
@@ -48,5 +48,9 @@ def save_preferences(language="ur", theme_name="white", colors=None):
     doc.language = language
     doc.theme_name = theme_name
     doc.colors = json.dumps(clean)
+    if brand_display is not None:
+        if brand_display not in ("both", "logo", "name"):
+            frappe.throw(_("Unknown header display."))
+        doc.brand_display = brand_display
     doc.save(ignore_permissions=True)
-    return {"language": language, "theme_name": theme_name, "colors": clean, "saved_on": str(now_datetime())}
+    return {"language": language, "theme_name": theme_name, "colors": clean, "brand_display": doc.brand_display or "both", "saved_on": str(now_datetime())}
