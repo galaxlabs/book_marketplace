@@ -34,7 +34,13 @@
   "country",
   "approval_section",
   "approved_by",
-  "approved_on"
+  "approved_on",
+  "shop_section",
+  "item_types",
+  "closed_note",
+  "shop_col",
+  "weekly_hours",
+  "holidays"
  ],
  "fields": [
   {
@@ -206,6 +212,38 @@
    "fieldtype": "Percent",
    "label": "General discount % / عمومی رعایت",
    "description": "Publisher: applies to every book that has no discount of its own."
+  },
+  {
+   "fieldname": "shop_section",
+   "fieldtype": "Section Break",
+   "label": "What the shop sells and its hours"
+  },
+  {
+   "fieldname": "item_types",
+   "fieldtype": "Small Text",
+   "label": "Item types it sells (one per line)",
+   "description": "Only these show in the panel. Empty: books only."
+  },
+  {
+   "fieldname": "closed_note",
+   "fieldtype": "Data",
+   "label": "Closed notice (optional)"
+  },
+  {
+   "fieldname": "shop_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "weekly_hours",
+   "fieldtype": "Table",
+   "label": "Weekly hours",
+   "options": "Shop Hours"
+  },
+  {
+   "fieldname": "holidays",
+   "fieldtype": "Table",
+   "label": "Holidays",
+   "options": "Shop Holiday"
   }
  ],
  "index_web_pages_for_search": 1,

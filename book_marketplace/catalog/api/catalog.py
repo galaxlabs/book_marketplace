@@ -445,6 +445,9 @@ def add_shop_book(profile_id, title, author=None, book_type="Single Volume", lan
     allowed = (frappe.get_meta("Book").get_field("item_type").options or "Book").split("\n")
     if item_type not in allowed:
         frappe.throw(_("Unknown item type."))
+    from book_marketplace.auth.api.shop_settings import item_types_of
+    if item_type not in item_types_of(profile_id):
+        frappe.throw(_("Your shop does not sell {0}. Add it in Settings > What I sell.").format(item_type))
     is_book = item_type == "Book"
     if not title or (is_book and not author):
         frappe.throw(_("Title and author are required.") if is_book else _("Item name is required."))
@@ -722,6 +725,8 @@ def get_store_by_slug(slug):
     store.profile_type = profile.profile_type if profile else ""
     # The business profile's logo and banner (uploaded in the business panel) show on the shop page.
     store.logo = (profile.logo if profile else "") or ""
+    from book_marketplace.auth.api.shop_settings import shop_status
+    store.open_status = shop_status(store.business_profile)
     store.banner_image = (profile.banner_image if profile else "") or store.banner_image or ""
     items = _store_items(store.business_profile, store.profile_type)
     catalog, cache = [], {}

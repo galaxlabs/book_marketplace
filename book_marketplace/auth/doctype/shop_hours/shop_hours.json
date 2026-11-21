@@ -1,0 +1,59 @@
+{
+ "actions": [],
+ "creation": "2026-11-21 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "day",
+  "is_open",
+  "col_1",
+  "open_from",
+  "open_to"
+ ],
+ "fields": [
+  {
+   "fieldname": "day",
+   "fieldtype": "Select",
+   "label": "Day",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_open",
+   "fieldtype": "Check",
+   "label": "Open",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "col_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "open_from",
+   "fieldtype": "Data",
+   "label": "From",
+   "in_list_view": 1,
+   "length": 5,
+   "description": "HH:MM"
+  },
+  {
+   "fieldname": "open_to",
+   "fieldtype": "Data",
+   "label": "To",
+   "in_list_view": 1,
+   "length": 5,
+   "description": "HH:MM"
+  }
+ ],
+ "istable": 1,
+ "module": "Auth",
+ "name": "Shop Hours",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

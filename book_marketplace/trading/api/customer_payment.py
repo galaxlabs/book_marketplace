@@ -175,7 +175,10 @@ def seller_order_detail(order):
     from book_marketplace.trading.api.customer_order import delivery_view
     return {"name": doc.name, "status": doc.status, "total": doc.total, "reserved_until": doc.reserved_until,
             "buyer": buyer, "items": items, "payments": pays, "buyer_note": doc.buyer_note,
-            "delivery": delivery_view(doc)}
+            "delivery": delivery_view(doc),
+            # print: the shop own number (also the PDF file name), the date and the shop letterhead
+            "seller_doc_no": doc.get("seller_doc_no") or "", "creation": str(doc.creation)[:19],
+            "dispatched_on": str(doc.get("dispatched_on") or "")[:19], "seller": _seller_party(doc.seller_profile)}
 
 
 @frappe.whitelist()
@@ -307,3 +310,8 @@ def seller_confirm(order, mode, discount_chain=None, received_amount=None, diffe
 def revive(order):
     """Revive an expired order under the same number (buyer or shop). Stock must be available."""
     return _revive(order)
+
+
+def _seller_party(profile_id):
+    from book_marketplace.trading.api.invoice import _party
+    return _party(profile_id)
