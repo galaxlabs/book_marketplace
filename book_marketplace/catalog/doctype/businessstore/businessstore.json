@@ -20,7 +20,8 @@
   "district",
   "map_link",
   "city",
-  "is_published"
+  "is_published",
+  "card_design"
  ],
  "fields": [
   {
@@ -107,6 +108,11 @@
    "fieldtype": "Check",
    "label": "Published",
    "default": "0"
+  },
+  {
+   "fieldname": "card_design",
+   "fieldtype": "Long Text",
+   "label": "Visiting Card Design (JSON)"
   }
  ],
  "index_web_pages_for_search": 1,

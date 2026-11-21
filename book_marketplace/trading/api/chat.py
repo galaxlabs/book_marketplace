@@ -322,6 +322,6 @@ def admin_contacts():
     _me()
     users = frappe.get_all(
         "Has Role", filters={"role": "System Manager", "parenttype": "User"}, pluck="parent", limit_page_length=0)
-    rows = frappe.get_all("User", filters={"name": ["in", users or [""]], "enabled": 1, "name": ["!=", "Guest"]},
+    rows = frappe.get_all("User", filters={"name": ["in", users or [""]], "enabled": 1, "name": ["not in", ["Guest", frappe.session.user]]},
                           fields=["name", "full_name"], order_by="full_name asc", limit_page_length=0)
     return [{"user": r.name, "name": r.full_name or r.name} for r in rows]
