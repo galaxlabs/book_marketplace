@@ -102,6 +102,7 @@ def _view(doc):
         "rider_name": doc.rider_name or "",
         "rider_phone": doc.rider_phone or "",
         "invoice_total": flt(doc.invoice_total),
+        "buyer_doc_no": doc.get("buyer_doc_no") or "", "seller_doc_no": doc.get("seller_doc_no") or "",
         "packing": {"same_city": bool(doc.get("same_city")), "cartons": int(doc.get("cartons") or 0),
                     "packets": int(doc.get("packets") or 0), "bundles": int(doc.get("bundles") or 0),
                     "tape_status": doc.get("tape_status") or "", "packing_charge": flt(doc.get("packing_charge")),
@@ -226,6 +227,9 @@ def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider
     c = packing.charges(packing.settings_of(doc.seller_profile), doc.cartons, doc.packets, doc.tape_status, doc.same_city)
     doc.packing_charge, doc.labour_charge, doc.station_cost = c["packing_charge"], c["labour_charge"], c["station_cost"]
     doc.packing_paid_by = c["packing_paid_by"]
+    if not doc.get("seller_doc_no"):
+        from book_marketplace.trading import doc_numbers
+        doc.seller_doc_no = doc_numbers.next_number(doc.seller_profile, "BILL", doc.buyer_profile)
     doc.status = "Dispatched"
     doc.dispatched_on = now_datetime()
     doc.save(ignore_permissions=True)
@@ -346,7 +350,7 @@ def agree_receipt(name, profile_id):
     doc.total = sum(flt(i.line_total) for i in doc.items)
     doc.invoice_total = flt(doc.total)  # goods only; the freight is posted separately (khata and expenses)
     prefix = frappe.db.get_value("BusinessProfile", doc.seller_profile, "invoice_prefix") or "INV"
-    doc.invoice_no = f"{prefix}-{doc.name}"
+    doc.invoice_no = doc.get("seller_doc_no") or f"{prefix}-{doc.name}"
     doc.received_on = now_datetime()
     doc.agreed_on = now_datetime()
     doc.status = "Short" if short else "Received"

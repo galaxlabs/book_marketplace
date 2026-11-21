@@ -1,0 +1,92 @@
+{
+ "actions": [],
+ "creation": "2026-11-21 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "party_name",
+  "party_type",
+  "party_code",
+  "col_1",
+  "linked_profile",
+  "phone",
+  "city",
+  "address"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Saved by",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "party_name",
+   "fieldtype": "Data",
+   "label": "Name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Select",
+   "label": "Buyer or seller",
+   "options": "Buyer\nSeller\nBoth",
+   "default": "Buyer",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "party_code",
+   "fieldtype": "Data",
+   "label": "Letters in document numbers",
+   "length": 6
+  },
+  {
+   "fieldname": "col_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "linked_profile",
+   "fieldtype": "Link",
+   "label": "Business on BookBaazaar",
+   "options": "BusinessProfile"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone"
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Data",
+   "label": "City"
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Small Text",
+   "label": "Address"
+  }
+ ],
+ "module": "Trading",
+ "name": "Business Party",
+ "owner": "Administrator",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "export": 1,
+   "report": 1
+  }
+ ],
+ "autoname": "hash"
+}

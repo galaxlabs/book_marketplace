@@ -48,6 +48,7 @@ def purchase_order_print(name, profile_id):
                     "seller_share": flt(doc.freight_seller_share)},
         "goods_total": sum(l["sent_qty"] * l["unit_price"] for l in lines),
         "invoice_no": doc.invoice_no or "",
+        "buyer_doc_no": doc.get("buyer_doc_no") or "", "seller_doc_no": doc.get("seller_doc_no") or "",
         "lines": lines,
         "total_requested": sum(l["requested_qty"] for l in lines),
         "total_sent": sum(l["sent_qty"] for l in lines),

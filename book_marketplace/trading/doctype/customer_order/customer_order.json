@@ -38,7 +38,10 @@
   "ship_phone",
   "ship_city",
   "ship_address",
-  "ship_postal"
+  "ship_postal",
+  "numbers_section",
+  "seller_doc_no",
+  "numbers_col"
  ],
  "fields": [
   {
@@ -228,6 +231,21 @@
    "fieldtype": "Data",
    "label": "Postal code / ڈاک کوڈ",
    "read_only": 1
+  },
+  {
+   "fieldname": "numbers_section",
+   "fieldtype": "Section Break",
+   "label": "Document numbers"
+  },
+  {
+   "fieldname": "seller_doc_no",
+   "fieldtype": "Data",
+   "label": "Shop's order number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "numbers_col",
+   "fieldtype": "Column Break"
   }
  ],
  "permissions": [

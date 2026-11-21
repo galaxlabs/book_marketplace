@@ -44,7 +44,11 @@
   "packing_charge",
   "labour_charge",
   "station_cost",
-  "packing_paid_by"
+  "packing_paid_by",
+  "numbers_section",
+  "buyer_doc_no",
+  "numbers_col",
+  "seller_doc_no"
  ],
  "fields": [
   {
@@ -264,6 +268,27 @@
    "fieldtype": "Select",
    "label": "Tape and labour paid by",
    "options": "\nBuyer\nSeller"
+  },
+  {
+   "fieldname": "numbers_section",
+   "fieldtype": "Section Break",
+   "label": "Document numbers"
+  },
+  {
+   "fieldname": "buyer_doc_no",
+   "fieldtype": "Data",
+   "label": "Buyer's order number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "numbers_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "seller_doc_no",
+   "fieldtype": "Data",
+   "label": "Seller's bill number",
+   "read_only": 1
   }
  ],
  "module": "Trading",

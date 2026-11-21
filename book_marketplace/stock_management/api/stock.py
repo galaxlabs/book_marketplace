@@ -204,3 +204,47 @@ def set_catalog_quantity(profile_id, book_id, quantity):
     from book_marketplace.trading.api.customer_portal import notify_back_in_stock
     notify_back_in_stock(profile_id, book_id, before, qty)
     return {"book": book_id, "quantity": qty}
+
+
+BRANCH_TYPES = ("Shop", "Godown", "Warehouse", "Van", "Temporary")
+
+
+@frappe.whitelist()
+def my_branches(profile_id):
+    """Every branch of the business (shop, godown, warehouse ...), active ones first, with the stock held there."""
+    _assert_publisher_profile(profile_id)
+    rows = frappe.get_all("BranchLocation", filters={"business_profile": profile_id},
+                          fields=["name", "branch_name", "location_type", "city", "address", "is_active"],
+                          order_by="is_active desc, creation asc", limit_page_length=0)
+    for r in rows:
+        r["stock"] = int(frappe.db.sql("""select coalesce(sum(quantity), 0) from `tabStockLedger`
+            where branch_location=%s and state='Available'""", r.name)[0][0] or 0)
+    return rows
+
+
+@frappe.whitelist()
+def add_branch(profile_id, branch_name, location_type="Shop", city="", address=""):
+    _assert_publisher_profile(profile_id)
+    branch_name = " ".join((branch_name or "").split())[:60]
+    if not branch_name:
+        frappe.throw(_("Write the branch name."))
+    if location_type not in BRANCH_TYPES:
+        frappe.throw(_("Unknown branch type."))
+    if frappe.db.exists("BranchLocation", {"business_profile": profile_id, "branch_name": branch_name}):
+        frappe.throw(_("A branch with this name already exists."))
+    doc = frappe.get_doc({"doctype": "BranchLocation", "business_profile": profile_id, "branch_name": branch_name,
+                          "location_type": location_type, "city": (city or "").strip()[:80],
+                          "address": (address or "").strip()[:300], "is_active": 1}).insert(ignore_permissions=True)
+    return {"name": doc.name}
+
+
+@frappe.whitelist()
+def set_branch_active(profile_id, branch, active=1):
+    _assert_publisher_profile(profile_id)
+    if frappe.db.get_value("BranchLocation", branch, "business_profile") != profile_id:
+        frappe.throw(_("This branch is not yours."), frappe.PermissionError)
+    on = 1 if str(active) in ("1", "true", "True") else 0
+    if not on and frappe.db.count("BranchLocation", {"business_profile": profile_id, "is_active": 1}) <= 1:
+        frappe.throw(_("Keep at least one active branch."))
+    frappe.db.set_value("BranchLocation", branch, "is_active", on)
+    return {"name": branch, "is_active": on}

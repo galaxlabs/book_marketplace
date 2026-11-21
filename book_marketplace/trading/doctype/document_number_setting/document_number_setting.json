@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "creation": "2026-11-21 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "prefix",
+  "col_1",
+  "add_party_letters"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Business",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "prefix",
+   "fieldtype": "Data",
+   "label": "My prefix",
+   "length": 8,
+   "description": "2 to 8 letters or digits, for example MBL. Empty: made from the business name."
+  },
+  {
+   "fieldname": "col_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "add_party_letters",
+   "fieldtype": "Check",
+   "label": "Add the other party's letters",
+   "default": "1",
+   "description": "MBL-BILL-ABD-2611-0007: ABD are the letters of Ahmad Book Depot."
+  }
+ ],
+ "module": "Trading",
+ "name": "Document Number Setting",
+ "owner": "Administrator",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "export": 1,
+   "report": 1
+  }
+ ],
+ "autoname": "field:business_profile"
+}

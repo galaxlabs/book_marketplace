@@ -10,7 +10,13 @@
   "theme_name",
   "colors",
   "brand_display",
-  "time_zone"
+  "time_zone",
+  "clock_section",
+  "country",
+  "hijri_adjust",
+  "clock_col",
+  "show_world_clocks",
+  "world_clocks"
  ],
  "module": "Auth",
  "name": "Account Preference",
@@ -59,6 +65,39 @@
    "label": "Time Zone",
    "default": "Asia/Karachi",
    "description": "IANA name, for example Asia/Karachi. Times in the panel are shown in this zone."
+  },
+  {
+   "fieldname": "clock_section",
+   "fieldtype": "Section Break",
+   "label": "Clock and dates"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "options": "Country"
+  },
+  {
+   "fieldname": "hijri_adjust",
+   "fieldtype": "Int",
+   "label": "Hijri date adjustment (days)",
+   "default": "0",
+   "description": "-2 to +2: moves the Islamic date to match the local moon sighting."
+  },
+  {
+   "fieldname": "clock_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "show_world_clocks",
+   "fieldtype": "Check",
+   "label": "Show world clocks on the dashboard",
+   "default": "0"
+  },
+  {
+   "fieldname": "world_clocks",
+   "fieldtype": "Small Text",
+   "label": "World clocks (JSON list of zones)"
   }
  ]
 }
