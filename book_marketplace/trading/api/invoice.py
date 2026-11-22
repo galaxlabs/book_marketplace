@@ -57,6 +57,12 @@ def list_invoices(profile_id, direction="sales"):
 
 
 @frappe.whitelist()
+def design_of(profile_id):
+    from book_marketplace.trading.api.design import design_of as _d
+    return _d(profile_id)
+
+
+@frappe.whitelist()
 def get_invoice(name, profile_id):
     """The full invoice for printing (letterhead of the seller, bill to the buyer). Only the two parties."""
     _profile_of_user(profile_id)
@@ -96,4 +102,6 @@ def get_invoice(name, profile_id):
         "total": round(flt(doc.invoice_total), 2),
         "freight": {"scenario": doc.freight_scenario or "", "transporter": doc.transporter or "", "buyer_share": flt(doc.freight_buyer_share), "seller_share": flt(doc.freight_seller_share), "payer_is_buyer": flt(doc.freight_buyer_share) > 0},
         "note": doc.receipt_note or "",
+        # the seller's saved print design (letterhead and bill terms)
+        "design": design_of(doc.seller_profile),
     }
