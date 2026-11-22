@@ -254,6 +254,7 @@ after_migrate = "book_marketplace.setup.migrate.after_migrate"
 doc_events = {
     "Book": {
         "after_save": "book_marketplace.catalog.item_sync.sync_book_to_item",
+        "on_update": "book_marketplace.catalog.api.price_changes.on_book_update",
     },
     "BusinessCatalogItem": {
         "after_insert": "book_marketplace.trading.api.customer_portal.on_catalog_item_added",
@@ -262,6 +263,7 @@ doc_events = {
 
 scheduler_events = {
     "daily": [
+        "book_marketplace.trading.api.trade_policy.expire_policies",
         "book_marketplace.trading.api.purchase_order.expire_stale_receipts",
         "book_marketplace.trading.api.policy.end_restrictions",
     ],

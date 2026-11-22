@@ -30,6 +30,40 @@ def month_purchases(shop, publisher, today=None):
     return sum(flt(r.total) for r in rows)
 
 
+def covered_shops(publisher):
+    """Shops that buy from or list this publisher's books (they are told about its policies)."""
+    buyers = frappe.db.sql("select distinct buyer_profile from `tabPurchase Order Request` where seller_profile = %s", publisher)
+    holders = frappe.db.sql("""select distinct c.business_profile from `tabBusinessCatalogItem` c
+        join `tabBook` b on b.name = c.book where b.publisher = %s and c.business_profile != %s""", (publisher, publisher))
+    return sorted({r[0] for r in buyers + holders if r[0] and r[0] != publisher})
+
+
+def announce_policy(policy_name, event):
+    """event: 'issued', 'stopped' or 'expired'. Notes for the covered shops and one board notice."""
+    from book_marketplace.trading.api.notifications import notify
+    doc = frappe.get_doc("Trade Discount Policy", policy_name)
+    texts = {
+        "issued": ("New discount policy: {0}", "Publisher {0} has a new discount policy, {1}. See Trade discounts for the steps."),
+        "stopped": ("Discount policy ended: {0}", "Publisher {0} has ended the discount policy {1}. Orders from now use the normal rate."),
+        "expired": ("Discount policy ended: {0}", "The discount policy {1} of publisher {0} has reached its end date."),
+    }
+    tt, bb = texts[event]
+    pub = frappe.db.get_value("BusinessProfile", doc.publisher, "business_name") or doc.publisher
+    title, body = tt.format(doc.policy_name), bb.format(pub, doc.policy_name)
+    for shop in covered_shops(doc.publisher):
+        notify(shop, title, body, link="/discount-policies", kind="policy")
+    frappe.get_doc({"doctype": "Shop Board Post", "business_profile": doc.publisher, "status": "Open",
+                    "body": title + " — " + body, "reports": 0, "created_on": frappe.utils.now_datetime()}).insert(ignore_permissions=True)
+
+
+def expire_policies():
+    """Daily: an active policy past its end date stops, and the shops hear about it."""
+    today = getdate(nowdate())
+    for p in frappe.get_all("Trade Discount Policy", filters={"status": "Active", "valid_to": ["<", today]}, pluck="name"):
+        frappe.db.set_value("Trade Discount Policy", p, "status", "Stopped")
+        announce_policy(p, "expired")
+
+
 def _covers(policy, shop):
     listed = {s.business_profile for s in policy.get("shops") or []}
     return (shop not in listed) if policy.applies_to_all else (shop in listed)
@@ -139,10 +173,12 @@ def save_policy(publisher, policy_name, status="Draft", priority=0, valid_from=N
     }
     if not data["policy_name"]:
         frappe.throw(_("Write the policy name."))
+    old_status = None
     if name:
         doc = frappe.get_doc("Trade Discount Policy", name)
         if doc.publisher != publisher:
             frappe.throw(_("This policy is not yours."), frappe.PermissionError)
+        old_status = doc.status
         doc.update(data)
         doc.set("tiers", [])
         doc.set("shops", [])
@@ -153,4 +189,6 @@ def save_policy(publisher, policy_name, status="Draft", priority=0, valid_from=N
         doc.save(ignore_permissions=True)
     else:
         doc = frappe.get_doc({"doctype": "Trade Discount Policy", **data}).insert(ignore_permissions=True)
+    if doc.status != old_status and doc.status in ("Active", "Stopped"):
+        announce_policy(doc.name, "issued" if doc.status == "Active" else "stopped")
     return {"name": doc.name, "status": doc.status}

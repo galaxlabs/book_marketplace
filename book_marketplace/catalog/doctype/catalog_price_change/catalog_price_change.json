@@ -1,0 +1,79 @@
+{
+ "actions": [],
+ "creation": "2026-11-22 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "book",
+  "publisher",
+  "old_price",
+  "new_price",
+  "changed_on",
+  "seen"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Shop",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "book",
+   "fieldtype": "Link",
+   "label": "Book",
+   "options": "Book",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "publisher",
+   "fieldtype": "Link",
+   "label": "Publisher",
+   "options": "BusinessProfile"
+  },
+  {
+   "fieldname": "old_price",
+   "fieldtype": "Currency",
+   "label": "Old price"
+  },
+  {
+   "fieldname": "new_price",
+   "fieldtype": "Currency",
+   "label": "New price",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "changed_on",
+   "fieldtype": "Datetime",
+   "label": "Changed on"
+  },
+  {
+   "fieldname": "seen",
+   "fieldtype": "Check",
+   "label": "Seen by the shop",
+   "default": "0"
+  }
+ ],
+ "module": "Catalog",
+ "name": "Catalog Price Change",
+ "owner": "Administrator",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1
+  }
+ ]
+}

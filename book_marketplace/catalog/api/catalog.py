@@ -339,6 +339,7 @@ def list_catalog(profile_id, active_only=True):
             "is_active": item.is_active,
             "added_on": item.added_on,
             "owned": 1 if book.get("publisher") == profile_id else 0,
+            "from_publisher": book.get("publisher") or "",
             "is_discontinued": frappe.utils.cint(book.get("is_discontinued")),
             "stock_available": _stock_for(item.book, profile_id),
         })
