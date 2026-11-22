@@ -82,8 +82,10 @@ def book_list(profile_id, text="", availability="all", published="all", limit=50
     def price_key(r):
         return (r["mrp"] <= 0, r["mrp"])
 
+    # the title decides first; the author is the second level (so one title's books group together, and the
+    # author tells them apart); the cheapest comes first within the same title and author
     if sort == "price":
-        out.sort(key=lambda r: price_key(r) + ((r["title"] or "").lower(),))
+        out.sort(key=lambda r: price_key(r) + ((r["title"] or "").lower(), (r["author"] or "").lower()))
     else:
-        out.sort(key=lambda r: ((r["title"] or "").lower(),) + price_key(r))
+        out.sort(key=lambda r: ((r["title"] or "").lower(), (r["author"] or "").lower()) + price_key(r))
     return {"books": out[offset:offset + limit], "total": len(out)}
