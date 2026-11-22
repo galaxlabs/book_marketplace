@@ -48,7 +48,9 @@
   "numbers_section",
   "buyer_doc_no",
   "numbers_col",
-  "seller_doc_no"
+  "seller_doc_no",
+  "trade_policy",
+  "trade_rate"
  ],
  "fields": [
   {
@@ -288,6 +290,18 @@
    "fieldname": "seller_doc_no",
    "fieldtype": "Data",
    "label": "Seller's bill number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "trade_policy",
+   "fieldtype": "Data",
+   "label": "Trade policy used",
+   "read_only": 1
+  },
+  {
+   "fieldname": "trade_rate",
+   "fieldtype": "Percent",
+   "label": "Trade rate",
    "read_only": 1
   }
  ],

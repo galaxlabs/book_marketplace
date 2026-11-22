@@ -54,29 +54,55 @@ def create_purchase_order(buyer_profile, seller_profile, items, notes=""):
     if not rows:
         frappe.throw(_("Add at least one book with a quantity."))
     from book_marketplace.catalog.api import item_options as io
+    from book_marketplace.trading.api import trade_policy as tp
     doc = frappe.get_doc({
         "doctype": "Purchase Order Request", "buyer_profile": buyer_profile, "seller_profile": seller_profile,
         "status": "Sent", "notes": (notes or "").strip()[:500],
     })
+    # 1. the publisher's own price for each line (its list price, its own normal discount)
+    lines = []
     for r in rows:
-        price = _listed_price(seller_profile, r["book"])
+        mrp, disc, price = _price_info(seller_profile, r["book"])
         qty = int(r["qty"])
         line = {"book": r["book"], "qty": qty}
+        ref = mrp
         sells_options = io.owner_of(r["book"]) == seller_profile and io.has_options(r["book"])
         if r.get("option"):
             if not sells_options:
                 frappe.throw(_("This seller does not sell options of this item."))
             opt = io.get_option(r["book"], r["option"])
             if flt(opt.price):
-                mrp, disc, _net = _price_info(seller_profile, r["book"])
+                ref = flt(opt.price)
                 price = round(flt(opt.price) * (1 - flt(disc) / 100), 2)
             line.update({"item_option": opt.name, "option_label": io.label_of(opt)})
         elif sells_options:
             frappe.throw(_("Choose the size / colour of {0}.").format(frappe.db.get_value("Book", r["book"], "title")))
-        line.update({"unit_price": price, "line_total": price * qty})
-        doc.append("items", line)
+        lines.append({"line": line, "qty": qty, "base": flt(price), "ref": flt(ref), "normal": flt(disc)})
+
+    # 2. the publisher's trade policy for this shop and this bill (the bill is the total at the publisher's prices)
+    bill = sum(l["base"] * l["qty"] for l in lines)
+    rates = {}
+    applied = None
+    for l in lines:
+        if l["normal"] not in rates:
+            rates[l["normal"]] = tp.rate_for(seller_profile, buyer_profile, bill, l["normal"])
+        res = rates[l["normal"]]
+        if res["policy"]:
+            applied = res
+        rate, normal = res["rate"], l["normal"]
+        # the policy can only lower a price, never raise it
+        if l["ref"] > 0:
+            policy_price = round(l["ref"] * (1 - rate / 100), 2)
+            price = min(l["base"], policy_price) if rate > normal else l["base"]
+        else:
+            price = round(l["base"] * (1 - max(rate - normal, 0) / 100), 2)
+        l["line"].update({"unit_price": price, "line_total": price * l["qty"]})
+        doc.append("items", l["line"])
     doc.total_qty = sum(int(i.qty) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
+    if applied:
+        doc.trade_policy = applied["policy_name"]
+        doc.trade_rate = max(x["rate"] for x in rates.values())
     doc.insert(ignore_permissions=True)
     return _view(doc)
 
@@ -89,6 +115,7 @@ def _key(book, option):
 def _view(doc):
     return {
         "name": doc.name, "status": doc.status, "buyer_profile": doc.buyer_profile,
+        "trade_policy": doc.get("trade_policy") or "", "trade_rate": flt(doc.get("trade_rate")),
         "buyer_name": frappe.db.get_value("BusinessProfile", doc.buyer_profile, "business_name"),
         "seller_profile": doc.seller_profile,
         "seller_name": frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name"),
