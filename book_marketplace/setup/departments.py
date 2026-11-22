@@ -67,7 +67,7 @@ def _plan(path):
         top = len(rows) - 1
         for j, sub in enumerate(dep.get("sub_departments", [])):
             _node_rows(sub, top, j, rows, skipped)
-    filters = data["departments"][0].get("boards_filter") if data["departments"] else None
+    filters = next((d.get("boards_filter") for d in data["departments"] if d.get("boards_filter")), None)
     return rows, skipped, filters
 
 
