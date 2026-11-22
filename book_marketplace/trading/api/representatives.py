@@ -153,3 +153,10 @@ def set_visit_greeting(profile, text=""):
     _assert_profile_owner(profile)
     frappe.db.set_value("BusinessProfile", profile, "visit_greeting", (text or "").strip()[:600])
     return {"status": "saved"}
+
+
+@frappe.whitelist()
+def visit_greeting(profile):
+    """This business's welcome text for visit notices."""
+    _assert_profile_owner(profile)
+    return frappe.db.get_value("BusinessProfile", profile, "visit_greeting") or ""
