@@ -71,6 +71,18 @@ def _plan(path):
     return rows, skipped, filters
 
 
+def _chunks(names, size=300):
+    for i in range(0, len(names), size):
+        yield names[i : i + size]
+
+
+def _count_in(table, column, names):
+    total = 0
+    for part in _chunks(names):
+        total += frappe.db.sql(f"SELECT COUNT(*) FROM `tab{table}` WHERE `{column}` IN %(n)s", {"n": tuple(part)})[0][0]
+    return total
+
+
 def _old_department_names(root):
     return [r.name for r in frappe.get_all("Book Category", filters={"category_type": "Department", "name": ["!=", root]}, fields=["name"])]
 
@@ -81,11 +93,11 @@ def rebuild(path, apply=0):
     root = _root()
     rows, skipped, filters = _plan(path)
     old = _old_department_names(root)
-    links = frappe.db.count("Book Classification", {"category": ["in", old]}) if old else 0
+    links = _count_in("Book Classification", "category", old) if old else 0
     syllabus = 0
     if old:
         for f in ("board", "stage", "darja"):
-            syllabus += frappe.db.count("Syllabus Entry", {f: ["in", old]})
+            syllabus += _count_in("Syllabus Entry", f, old)
     summary = {
         "old_departments": len(old),
         "old_book_links": links,
@@ -100,15 +112,15 @@ def rebuild(path, apply=0):
         return summary
 
     # 1. book links to the old departments go; the books keep their subject and title categories
-    if old:
-        frappe.db.delete("Book Classification", {"category": ["in", old]})
+    for part in _chunks(old):
+        frappe.db.sql("DELETE FROM `tabBook Classification` WHERE `category` IN %(n)s", {"n": tuple(part)})
     # 2. syllabus entries that point at an old department are cleared (reported above)
     if old and syllabus:
         for f in ("board", "stage", "darja"):
             frappe.db.sql(f"UPDATE `tabSyllabus Entry` SET `{f}`=NULL WHERE `{f}` IN %(names)s", {"names": tuple(old)})
     # 3. old department rows go, in batches
-    for i in range(0, len(old), 300):
-        frappe.db.delete("Book Category", {"name": ["in", old[i : i + 300]]})
+    for part in _chunks(old):
+        frappe.db.sql("DELETE FROM `tabBook Category` WHERE `name` IN %(n)s", {"n": tuple(part)})
     # 4. the new tree: rows keep their parent position while inserting
     made = {}
     for idx, r in enumerate(rows):
