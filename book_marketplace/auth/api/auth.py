@@ -68,7 +68,6 @@ def get_me():
     }
 
 
-@frappe.whitelist(allow_guest=True)
 def _browser_of_request():
     """The browser's User-Agent of this request; empty outside a web request."""
     if not getattr(frappe.local, "request", None):
@@ -76,6 +75,7 @@ def _browser_of_request():
     return frappe.get_request_header("User-Agent", "") or ""
 
 
+@frappe.whitelist(allow_guest=True)
 def login_with_token(usr, pwd, device_name=None):
     if not usr or not pwd:
         frappe.throw(_("Email and password are required."))
