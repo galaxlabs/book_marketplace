@@ -28,8 +28,12 @@ def book_list(profile_id, text="", availability="all", published="all", limit=50
         held[row.book] = held.get(row.book, 0) + float(row.quantity or 0)
 
     books = frappe.get_all("Book", filters={"name": ["in", list(names)]},
-                           fields=["name", "title", "author", "publisher", "item_type"],
+                           fields=["name", "title", "title_en", "author", "publisher", "item_type", "isbn", "language",
+                                   "binding", "edition", "set_mrp", "trade_price", "cover_image"],
                            order_by="title asc", limit_page_length=0)
+    pub_ids = list({b.publisher for b in books if b.publisher})
+    pub_names = {p.name: p.business_name for p in frappe.get_all(
+        "BusinessProfile", filters={"name": ["in", pub_ids]}, fields=["name", "business_name"], limit_page_length=0)} if pub_ids else {}
     t = (text or "").strip().lower()
     out = []
     for b in books:
@@ -48,7 +52,11 @@ def book_list(profile_id, text="", availability="all", published="all", limit=50
             continue
         if published == "unpublished" and is_published:
             continue
-        out.append({"name": b.name, "title": b.title, "author": b.author or "", "publisher": b.publisher or "",
+        out.append({"name": b.name, "title": b.title, "title_en": b.title_en or "", "author": b.author or "",
+                    "publisher": b.publisher or "", "publisher_name": pub_names.get(b.publisher, "") or b.publisher or "",
+                    "isbn": b.isbn or "", "language": b.language or "", "binding": b.binding or "",
+                    "edition": b.edition or "", "mrp": float(b.set_mrp or 0), "trade_price": float(b.trade_price or 0),
+                    "cover_image": b.cover_image or "",
                     "quantity": qty, "available": qty > 0, "published": is_published, "item_type": b.item_type or "Book",
                     "catalog_item": cat.name if cat else None})
     return {"books": out[offset:offset + limit], "total": len(out)}
