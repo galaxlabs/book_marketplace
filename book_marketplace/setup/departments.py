@@ -93,7 +93,7 @@ def rebuild(path, apply=0):
     root = _root()
     rows, skipped, filters = _plan(path)
     old = _old_department_names(root)
-    links = _count_in("Book Classification", "category", old) if old else 0
+    links = _count_in("BookClassification", "category", old) if old else 0
     syllabus = 0
     if old:
         for f in ("board", "stage", "darja"):
@@ -113,7 +113,7 @@ def rebuild(path, apply=0):
 
     # 1. book links to the old departments go; the books keep their subject and title categories
     for part in _chunks(old):
-        frappe.db.sql("DELETE FROM `tabBook Classification` WHERE `category` IN %(n)s", {"n": tuple(part)})
+        frappe.db.sql("DELETE FROM `tabBookClassification` WHERE `category` IN %(n)s", {"n": tuple(part)})
     # 2. syllabus entries that point at an old department are cleared (reported above)
     if old and syllabus:
         for f in ("board", "stage", "darja"):
