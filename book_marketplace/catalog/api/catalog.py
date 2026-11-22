@@ -1125,7 +1125,44 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
         result.sort(key=lambda b: b["in_city_count"] == 0)
 
     total = len(result)
-    return {"books": result[offset:offset + limit], "total": total, "cities": _published_cities()}
+    page = result[offset:offset + limit]
+    _attach_classifications(page)
+    return {"books": page, "total": total, "cities": _published_cities()}
+
+
+def _attach_classifications(books):
+    """Each book's categories (department, book type, title type ...) for the cards. Only the books on this page."""
+    if not books:
+        return
+    names = [b["name"] for b in books]
+    rows = frappe.get_all(
+        "BookClassification",
+        filters={"parenttype": "Book", "parent": ["in", names]},
+        fields=["parent", "category"],
+        limit_page_length=0,
+    )
+    cat_names = list({r.category for r in rows if r.category})
+    cats = {}
+    if cat_names:
+        for c in frappe.get_all(
+            "Book Category",
+            filters={"name": ["in", cat_names]},
+            fields=["name", "category_name", "category_name_ur", "category_type"],
+            limit_page_length=0,
+        ):
+            cats[c.name] = c
+    by_book = {}
+    for r in rows:
+        c = cats.get(r.category)
+        if c:
+            by_book.setdefault(r.parent, []).append({
+                "name": c.name,
+                "label": c.category_name_ur or c.category_name,
+                "label_en": c.category_name,
+                "type": c.category_type,
+            })
+    for b in books:
+        b["classifications"] = by_book.get(b["name"], [])
 
 
 def _published_cities():
