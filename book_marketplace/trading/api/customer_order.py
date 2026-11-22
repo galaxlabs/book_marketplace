@@ -227,6 +227,18 @@ def checkout_for(buyer, client_id, items, choices=None, payment_mode="online", d
     return {"ok": True, "basket": basket.name, "grand_total": grand, "reserved_until": str(deadline), "orders": orders}
 
 
+@frappe.whitelist(allow_guest=True)
+def book_offers(book):
+    """The shops that have this book in stock, each with its own price (lowest first). The book page shows
+    these prices; checkout uses the same rule, so what the page shows is what the cart charges."""
+    if not book or not frappe.db.exists("Book", book):
+        return []
+    rows = [o for o in _offers(book) if o["have"] > 0]
+    rows.sort(key=lambda o: (flt(o["unit_price"]), o["business_name"] or ""))
+    return [{"seller": o["seller"], "business_name": o["business_name"], "unit_price": flt(o["unit_price"]),
+             "have": int(o["have"])} for o in rows]
+
+
 @frappe.whitelist()
 def checkout(client_id=None, items=None, choices=None, payment_mode="online", delivery=None):
     return checkout_for(_buyer_from_session(), client_id, items, choices, payment_mode, delivery)
