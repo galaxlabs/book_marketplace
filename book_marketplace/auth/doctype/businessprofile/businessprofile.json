@@ -41,7 +41,8 @@
   "shop_col",
   "weekly_hours",
   "holidays",
-  "print_design"
+  "print_design",
+  "visit_greeting"
  ],
  "fields": [
   {
@@ -251,6 +252,11 @@
    "fieldtype": "Long Text",
    "label": "Print design (JSON)",
    "hidden": 1
+  },
+  {
+   "fieldname": "visit_greeting",
+   "fieldtype": "Small Text",
+   "label": "Welcome text for visit notices"
   }
  ],
  "index_web_pages_for_search": 1,
