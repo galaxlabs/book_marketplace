@@ -282,3 +282,6 @@ has_permission = {
     "Customer Order": "book_marketplace.trading.customer_order_permissions.order_has_permission",
     "Customer Basket": "book_marketplace.trading.customer_order_permissions.basket_has_permission",
 }
+
+# per-device sign-in checks (idle 30 days, logged-out devices)
+auth_hooks = ["book_marketplace.auth.api.device_session.check"]

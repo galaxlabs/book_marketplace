@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import now_datetime
 from frappe.utils.password import check_password
 
 from book_marketplace.auth.doctype.marketplace_settings.marketplace_settings import (
@@ -68,7 +69,14 @@ def get_me():
 
 
 @frappe.whitelist(allow_guest=True)
-def login_with_token(usr, pwd):
+def _browser_of_request():
+    """The browser's User-Agent of this request; empty outside a web request."""
+    if not getattr(frappe.local, "request", None):
+        return ""
+    return frappe.get_request_header("User-Agent", "") or ""
+
+
+def login_with_token(usr, pwd, device_name=None):
     if not usr or not pwd:
         frappe.throw(_("Email and password are required."))
     user = frappe.db.get_value("User", {"email": usr}, "name") or frappe.db.get_value("User", usr, "name")
@@ -77,14 +85,19 @@ def login_with_token(usr, pwd):
     check_password(user, pwd)
     if not frappe.db.get_value("User", user, "enabled"):
         frappe.throw(_("This account is disabled. Contact the administrator."))
-    user_doc = frappe.get_doc("User", user)
-    if not user_doc.api_key:
-        user_doc.api_key = frappe.generate_hash(length=15)
-    api_secret = frappe.generate_hash(length=15)
-    user_doc.api_secret = api_secret
-    user_doc.save(ignore_permissions=True)
+    # one key and secret per sign-in: another browser or phone does not sign this one out
+    # the secret is kept in plain text only for this reply: Frappe stores it encrypted and masks it on read
+    api_key = frappe.generate_hash(length=20)
+    api_secret = frappe.generate_hash(length=40)
+    frappe.get_doc({
+        "doctype": "Login Device", "user": user,
+        "device_name": (device_name or "")[:140] or None,
+        "user_agent": _browser_of_request()[:200] or None,
+        "api_key": api_key, "api_secret": api_secret,
+        "created_on": now_datetime(), "last_used": now_datetime(), "enabled": 1,
+    }).insert(ignore_permissions=True)
     frappe.set_user(user)
-    return {"api_key": user_doc.api_key, "api_secret": api_secret, "token": f"{user_doc.api_key}:{api_secret}", "me": get_me()}
+    return {"api_key": api_key, "api_secret": api_secret, "token": f"{api_key}:{api_secret}", "me": get_me()}
 
 
 def _grant_profile_role(user_name, profile_type):
