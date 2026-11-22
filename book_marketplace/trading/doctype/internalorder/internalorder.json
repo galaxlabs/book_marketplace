@@ -36,7 +36,12 @@
   "payment_remarks",
   "notes",
   "items_section",
-  "items"
+  "items",
+  "bill_discount_section",
+  "subtotal",
+  "discount_percent",
+  "bill_discount_col",
+  "discount_amount"
  ],
  "fields": [
   {
@@ -211,6 +216,32 @@
    "fieldname": "customer_phone",
    "fieldtype": "Data",
    "label": "Customer phone / گاہک کا فون"
+  },
+  {
+   "fieldname": "bill_discount_section",
+   "fieldtype": "Section Break",
+   "label": "Bill discount"
+  },
+  {
+   "fieldname": "subtotal",
+   "fieldtype": "Currency",
+   "label": "Before discount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "discount_percent",
+   "fieldtype": "Percent",
+   "label": "Discount %"
+  },
+  {
+   "fieldname": "bill_discount_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "discount_amount",
+   "fieldtype": "Currency",
+   "label": "Discount amount",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

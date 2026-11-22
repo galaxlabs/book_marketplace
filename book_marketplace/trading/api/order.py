@@ -81,7 +81,8 @@ def _tracked_quantity(seller, book):
 
 
 @frappe.whitelist()
-def create_sale(seller, items, customer_name=None, customer_phone=None, payment_status="Paid"):
+def create_sale(seller, items, customer_name=None, customer_phone=None, payment_status="Paid",
+                 discount_percent=0, discount_amount=0):
     """A sale over the counter or to a customer without an account. Checks and reduces the shop's stock."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
     _assert_profile_owner(seller)
@@ -122,6 +123,7 @@ def create_sale(seller, items, customer_name=None, customer_phone=None, payment_
         "delivery_method": "Pickup",
         "status": "Received",
         "payment_status": payment_status or "Paid",
+        "discount_percent": float(discount_percent or 0), "discount_amount": float(discount_amount or 0),
         "items": [
             {"book": it["book"], "quantity": qty, "rate": float(it.get("rate") or 0),
              "item_option": it.get("option") or None, "option_label": it["_label"] or None}
