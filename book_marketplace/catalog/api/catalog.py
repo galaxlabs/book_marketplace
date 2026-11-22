@@ -932,12 +932,14 @@ def search_stores(text=None, city=None, profile_type=None, limit=60, offset=0):
         # Card details: the shop's logo, its book count and contact details (same count as the shop page).
         s.logo = frappe.db.get_value("BusinessProfile", s.business_profile, "logo") or ""
         s.catalog_count = len(_store_items(s.business_profile, s.profile_type))
+        # a business that advertises its whole store (ad option Store) is shown first, with the label
+        s.advertised = frappe.db.get_value("BusinessProfile", s.business_profile, "ad_option") == "Store"
         contact = frappe.db.get_value("BusinessStore", s.name, ["contact_phone", "contact_email", "address", "map_link"], as_dict=True) or {}
         s.contact_phone = contact.get("contact_phone") or ""
         s.contact_email = contact.get("contact_email") or ""
         s.address = contact.get("address") or ""
         out.append(s)
-    out.sort(key=lambda x: (x.profile_type != "Publisher", x.store_name or ""))
+    out.sort(key=lambda x: (not x.advertised, x.profile_type != "Publisher", x.store_name or ""))
     start = int(offset or 0)
     return out[start:start + int(limit or 60)]
 

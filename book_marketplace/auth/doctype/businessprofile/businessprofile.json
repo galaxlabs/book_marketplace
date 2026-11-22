@@ -17,6 +17,7 @@
   "public_message",
   "status",
   "verified_badge",
+  "ad_option",
   "parent_publisher",
   "accepted_terms",
   "enable_fbr",
@@ -102,6 +103,13 @@
    "fieldtype": "Check",
    "label": "Verified Badge",
    "description": "Paid premium badge. Set only by an admin (manual for now); shops cannot change it."
+  },
+  {
+   "fieldname": "ad_option",
+   "fieldtype": "Select",
+   "label": "Advertising option",
+   "options": "\nStore\nBooks",
+   "description": "One ad per business: the whole store at the top of the store list (Store), or up to 5 books at the top of its store (Books). Free for now."
   },
   {
    "fieldname": "parent_publisher",
