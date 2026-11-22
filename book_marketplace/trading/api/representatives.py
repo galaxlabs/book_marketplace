@@ -83,7 +83,8 @@ def end(name, profile):
 def my_appointments(profile):
     _assert_profile_owner(profile)
     rows = frappe.get_all("Business Representative", filters={"principal": profile, "status": ["!=", "Ended"]},
-                          fields=["name", "representative", "status", "note", "appointed_on"], order_by="creation desc", limit_page_length=0)
+                          fields=["name", "representative", "status", "note", "appointed_on", "payment_route",
+                                  "commission_customer", "commission_agent"], order_by="creation desc", limit_page_length=0)
     for r in rows:
         r["representative_name"] = _name(r.representative)
     return rows
@@ -93,7 +94,8 @@ def my_appointments(profile):
 def my_representations(profile):
     _assert_profile_owner(profile)
     rows = frappe.get_all("Business Representative", filters={"representative": profile, "status": ["!=", "Ended"]},
-                          fields=["name", "principal", "status", "note", "appointed_on"], order_by="creation desc", limit_page_length=0)
+                          fields=["name", "principal", "status", "note", "appointed_on", "payment_route",
+                                  "commission_customer", "commission_agent"], order_by="creation desc", limit_page_length=0)
     for r in rows:
         r["principal_name"] = _name(r.principal)
         r["greeting"] = frappe.db.get_value("BusinessProfile", r.principal, "visit_greeting") or ""

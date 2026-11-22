@@ -132,6 +132,11 @@ def _view(doc):
     return {
         "name": doc.name, "status": doc.status, "buyer_profile": doc.buyer_profile,
         "trade_policy": doc.get("trade_policy") or "", "trade_rate": flt(doc.get("trade_rate")),
+        "agent": doc.get("agent") or "",
+        "agent_name": (frappe.db.get_value("BusinessProfile", doc.agent, "business_name") or doc.agent) if doc.get("agent") else "",
+        "agent_route": doc.get("agent_route") or "",
+        "agent_commission_pct": flt(doc.get("agent_commission_pct")),
+        "recovered": flt(frappe.db.sql("select coalesce(sum(base), 0) from `tabAgent Commission` where `order` = %s", doc.name)[0][0]),
         "buyer_name": frappe.db.get_value("BusinessProfile", doc.buyer_profile, "business_name"),
         "seller_profile": doc.seller_profile,
         "seller_name": frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name"),
