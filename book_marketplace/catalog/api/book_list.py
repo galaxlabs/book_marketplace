@@ -3,19 +3,10 @@ with the stock it has, and whether it is published on its own store.
 Filters: availability (all, available, unavailable), publish state (all, published, unpublished), item type and text.
 The text also matches ISBN, barcode and article number exactly, so a scanned code finds its book.
 Sort: "alpha" (by title; for the same title the cheapest first) or "price" (cheapest first).
-Each row carries publisher_count: how many publishers hold this same book (same ISBN, or same title and author)."""
-from collections import defaultdict
-
+Books of the same title or ISBN from other publishers are listed too."""
 import frappe
 
 from book_marketplace.auth.api.auth import _assert_profile_owner
-
-
-def _book_key(b):
-    isbn = (b.isbn or "").strip()
-    if isbn:
-        return "isbn:" + isbn.lower()
-    return "t:" + (b.title or "").strip().lower() + "|" + (b.author or "").strip().lower()
 
 
 @frappe.whitelist()
@@ -33,6 +24,18 @@ def book_list(profile_id, text="", availability="all", published="all", limit=50
     if not names:
         return {"books": [], "total": 0}
 
+    # the same book from other publishers: a book with the same title or the same ISBN is listed too
+    own = frappe.get_all("Book", filters={"name": ["in", list(names)]}, fields=["title", "isbn"], limit_page_length=0)
+    titles = list({b.title for b in own if b.title})
+    isbns = list({b.isbn for b in own if b.isbn})
+    if titles or isbns:
+        or_filters = []
+        if titles:
+            or_filters.append(["title", "in", titles])
+        if isbns:
+            or_filters.append(["isbn", "in", isbns])
+        names |= set(frappe.get_all("Book", or_filters=or_filters, pluck="name", limit_page_length=0))
+
     held = {}
     for row in frappe.get_all("StockLedger", filters={"business_profile": profile_id, "state": "Available",
                                                       "book": ["in", list(names)]},
@@ -43,11 +46,6 @@ def book_list(profile_id, text="", availability="all", published="all", limit=50
                            fields=["name", "title", "title_en", "author", "publisher", "item_type", "isbn", "barcode",
                                    "article_number", "language", "binding", "edition", "set_mrp"],
                            order_by="title asc", limit_page_length=0)
-
-    # publishers per book: counted over every book this business holds, before any filter
-    publishers_of = defaultdict(set)
-    for b in books:
-        publishers_of[_book_key(b)].add(b.publisher or b.name)
 
     pub_ids = list({b.publisher for b in books if b.publisher})
     pub_names = {p.name: p.business_name for p in frappe.get_all(
@@ -75,7 +73,6 @@ def book_list(profile_id, text="", availability="all", published="all", limit=50
             continue
         out.append({"name": b.name, "title": b.title, "title_en": b.title_en or "", "author": b.author or "",
                     "publisher": b.publisher or "", "publisher_name": pub_names.get(b.publisher, "") or b.publisher or "",
-                    "publisher_count": len(publishers_of[_book_key(b)]),
                     "isbn": b.isbn or "", "barcode": b.barcode or "", "language": b.language or "", "binding": b.binding or "",
                     "edition": b.edition or "", "mrp": float(b.set_mrp or 0),
                     "quantity": qty, "available": qty > 0, "published": is_published, "item_type": b.item_type or "Book",
