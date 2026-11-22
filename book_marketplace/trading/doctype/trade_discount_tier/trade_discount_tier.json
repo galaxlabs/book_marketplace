@@ -1,0 +1,62 @@
+{
+ "actions": [],
+ "creation": "2026-11-22 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basis",
+  "min_bill",
+  "min_monthly",
+  "percent",
+  "mode"
+ ],
+ "fields": [
+  {
+   "fieldname": "basis",
+   "fieldtype": "Select",
+   "label": "Condition",
+   "options": "Bill only\nMonthly only\nBoth\nEither",
+   "default": "Bill only",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "min_bill",
+   "fieldtype": "Currency",
+   "label": "Bill amount at least",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "min_monthly",
+   "fieldtype": "Currency",
+   "label": "Monthly amount at least",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "percent",
+   "fieldtype": "Percent",
+   "label": "Discount %",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "mode",
+   "fieldtype": "Select",
+   "label": "How it counts",
+   "options": "Replace\nAdd on top",
+   "default": "Replace",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Replace: this rate replaces the normal rate when higher. Add on top: this rate is added to the normal rate."
+  }
+ ],
+ "module": "Trading",
+ "name": "Trade Discount Tier",
+ "owner": "Administrator",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "istable": 1,
+ "editable_grid": 1
+}
