@@ -170,7 +170,7 @@ def department_tree(lang=None):
         kids.setdefault(r.parent_book_category or "", []).append(r)
     for sibs in kids.values():
         # an explicit order (boards, stages, darajat) comes first, in that order; the rest by name
-        sibs.sort(key=lambda r: (not r.sort_order, r.sort_order or 0, r.category_name))
+        sibs.sort(key=lambda r: (r.sort_order or 0, r.category_name))
 
     def build(parent, inherited=None):
         out = []
@@ -200,7 +200,7 @@ def filter_trees(lang=None):
     for r in rows:
         kids.setdefault(r.parent_book_category or "", []).append(r)
     for sibs in kids.values():
-        sibs.sort(key=lambda r: (not r.sort_order, r.sort_order or 0, label(r.category_name, r.category_name_ur, lang)))
+        sibs.sort(key=lambda r: (r.sort_order or 0, label(r.category_name, r.category_name_ur, lang)))
 
     def build(parent):
         return [{"name": r.name, "label": label(r.category_name, r.category_name_ur, lang), "children": build(r.name)}
