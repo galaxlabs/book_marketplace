@@ -37,10 +37,6 @@ def on_book_update(doc, method=None):
                _("The publisher's price is now {0} (was {1}). Your catalogue shows the new price.").format(new, old),
                link="/catalog", kind="price")
         shops += 1
-    if shops and publisher:
-        frappe.get_doc({"doctype": "Shop Board Post", "business_profile": publisher, "status": "Open",
-                        "body": _("Price update: «{0}» is now {1} (was {2}). Shops that list this book see the new price.").format(title, new, old),
-                        "reports": 0, "created_on": now}).insert(ignore_permissions=True)
 
 
 @frappe.whitelist()

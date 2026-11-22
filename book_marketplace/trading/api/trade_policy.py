@@ -52,8 +52,6 @@ def announce_policy(policy_name, event):
     title, body = tt.format(doc.policy_name), bb.format(pub, doc.policy_name)
     for shop in covered_shops(doc.publisher):
         notify(shop, title, body, link="/discount-policies", kind="policy")
-    frappe.get_doc({"doctype": "Shop Board Post", "business_profile": doc.publisher, "status": "Open",
-                    "body": title + " — " + body, "reports": 0, "created_on": frappe.utils.now_datetime()}).insert(ignore_permissions=True)
 
 
 def expire_policies():

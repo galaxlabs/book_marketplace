@@ -18,7 +18,7 @@ ENTRY_TYPES = RECEIVABLE_UP + RECEIVABLE_DOWN + PAYABLE_UP + PAYABLE_DOWN
 
 
 @frappe.whitelist()
-def add_khata_entry(business_profile, party_name, entry_type, amount, entry_date=None, reference=None, notes=None):
+def add_khata_entry(business_profile, party_name, entry_type, amount, entry_date=None, reference=None, notes=None, party_profile=None):
     _assert_profile_owner(business_profile)
     if entry_type not in ENTRY_TYPES:
         frappe.throw(_("Unknown entry type."))

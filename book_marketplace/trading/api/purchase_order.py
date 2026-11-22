@@ -457,6 +457,7 @@ def _post_khata(doc):
     ):
         frappe.get_doc({
             "doctype": "Khata Entry", "business_profile": profile, "party_name": party,
+            "party_profile": doc.seller_profile if profile == doc.buyer_profile else doc.buyer_profile,
             "entry_type": entry_type, "amount": amount, "entry_date": frappe.utils.nowdate(),
             "reference": doc.invoice_no, "notes": f"Agreed receipt {doc.name}",
         }).insert(ignore_permissions=True)
