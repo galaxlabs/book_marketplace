@@ -50,7 +50,11 @@
   "numbers_col",
   "seller_doc_no",
   "trade_policy",
-  "trade_rate"
+  "trade_rate",
+  "agent_section",
+  "agent",
+  "agent_route",
+  "agent_commission_pct"
  ],
  "fields": [
   {
@@ -302,6 +306,31 @@
    "fieldname": "trade_rate",
    "fieldtype": "Percent",
    "label": "Trade rate",
+   "read_only": 1
+  },
+  {
+   "fieldname": "agent_section",
+   "fieldtype": "Section Break",
+   "label": "Agent"
+  },
+  {
+   "fieldname": "agent",
+   "fieldtype": "Link",
+   "label": "Received through agent",
+   "options": "BusinessProfile",
+   "read_only": 1
+  },
+  {
+   "fieldname": "agent_route",
+   "fieldtype": "Select",
+   "label": "Payment goes to",
+   "options": "Customer account\nAgent account",
+   "read_only": 1
+  },
+  {
+   "fieldname": "agent_commission_pct",
+   "fieldtype": "Percent",
+   "label": "Agent commission %",
    "read_only": 1
   }
  ],

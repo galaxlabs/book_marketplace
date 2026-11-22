@@ -10,7 +10,10 @@
   "status",
   "note",
   "appointed_on",
-  "answered_on"
+  "answered_on",
+  "payment_route",
+  "commission_customer",
+  "commission_agent"
  ],
  "fields": [
   {
@@ -53,6 +56,24 @@
    "fieldname": "answered_on",
    "fieldtype": "Datetime",
    "label": "Answered on"
+  },
+  {
+   "fieldname": "payment_route",
+   "fieldtype": "Select",
+   "label": "Payment goes to",
+   "options": "Customer account\nAgent account",
+   "default": "Customer account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "commission_customer",
+   "fieldtype": "Percent",
+   "label": "Commission % (customer account)"
+  },
+  {
+   "fieldname": "commission_agent",
+   "fieldtype": "Percent",
+   "label": "Commission % (agent account)"
   }
  ],
  "module": "Trading",

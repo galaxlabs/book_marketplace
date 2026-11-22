@@ -21,18 +21,27 @@ def _row(name):
 
 
 @frappe.whitelist()
-def appoint(principal, representative, note=""):
+def appoint(principal, representative, note="", payment_route="Customer account", commission_customer=0, commission_agent=0):
     _assert_profile_owner(principal)
     if principal == representative:
         frappe.throw(_("A business cannot be its own representative."))
     if not frappe.db.exists("BusinessProfile", representative):
         frappe.throw(_("Business not found."))
+    # the agent must already buy from this publisher (it has an account and an order with it)
+    if not frappe.db.exists("Purchase Order Request", {"buyer_profile": representative, "seller_profile": principal}):
+        frappe.throw(_("An agent must first be a buyer of this publisher."))
+    if payment_route not in ("Customer account", "Agent account"):
+        frappe.throw(_("Choose where the payment goes: customer account or agent account."))
+    for pct in (commission_customer, commission_agent):
+        if not (0 <= flt(pct) <= 100):
+            frappe.throw(_("A commission must be between 0 and 100 percent."))
     if frappe.db.exists("Business Representative", {"principal": principal, "representative": representative,
                                                      "status": ["in", ["Pending", "Active"]]}):
         frappe.throw(_("This business is already appointed or waiting to answer."))
     doc = frappe.get_doc({"doctype": "Business Representative", "principal": principal,
                           "representative": representative, "status": "Pending", "note": (note or "")[:300],
-                          "appointed_on": now_datetime()}).insert(ignore_permissions=True)
+                          "appointed_on": now_datetime(), "payment_route": payment_route,
+                          "commission_customer": flt(commission_customer), "commission_agent": flt(commission_agent)}).insert(ignore_permissions=True)
     notify(representative, _("Representative request from {0}").format(_name(principal)),
            _("{0} asks you to be its representative to visit its debtors. Answer it in Representatives.").format(_name(principal)),
            link="/representatives", kind="representative")
@@ -160,3 +169,87 @@ def visit_greeting(profile):
     """This business's welcome text for visit notices."""
     _assert_profile_owner(profile)
     return frappe.db.get_value("BusinessProfile", profile, "visit_greeting") or ""
+
+
+def _active_rep(principal, agent):
+    return frappe.db.get_value("Business Representative", {"principal": principal, "representative": agent,
+                                                           "status": "Active"},
+                               ["name", "payment_route", "commission_customer", "commission_agent"], as_dict=True)
+
+
+@frappe.whitelist()
+def create_agent_order(principal, agent, buyer, items, notes=""):
+    """The publisher places an order for a buyer through an active agent. The order shows the agent; the payment
+    goes to the route chosen at appointment; the commission is the rate of that route."""
+    import json
+    _assert_profile_owner(principal)
+    rep = _active_rep(principal, agent)
+    if not rep:
+        frappe.throw(_("This business is not an active representative."), frappe.PermissionError)
+    if not frappe.db.exists("BusinessProfile", buyer) or buyer in (principal, agent):
+        frappe.throw(_("Choose the buyer business."))
+    from book_marketplace.trading.api.purchase_order import _create_po
+    pct = rep.commission_agent if rep.payment_route == "Agent account" else rep.commission_customer
+    return _create_po(buyer, principal, json.loads(items) if isinstance(items, str) else items, notes,
+                      by_principal=True, agent=agent, agent_route=rep.payment_route, agent_pct=pct)
+
+
+def accrue_commission(order, base, route, pct):
+    """A commission row for the agent of this order (only when the order has an agent)."""
+    if not order.get("agent"):
+        return None
+    amount = round(flt(base) * flt(pct) / 100, 2)
+    return frappe.get_doc({"doctype": "Agent Commission", "principal": order.seller_profile, "agent": order.agent,
+                           "order": order.name, "route": route, "base": flt(base), "percent": flt(pct),
+                           "amount": amount, "status": "Accrued", "created_on": now_datetime()}).insert(ignore_permissions=True)
+
+
+@frappe.whitelist()
+def record_recovery(principal, order, amount):
+    """The publisher records money it received from the buyer of an agent order (customer account route).
+    The commission on that amount accrues for the agent."""
+    _assert_profile_owner(principal)
+    o = frappe.get_doc("Purchase Order Request", order)
+    if o.seller_profile != principal:
+        frappe.throw(_("Not your order."), frappe.PermissionError)
+    if not o.get("agent") or o.get("agent_route") != "Customer account":
+        frappe.throw(_("Only an order on the customer account route is recovered here."))
+    amt = flt(amount)
+    if amt <= 0:
+        frappe.throw(_("Write the amount received."))
+    recovered = flt(frappe.db.sql(
+        "select coalesce(sum(base), 0) from `tabAgent Commission` where `order` = %s", order)[0][0])
+    if amt > flt(o.total) - recovered + 0.001:
+        frappe.throw(_("More than the amount still due ({0}).").format(round(flt(o.total) - recovered, 2)))
+    frappe.get_doc({"doctype": "Khata Entry", "business_profile": principal,
+                    "party_name": frappe.db.get_value("BusinessProfile", o.buyer_profile, "business_name") or o.buyer_profile,
+                    "party_profile": o.buyer_profile, "entry_type": "Payment Received", "amount": amt,
+                    "entry_date": frappe.utils.nowdate(), "reference": o.name,
+                    "notes": f"Recovered on {o.name} through {o.agent}"}).insert(ignore_permissions=True)
+    row = accrue_commission(o, amt, "Customer account", o.agent_commission_pct)
+    return {"commission": row.amount if row else 0, "still_due": round(flt(o.total) - recovered - amt, 2)}
+
+
+@frappe.whitelist()
+def my_commissions(profile):
+    """As an agent: what I earn. As a publisher: what I owe my agents."""
+    _assert_profile_owner(profile)
+    rows = frappe.get_all("Agent Commission", or_filters=[["agent", "=", profile], ["principal", "=", profile]],
+                          fields=["name", "principal", "agent", "order", "route", "base", "percent", "amount", "status", "created_on"],
+                          order_by="created_on desc", limit_page_length=0)
+    for r in rows:
+        r["as_agent"] = r.agent == profile
+        r["principal_name"] = _name(r.principal)
+        r["agent_name"] = _name(r.agent)
+    return rows
+
+
+@frappe.whitelist()
+def mark_commission_paid(name, profile):
+    """The publisher marks a commission as paid to its agent."""
+    _assert_profile_owner(profile)
+    row = frappe.get_doc("Agent Commission", name)
+    if row.principal != profile:
+        frappe.throw(_("Only the publisher pays the commission."), frappe.PermissionError)
+    frappe.db.set_value("Agent Commission", name, "status", "Paid")
+    return {"name": name, "status": "Paid"}

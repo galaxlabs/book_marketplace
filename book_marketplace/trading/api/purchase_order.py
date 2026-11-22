@@ -42,10 +42,14 @@ def _listed_price(seller, book):
     return _price_info(seller, book)[2]
 
 
-@frappe.whitelist()
-def create_purchase_order(buyer_profile, seller_profile, items, notes=""):
-    """items: JSON list of {book, qty}. The price is the seller's listed price (trade price if it has one)."""
-    _profile_of_user(buyer_profile)
+def _create_po(buyer_profile, seller_profile, items, notes="", by_principal=False, agent=None,
+               agent_route=None, agent_pct=None):
+    """Builds the order. by_principal: the publisher places it for a buyer (through an agent); never reachable by users."""
+    from book_marketplace.auth.api.auth import _assert_profile_owner
+    if by_principal:
+        _assert_profile_owner(seller_profile)
+    else:
+        _profile_of_user(buyer_profile)
     policy.assert_can_order(buyer_profile)
     if buyer_profile == seller_profile:
         frappe.throw(_("Choose another business for the order."))
@@ -105,8 +109,18 @@ def create_purchase_order(buyer_profile, seller_profile, items, notes=""):
     if applied:
         doc.trade_policy = applied["policy_name"]
         doc.trade_rate = max(x["rate"] for x in rates.values())
+    if agent:
+        doc.agent = agent
+        doc.agent_route = agent_route or "Customer account"
+        doc.agent_commission_pct = flt(agent_pct)
     doc.insert(ignore_permissions=True)
     return _view(doc)
+
+
+@frappe.whitelist()
+def create_purchase_order(buyer_profile, seller_profile, items, notes=""):
+    """items: JSON list of {book, qty}. The price is the seller's listed price (trade price if it has one)."""
+    return _create_po(buyer_profile, seller_profile, items, notes)
 
 
 def _key(book, option):
@@ -451,16 +465,25 @@ def _post_khata(doc):
     seller_name = frappe.db.get_value("BusinessProfile", doc.seller_profile, "business_name") or doc.seller_profile
     buyer_name = frappe.db.get_value("BusinessProfile", doc.buyer_profile, "business_name") or doc.buyer_profile
     amount = flt(doc.total)
-    for profile, party, entry_type in (
-        (doc.seller_profile, buyer_name, "Credit Given"),
-        (doc.buyer_profile, seller_name, "Credit Taken"),
+    # on the agent route the agent is the one who owes the publisher (it pays if the buyer does not)
+    payer = doc.buyer_profile
+    payer_name = buyer_name
+    if doc.get("agent") and doc.get("agent_route") == "Agent account":
+        payer = doc.agent
+        payer_name = frappe.db.get_value("BusinessProfile", payer, "business_name") or payer
+    for profile, party, entry_type, other in (
+        (doc.seller_profile, payer_name, "Credit Given", payer),
+        (payer, seller_name, "Credit Taken", doc.seller_profile),
     ):
         frappe.get_doc({
             "doctype": "Khata Entry", "business_profile": profile, "party_name": party,
-            "party_profile": doc.seller_profile if profile == doc.buyer_profile else doc.buyer_profile,
+            "party_profile": other,
             "entry_type": entry_type, "amount": amount, "entry_date": frappe.utils.nowdate(),
             "reference": doc.invoice_no, "notes": f"Agreed receipt {doc.name}",
         }).insert(ignore_permissions=True)
+    if doc.get("agent") and doc.get("agent_route") == "Agent account":
+        from book_marketplace.trading.api.representatives import accrue_commission
+        accrue_commission(doc, amount, "Agent account", doc.agent_commission_pct)
     _post_freight(doc)
     _post_packing(doc)
 
