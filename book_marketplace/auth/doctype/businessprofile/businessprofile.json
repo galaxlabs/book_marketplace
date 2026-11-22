@@ -9,6 +9,8 @@
   "user",
   "profile_type",
   "business_name",
+  "business_name_local",
+  "business_name_spelling",
   "default_discount_percent",
   "branding_section",
   "logo",
@@ -65,6 +67,16 @@
    "fieldtype": "Data",
    "label": "Business Name",
    "reqd": 1
+  },
+  {
+   "fieldname": "business_name_local",
+   "fieldtype": "Data",
+   "label": "Business name in local language"
+  },
+  {
+   "fieldname": "business_name_spelling",
+   "fieldtype": "Data",
+   "label": "Spelling in local language"
   },
   {
    "fieldname": "branding_section",
