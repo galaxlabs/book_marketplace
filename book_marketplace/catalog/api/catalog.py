@@ -241,15 +241,24 @@ def publisher_books(profile_id, publishers, text=None, limit=50, offset=0, avail
     names = {p.name: p.business_name for p in frappe.get_all(
         "BusinessProfile", filters={"name": ["in", publishers]}, fields=["name", "business_name"])}
     cache = {}
+    # The price shown is the publisher's own price (the one its public store shows): its catalog row's price,
+    # discount and trade price, else the book's MRP and the publisher's discount.
+    own_rows = {(r.business_profile, r.book): r for r in frappe.get_all(
+        "BusinessCatalogItem",
+        filters={"business_profile": ["in", publishers], "book": ["in", [b.name for b in books] or [""]]},
+        fields=["business_profile", "book", "selling_price", "discount_percent", "trade_price"], limit_page_length=0)}
     rows = []
     for b in books:
-        d = publisher_discount(book=b, _cache=cache)
+        own = own_rows.get((b.publisher, b.name))
+        list_price = (own.selling_price if own else None) or b.set_mrp
+        d = (own.discount_percent if own else None) or publisher_discount(book=b, _cache=cache)
+        trade = (own.trade_price if own else None) or b.trade_price
         rows.append({
             "name": b.name, "title": b.title, "author": b.author, "publisher": b.publisher,
             "publisher_name": names.get(b.publisher, ""), "language": b.language, "binding": b.binding,
             "availability": b.availability or "Available",
-            "set_mrp": b.set_mrp, "trade_price": b.trade_price,
-            "publisher_discount": d, "net_price": price_view(b.set_mrp, d)["net_price"],
+            "set_mrp": list_price, "trade_price": trade,
+            "publisher_discount": d, "net_price": price_view(list_price, d)["net_price"],
             "is_discontinued": frappe.utils.cint(b.is_discontinued),
             "in_catalog": b.name in have,
         })
