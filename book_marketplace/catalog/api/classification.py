@@ -148,13 +148,13 @@ def section_overview(lang=None):
 
 
 def label(name_en, name_ur=None, lang=None):
-    """Name in the reader's language, from Frappe's Translation doctype. Falls back to the stored Urdu name."""
+    """Name in the reader's language. Urdu: the stored Urdu name comes first (it is the catalogue's own name, from the
+    taxonomy file); Frappe's Translation doctype is only the fallback, so an old translation cannot override it."""
     if not lang:
         return name_en
-    translated = frappe._(name_en, lang=lang)
-    if translated == name_en and lang == "ur" and name_ur:
+    if lang == "ur" and name_ur:
         return name_ur
-    return translated
+    return frappe._(name_en, lang=lang)
 
 
 @frappe.whitelist(allow_guest=True)
