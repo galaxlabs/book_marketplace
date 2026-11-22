@@ -9,6 +9,7 @@
   "business_profile",
   "book",
   "is_active",
+  "is_advertised",
   "added_on",
   "column_break_prices",
   "selling_price",
@@ -51,6 +52,12 @@
    "fieldtype": "Check",
    "label": "Visible on Store",
    "default": "1"
+  },
+  {
+   "fieldname": "is_advertised",
+   "fieldtype": "Check",
+   "label": "Advertised (top of store)",
+   "description": "Shown first on the public store with an advertisement label. At most 5 per business."
   },
   {
    "fieldname": "added_on",

@@ -323,7 +323,7 @@ def list_catalog(profile_id, active_only=True):
         "BusinessCatalogItem",
         filters=filters,
         fields=["name", "book", "selling_price", "trade_price", "is_active", "added_on",
-                "discount_percent", "shelf", "storage_place"],
+                "discount_percent", "shelf", "storage_place", "is_advertised"],
         order_by="added_on desc",
     )
     rows, listed, cache = [], set(), {}
@@ -353,6 +353,7 @@ def list_catalog(profile_id, active_only=True):
             "discount_percent": _pct(item.discount_percent) or (publisher_discount(book_id=item.book) if book.get("publisher") == profile_id else 0),
             "publisher_discount": publisher_discount(book=book, _cache=cache) if book else 0,
             "shelf": item.shelf or "",
+            "is_advertised": bool(item.is_advertised),
             "storage_place": item.storage_place or "",
             "is_active": item.is_active,
             "added_on": item.added_on,
@@ -802,6 +803,7 @@ def get_store_by_slug(slug):
                                          book.set_mrp if book else None, item.selling_price, item.book)
             pv = price_view(general, item.discount_percent)
         catalog.append({
+            "advertised": bool(item.get("is_advertised")),
             "item_name": item.name,
             "book_id": item.book,
             "title": book.title if book else "",
@@ -838,9 +840,11 @@ def _store_items(profile_name, profile_type):
     items = list(frappe.get_all(
         "BusinessCatalogItem",
         filters={"business_profile": profile_name, "is_active": 1},
-        fields=["name", "book", "selling_price", "discount_percent"],
+        fields=["name", "book", "selling_price", "discount_percent", "is_advertised"],
         order_by="modified desc",
     ))
+    # advertised books first; the order inside each group stays the same (newest changed first)
+    items.sort(key=lambda i: not i.get("is_advertised"))
     return items
 
 
