@@ -37,7 +37,7 @@ def _offers(book):
         if not disc and r.business_profile == bk.publisher:
             disc = publisher_discount(book_id=book)
         from book_marketplace.catalog.api.catalog import shop_general_price
-        cands[r.business_profile] = (shop_general_price(r.business_profile, bk.publisher, bk.set_mrp, r.selling_price), disc)
+        cands[r.business_profile] = (shop_general_price(r.business_profile, bk.publisher, bk.set_mrp, r.selling_price, book), disc)
     out = []
     for seller, (list_price, pct) in cands.items():
         if not _store_open(seller):

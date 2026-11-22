@@ -29,7 +29,7 @@ def _price_info(seller, book):
         # a listed book with no price of its own is sold at its MRP
         from book_marketplace.catalog.api.catalog import shop_general_price
         publisher = frappe.db.get_value("Book", book, "publisher")
-        net = flt(row.trade_price) or shop_general_price(seller, publisher, mrp, row.selling_price) or mrp
+        net = flt(row.trade_price) or shop_general_price(seller, publisher, mrp, row.selling_price, book) or mrp
         disc = flt(row.discount_percent) or (round((1 - net / mrp) * 100, 2) if mrp and net < mrp else 0)
         return mrp, disc, net
     if frappe.db.get_value("Book", book, "publisher") == seller:
