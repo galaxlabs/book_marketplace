@@ -6,6 +6,7 @@ from frappe.utils import flt
 
 from book_marketplace.auth.api.auth import _assert_profile_owner
 from book_marketplace.trading.api.invoice import _party
+from book_marketplace.trading.api.design import design_of as _design
 
 
 @frappe.whitelist()
@@ -34,6 +35,7 @@ def purchase_order_print(name, profile_id):
         "created": str(doc.creation or "")[:16],
         "dispatched_on": str(doc.dispatched_on or "")[:16],
         "seller": _party(doc.seller_profile),
+        "designs": {"buyer": _design(doc.buyer_profile), "seller": _design(doc.seller_profile)},
         "buyer": _party(doc.buyer_profile),
         "transport": {
             "transporter": doc.transporter or "",

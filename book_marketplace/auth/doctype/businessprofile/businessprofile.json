@@ -40,7 +40,8 @@
   "closed_note",
   "shop_col",
   "weekly_hours",
-  "holidays"
+  "holidays",
+  "print_design"
  ],
  "fields": [
   {
@@ -244,6 +245,12 @@
    "fieldtype": "Table",
    "label": "Holidays",
    "options": "Shop Holiday"
+  },
+  {
+   "fieldname": "print_design",
+   "fieldtype": "Long Text",
+   "label": "Print design (JSON)",
+   "hidden": 1
   }
  ],
  "index_web_pages_for_search": 1,
