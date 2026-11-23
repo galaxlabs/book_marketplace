@@ -307,16 +307,48 @@ def revive_order(order):
     doc.expired_on = None
     doc.save(ignore_permissions=True)
     return {"name": doc.name, "status": doc.status, "reserved_until": str(doc.reserved_until)}
-"""Delete a CANCELLED customer order (owner's rule). Only Cancelled orders; stock was already released when cancelled.
-Appended to trading/api/customer_order.py on dev-b."""
+# An order can be deleted only before the shop accepts it: work has not started on it yet.
+DELETABLE = {"Awaiting Payment", "Awaiting Shop Confirmation", "Payment Under Review", "Cancelled", "Rejected", "Expired"}
+# Orders still holding reserved copies: the copies go back to stock on delete, as on cancel.
+HOLDS_STOCK = {"Awaiting Payment", "Awaiting Shop Confirmation", "Payment Under Review"}
 
 
 @frappe.whitelist()
 def delete_cancelled_order(order):
+    """Delete an order (buyer or shop). Allowed only while the shop has not accepted it. A log is kept."""
     doc = frappe.get_doc("Customer Order", order)
     if not _may_act_on(doc):
         frappe.throw(_("Not your order."), frappe.PermissionError)
-    if doc.status != "Cancelled":
-        frappe.throw(_("Only a cancelled order can be deleted."))
+    if doc.status not in DELETABLE:
+        frappe.throw(_("This order is already accepted or in progress, so it cannot be deleted."))
+    _write_deletion_log(doc)
+    if doc.status in HOLDS_STOCK:
+        for it in doc.items:
+            _release(doc.seller_profile, it.book, int(it.qty), it.get("item_option"))
     frappe.delete_doc("Customer Order", order, ignore_permissions=True, force=True)
     return {"name": order, "deleted": True}
+
+
+def _write_deletion_log(doc):
+    buyer = frappe.db.get_value("BuyerProfile", {"user": frappe.session.user}, "name")
+    if frappe.session.user == "Administrator":
+        side = "Administrator"
+    elif buyer and buyer == doc.buyer_profile:
+        side = "Buyer"
+    else:
+        side = "Shop"
+    items = [{"book": i.book, "qty": i.qty, "unit_price": i.unit_price, "line_total": i.line_total,
+              "item_option": i.get("item_option") or ""} for i in doc.items]
+    frappe.get_doc({
+        "doctype": "Deleted Order Log",
+        "order_no": doc.name,
+        "order_status": doc.status,
+        "deleted_on": now_datetime(),
+        "deleted_by": frappe.session.user,
+        "deleted_side": side,
+        "seller_profile": doc.seller_profile,
+        "buyer_profile": doc.buyer_profile,
+        "total": doc.total,
+        "payment_mode": doc.payment_mode or "",
+        "items_json": json.dumps(items, ensure_ascii=False, default=str),
+    }).insert(ignore_permissions=True)

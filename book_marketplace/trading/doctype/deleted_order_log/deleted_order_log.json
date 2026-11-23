@@ -1,0 +1,108 @@
+{
+ "name": "Deleted Order Log",
+ "module": "Trading",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "autoname": "format:DOL-{#######}",
+ "track_changes": 0,
+ "is_submittable": 0,
+ "istable": 0,
+ "editable_grid": 0,
+ "allow_rename": 0,
+ "title_field": "order_no",
+ "search_fields": "order_no,order_status",
+ "sort_field": "deleted_on",
+ "sort_order": "DESC",
+ "field_order": [
+  "order_no",
+  "order_status",
+  "deleted_on",
+  "deleted_by",
+  "deleted_side",
+  "column_break_1",
+  "seller_profile",
+  "buyer_profile",
+  "total",
+  "payment_mode",
+  "items_section",
+  "items_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "order_no",
+   "fieldtype": "Data",
+   "label": "Order No.",
+   "in_list_view": 1,
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "order_status",
+   "fieldtype": "Data",
+   "label": "Status when deleted",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "deleted_on",
+   "fieldtype": "Datetime",
+   "label": "Deleted on",
+   "in_list_view": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "deleted_by",
+   "fieldtype": "Data",
+   "label": "Deleted by (user)"
+  },
+  {
+   "fieldname": "deleted_side",
+   "fieldtype": "Select",
+   "label": "Deleted by side",
+   "options": "Buyer\nShop\nAdministrator"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "seller_profile",
+   "fieldtype": "Data",
+   "label": "Shop profile"
+  },
+  {
+   "fieldname": "buyer_profile",
+   "fieldtype": "Data",
+   "label": "Buyer profile"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total"
+  },
+  {
+   "fieldname": "payment_mode",
+   "fieldtype": "Data",
+   "label": "Payment mode"
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "items_json",
+   "fieldtype": "Long Text",
+   "label": "Items at deletion (JSON)",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1
+  }
+ ]
+}
