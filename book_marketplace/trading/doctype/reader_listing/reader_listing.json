@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "autoname": "format:RL-{#######}",
+ "creation": "2026-11-23 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "module": "Trading",
+ "name": "Reader Listing",
+ "owner": "Administrator",
+ "modified": "2026-11-23 00:00:00.000000",
+ "modified_by": "Administrator",
+ "field_order": [
+  "owner_user", "owner_profile", "status", "kind", "condition", "condition_grade",
+  "title", "author", "book", "price", "description",
+  "city", "area", "delivery",
+  "phone", "bank_info",
+  "photo_1", "photo_2", "photo_3",
+  "created_on", "given_on"
+ ],
+ "fields": [
+  {"fieldname": "owner_user", "fieldtype": "Link", "label": "Owner (user)", "options": "User", "reqd": 1, "in_list_view": 1, "search_index": 1},
+  {"fieldname": "owner_profile", "fieldtype": "Link", "label": "Business (if any)", "options": "BusinessProfile"},
+  {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Available\nGiven\nWithdrawn", "default": "Available", "reqd": 1, "in_list_view": 1, "search_index": 1},
+  {"fieldname": "kind", "fieldtype": "Select", "label": "Kind", "options": "For sale\nGift\nAvailable (price later)", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "condition", "fieldtype": "Select", "label": "Condition", "options": "Used\nRare\nManuscript", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "condition_grade", "fieldtype": "Select", "label": "Grade", "options": "Excellent\nGood\nUsable\nDamaged / worn"},
+  {"fieldname": "title", "fieldtype": "Data", "label": "Title", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "author", "fieldtype": "Data", "label": "Author"},
+  {"fieldname": "book", "fieldtype": "Link", "label": "Known book (optional)", "options": "Book"},
+  {"fieldname": "price", "fieldtype": "Currency", "label": "Price"},
+  {"fieldname": "description", "fieldtype": "Small Text", "label": "Details (edition, colour, defects, pages)"},
+  {"fieldname": "city", "fieldtype": "Data", "label": "City", "reqd": 1, "search_index": 1},
+  {"fieldname": "area", "fieldtype": "Data", "label": "Area"},
+  {"fieldname": "delivery", "fieldtype": "Select", "label": "Delivery", "options": "Pickup\nCourier\nBoth", "default": "Pickup"},
+  {"fieldname": "phone", "fieldtype": "Data", "label": "Phone (shown only to the accepted buyer)"},
+  {"fieldname": "bank_info", "fieldtype": "Small Text", "label": "Payment details (shown only to the accepted buyer)"},
+  {"fieldname": "photo_1", "fieldtype": "Attach Image", "label": "Photo 1"},
+  {"fieldname": "photo_2", "fieldtype": "Attach Image", "label": "Photo 2"},
+  {"fieldname": "photo_3", "fieldtype": "Attach Image", "label": "Photo 3"},
+  {"fieldname": "created_on", "fieldtype": "Datetime", "label": "Created on", "read_only": 1},
+  {"fieldname": "given_on", "fieldtype": "Datetime", "label": "Given on", "read_only": 1}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1}
+ ],
+ "istable": 0,
+ "track_changes": 1,
+ "title_field": "title",
+ "sort_field": "created_on",
+ "sort_order": "DESC"
+}

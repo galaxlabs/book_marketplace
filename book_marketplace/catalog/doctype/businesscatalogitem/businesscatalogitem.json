@@ -17,6 +17,7 @@
   "discount_percent",
   "location_section",
   "storage_place",
+  "condition",
   "column_break_location",
   "shelf"
  ],
@@ -84,6 +85,14 @@
    "fieldtype": "Select",
    "label": "Place / جگہ",
    "options": "\nShop\nWarehouse"
+  },
+  {
+   "fieldname": "condition",
+   "fieldtype": "Select",
+   "label": "Condition / حالت",
+   "options": "New\nUsed\nRare\nManuscript",
+   "default": "New",
+   "in_list_view": 1
   },
   {
    "fieldname": "column_break_location",
