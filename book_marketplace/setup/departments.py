@@ -15,11 +15,20 @@ Lower levels that are plain text become child departments with the English text 
 """
 
 import json
+import re
 
 import frappe
 
 ROOT_NAME = "Departments"
-CHILD_LISTS = ("boards", "levels", "programs", "categories", "subjects", "courses", "exams", "parts", "grades")
+CHILD_LISTS = ("boards", "levels", "programs", "categories", "subjects", "courses", "exams", "parts", "grades",
+               "sub_categories", "product_lines", "variants")
+# "English (اردو)" in one string: the part in brackets is the Urdu name
+_PAIR = re.compile(r"^(.*?)\s*\(([^()]*[؀-ۿ][^()]*)\)\s*$")
+
+
+def _split(text):
+    m = _PAIR.match(text.strip())
+    return (m.group(1).strip(), m.group(2).strip()) if m else (text.strip(), "")
 
 
 def _root():
@@ -38,13 +47,16 @@ def _text(v):
 def _node_rows(item, parent, sort, rows, skipped):
     """Turn one taxonomy item into rows: (name_en, name_ur, parent_index, description, is_group)."""
     if isinstance(item, str):
-        rows.append({"en": item.strip(), "ur": "", "parent": parent, "desc": "", "sort": sort, "group": 0})
+        en, ur = _split(item)
+        rows.append({"en": en, "ur": ur, "parent": parent, "desc": "", "sort": sort, "group": 0})
         return
     if not isinstance(item, dict):
         skipped.append(repr(item))
         return
-    en = _text(item.get("title_en")) or _text(item.get("name")) or _text(item.get("stage")) or _text(item.get("id"))
-    ur = _text(item.get("title_ur"))
+    raw = (_text(item.get("title_en")) or _text(item.get("name_en")) or _text(item.get("category_en"))
+           or _text(item.get("name")) or _text(item.get("stage")) or _text(item.get("id")))
+    en, ur_in_name = _split(raw)
+    ur = _text(item.get("title_ur")) or _text(item.get("name_ur")) or _text(item.get("category_ur")) or ur_in_name
     extra = [f"years: {item['years']}"] if "years" in item else []
     kids = []
     for k in CHILD_LISTS:
