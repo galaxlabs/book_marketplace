@@ -5,6 +5,7 @@
   (the buyer request step comes with the exchange feature, later).
 - Owner: the signed-in user who made the listing. Only the owner changes or marks it given.
 - Photos: up to six (photo_1 to photo_6), each optional.
+- Condition details: pages, edition, colour, a defect from a list, and a free note for the defect.
 """
 import frappe
 from frappe import _
@@ -14,8 +15,10 @@ CONDITIONS = ("Used", "Rare", "Manuscript")
 KINDS = ("For sale", "Gift", "Available (price later)")
 GRADES = ("Excellent", "Good", "Usable", "Damaged / worn")
 DELIVERY = ("Pickup", "Courier", "Both")
+DEFECTS = ("Water damaged", "Aged", "Torn", "Stained", "Binding broken", "Pages missing", "Worm-eaten", "Marginalia", "Used", "Other")
 PUBLIC_FIELDS = ["name", "title", "author", "book", "condition", "condition_grade", "kind", "price",
-                 "description", "city", "area", "delivery", "photo_1", "photo_2", "photo_3", "photo_4", "photo_5", "photo_6",
+                 "description", "city", "area", "delivery", "pages", "edition", "colour", "defect", "defect_note",
+                 "photo_1", "photo_2", "photo_3", "photo_4", "photo_5", "photo_6",
                  "status", "created_on", "owner_profile"]
 
 
@@ -36,7 +39,7 @@ def _choice(value, allowed, field):
 def create_listing(title, condition, kind, city, condition_grade=None, author=None, book=None, price=0,
                    description=None, area=None, delivery="Pickup", phone=None, bank_info=None,
                    photo_1=None, photo_2=None, photo_3=None, photo_4=None, photo_5=None, photo_6=None,
-                   owner_profile=None):
+                   owner_profile=None, pages=None, edition=None, colour=None, defect=None, defect_note=None):
     user = _signed_in()
     title = (title or "").strip()
     if not title:
@@ -48,6 +51,10 @@ def create_listing(title, condition, kind, city, condition_grade=None, author=No
     if condition_grade:
         _choice(condition_grade, GRADES, "Grade")
     _choice(delivery or "Pickup", DELIVERY, "Delivery")
+    if defect and defect not in DEFECTS:
+        frappe.throw(_("Defect must be one of: {0}").format(", ".join(DEFECTS)))
+    if pages not in (None, "") and int(pages) < 0:
+        frappe.throw(_("Pages cannot be negative."))
     if owner_profile and frappe.db.get_value("BusinessProfile", owner_profile, "user") != user:
         frappe.throw(_("This business is not yours."), frappe.PermissionError)
     doc = frappe.get_doc({
@@ -60,6 +67,9 @@ def create_listing(title, condition, kind, city, condition_grade=None, author=No
         "bank_info": (bank_info or "")[:500] or None,
         "photo_1": photo_1 or None, "photo_2": photo_2 or None, "photo_3": photo_3 or None,
         "photo_4": photo_4 or None, "photo_5": photo_5 or None, "photo_6": photo_6 or None,
+        "pages": int(pages) if pages not in (None, "") else None, "edition": (edition or "").strip()[:140] or None,
+        "colour": (colour or "").strip()[:80] or None, "defect": defect or None,
+        "defect_note": (defect_note or "").strip()[:500] or None,
         "created_on": now_datetime(),
     }).insert(ignore_permissions=True)
     return {"name": doc.name, "status": doc.status}
