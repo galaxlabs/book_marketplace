@@ -85,8 +85,12 @@ def login_with_token(usr, pwd, device_name=None):
     check_password(user, pwd)
     if not frappe.db.get_value("User", user, "enabled"):
         frappe.throw(_("This account is disabled. Contact the administrator."))
-    # one key and secret per sign-in: another browser or phone does not sign this one out
-    # the secret is kept in plain text only for this reply: Frappe stores it encrypted and masks it on read
+    return new_device_session(user, device_name)
+
+
+def new_device_session(user, device_name=None):
+    """One key and secret per sign-in: another browser or phone does not sign this one out.
+    The secret is kept in plain text only for this reply: Frappe stores it encrypted and masks it on read."""
     api_key = frappe.generate_hash(length=20)
     api_secret = frappe.generate_hash(length=40)
     frappe.get_doc({

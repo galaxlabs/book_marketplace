@@ -13,30 +13,66 @@ from frappe.utils import now_datetime
 from book_marketplace.auth.api.auth import _assert_profile_owner
 
 
+def _discount_of(book):
+    from book_marketplace.catalog.api.catalog import publisher_discount
+
+    return publisher_discount(book=book)
+
+
 def on_book_update(doc, method=None):
+    """The publisher changed the book's price, trade price or discount: every shop holding the book is told."""
     before = doc.get_doc_before_save()
     if not before:
         return
-    old, new = frappe.utils.flt(before.set_mrp), frappe.utils.flt(doc.set_mrp)
-    if old == new:
+    old_mrp, new_mrp = frappe.utils.flt(before.set_mrp), frappe.utils.flt(doc.set_mrp)
+    old_trade, new_trade = frappe.utils.flt(before.get("trade_price")), frappe.utils.flt(doc.get("trade_price"))
+    old_disc, new_disc = _discount_of(before.as_dict()), _discount_of(doc.as_dict())
+    changes = []
+    if old_mrp != new_mrp:
+        changes.append(_("price {0} (was {1})").format(new_mrp, old_mrp))
+    if old_disc != new_disc:
+        changes.append(_("discount {0}% (was {1}%)").format(new_disc, old_disc))
+    if old_trade != new_trade:
+        changes.append(_("trade price {0} (was {1})").format(new_trade, old_trade))
+    if not changes:
         return
-    publisher = doc.get("publisher")
-    holders = frappe.get_all("BusinessCatalogItem", filters={"book": doc.name, "is_active": 1},
-                             fields=["business_profile"], limit_page_length=0)
+    _tell_holders([doc.name], doc.get("publisher"), doc.title or doc.name, "; ".join(changes),
+                  old_mrp, new_mrp)
+
+
+def _tell_holders(books, publisher, title, what, old_price=0, new_price=0):
+    """One price-change row per shop and book (highlighted in its catalogue) and one note per shop."""
+    holders = frappe.get_all("BusinessCatalogItem", filters={"book": ["in", books], "is_active": 1},
+                             fields=["business_profile", "book"], limit_page_length=0)
     from book_marketplace.trading.api.notifications import notify
-    title = doc.title or doc.name
     now = now_datetime()
-    shops = 0
+    told = set()
     for h in holders:
         if not h.business_profile or h.business_profile == publisher:
             continue
-        frappe.get_doc({"doctype": "Catalog Price Change", "business_profile": h.business_profile, "book": doc.name,
-                        "publisher": publisher, "old_price": old, "new_price": new, "changed_on": now,
+        frappe.get_doc({"doctype": "Catalog Price Change", "business_profile": h.business_profile, "book": h.book,
+                        "publisher": publisher, "old_price": old_price, "new_price": new_price, "changed_on": now,
                         "seen": 0}).insert(ignore_permissions=True)
+        if h.business_profile in told:
+            continue
+        told.add(h.business_profile)
         notify(h.business_profile, _("Price changed: {0}").format(title),
-               _("The publisher's price is now {0} (was {1}). Your catalogue shows the new price.").format(new, old),
+               _("The publisher changed {0}. Your catalogue shows the new prices.").format(what),
                link="/catalog", kind="price")
-        shops += 1
+    return len(told)
+
+
+def on_general_discount_change(publisher, old_disc, new_disc):
+    """The publisher's general discount changed: shops holding its books that use the general rate are told."""
+    if frappe.utils.flt(old_disc) == frappe.utils.flt(new_disc):
+        return 0
+    books = frappe.get_all("Book", filters={"publisher": publisher, "own_discount": 0}, pluck="name",
+                           limit_page_length=0)
+    if not books:
+        return 0
+    name = frappe.db.get_value("BusinessProfile", publisher, "business_name") or publisher
+    return _tell_holders(books, publisher, name,
+                         _("its general discount to {0}% (was {1}%)").format(new_disc, old_disc))
 
 
 @frappe.whitelist()

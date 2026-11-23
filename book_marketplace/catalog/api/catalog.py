@@ -282,7 +282,10 @@ def set_publisher_discount(profile_id, discount_percent):
     _assert_profile_owner(profile_id)
     if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Publisher":
         frappe.throw(_("Only a publisher has a general discount."))
+    before = _pct(frappe.db.get_value("BusinessProfile", profile_id, "default_discount_percent"))
     frappe.db.set_value("BusinessProfile", profile_id, "default_discount_percent", _pct(discount_percent))
+    from book_marketplace.catalog.api.price_changes import on_general_discount_change
+    on_general_discount_change(profile_id, before, _pct(discount_percent))
     return {"name": profile_id, "default_discount_percent": _pct(discount_percent)}
 
 
