@@ -75,6 +75,63 @@ def create_listing(title, condition, kind, city, condition_grade=None, author=No
     return {"name": doc.name, "status": doc.status}
 
 
+def _buyer_or_none():
+    return frappe.db.get_value("BuyerProfile", {"user": frappe.session.user}, "name") if frappe.session.user != "Guest" else None
+
+
+def _add_likes(rows):
+    """Adds `likes` (count) and `liked` (by this buyer) to each listing row."""
+    names = [r["name"] for r in rows]
+    counts = {}
+    if names:
+        for listing, n in frappe.db.sql("select listing, count(*) from `tabReader Listing Like` where listing in %(n)s group by listing",
+                                        {"n": names}):
+            counts[listing] = n
+    buyer = _buyer_or_none()
+    mine = set(frappe.get_all("Reader Listing Like", filters={"buyer_profile": buyer, "listing": ["in", names]},
+                              pluck="listing")) if (buyer and names) else set()
+    for r in rows:
+        r["likes"] = counts.get(r["name"], 0)
+        r["liked"] = r["name"] in mine
+    return rows
+
+
+@frappe.whitelist()
+def like_listing(name, unlike=0):
+    """A buyer likes (or removes the like on) an available used or rare listing."""
+    buyer = frappe.db.get_value("BuyerProfile", {"user": frappe.session.user}, "name")
+    if not buyer:
+        frappe.throw(_("Log in as a buyer to like a book."), frappe.PermissionError)
+    if not frappe.db.exists("Reader Listing", {"name": name, "status": "Available"}):
+        frappe.throw(_("This listing is not available."))
+    existing = frappe.db.get_value("Reader Listing Like", {"listing": name, "buyer_profile": buyer}, "name")
+    if int(unlike or 0):
+        if existing:
+            frappe.delete_doc("Reader Listing Like", existing, ignore_permissions=True, force=True)
+    elif not existing:
+        frappe.get_doc({"doctype": "Reader Listing Like", "listing": name, "buyer_profile": buyer,
+                        "liked_on": now_datetime()}).insert(ignore_permissions=True)
+    return {"name": name, "liked": not int(unlike or 0),
+            "likes": frappe.db.count("Reader Listing Like", {"listing": name})}
+
+
+@frappe.whitelist()
+def my_liked_listings():
+    """The available listings this buyer has liked, newest like first."""
+    buyer = _buyer_or_none()
+    if not buyer:
+        return []
+    names = frappe.get_all("Reader Listing Like", filters={"buyer_profile": buyer}, pluck="listing",
+                           order_by="liked_on desc", limit_page_length=200)
+    if not names:
+        return []
+    rows = frappe.get_all("Reader Listing", filters={"name": ["in", names], "status": "Available"},
+                          fields=PUBLIC_FIELDS)
+    order = {n: i for i, n in enumerate(names)}
+    rows.sort(key=lambda r: order.get(r["name"], 0))
+    return _add_likes(rows)
+
+
 @frappe.whitelist(allow_guest=True)
 def public_listings(city=None, condition=None, kind=None, limit=30, offset=0):
     filters = {"status": "Available"}
@@ -87,7 +144,7 @@ def public_listings(city=None, condition=None, kind=None, limit=30, offset=0):
     limit = min(frappe.utils.cint(limit) or 30, 100)
     rows = frappe.get_all("Reader Listing", filters=filters, fields=PUBLIC_FIELDS,
                           order_by="created_on desc", limit_start=frappe.utils.cint(offset), limit_page_length=limit)
-    return rows
+    return _add_likes(rows)
 
 
 @frappe.whitelist()

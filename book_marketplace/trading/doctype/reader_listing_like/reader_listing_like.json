@@ -1,0 +1,47 @@
+{
+ "name": "Reader Listing Like",
+ "module": "Trading",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "autoname": "format:RLL-{#######}",
+ "track_changes": 0,
+ "is_submittable": 0,
+ "istable": 0,
+ "field_order": [
+  "listing",
+  "buyer_profile",
+  "liked_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "listing",
+   "fieldtype": "Link",
+   "label": "Listing",
+   "options": "Reader Listing",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "buyer_profile",
+   "fieldtype": "Data",
+   "label": "Buyer profile",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "liked_on",
+   "fieldtype": "Datetime",
+   "label": "Liked on"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  }
+ ]
+}
