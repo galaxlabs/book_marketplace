@@ -15,6 +15,9 @@
   "city", "area", "delivery",
   "phone", "bank_info",
   "photo_1", "photo_2", "photo_3",
+  "photo_4",
+  "photo_5",
+  "photo_6",
   "created_on", "given_on"
  ],
  "fields": [
@@ -36,7 +39,7 @@
   {"fieldname": "bank_info", "fieldtype": "Small Text", "label": "Payment details (shown only to the accepted buyer)"},
   {"fieldname": "photo_1", "fieldtype": "Attach Image", "label": "Photo 1"},
   {"fieldname": "photo_2", "fieldtype": "Attach Image", "label": "Photo 2"},
-  {"fieldname": "photo_3", "fieldtype": "Attach Image", "label": "Photo 3"},
+  {"fieldname": "photo_3", "fieldtype": "Attach Image", "label": "Photo 3"},{"fieldname": "photo_4", "fieldtype": "Attach Image", "label": "Photo 4"},{"fieldname": "photo_5", "fieldtype": "Attach Image", "label": "Photo 5"},{"fieldname": "photo_6", "fieldtype": "Attach Image", "label": "Photo 6"},
   {"fieldname": "created_on", "fieldtype": "Datetime", "label": "Created on", "read_only": 1},
   {"fieldname": "given_on", "fieldtype": "Datetime", "label": "Given on", "read_only": 1}
  ],

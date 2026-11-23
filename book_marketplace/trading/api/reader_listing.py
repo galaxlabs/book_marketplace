@@ -4,6 +4,7 @@
 - Phone and payment details are kept on the listing; they are shown only to the accepted buyer
   (the buyer request step comes with the exchange feature, later).
 - Owner: the signed-in user who made the listing. Only the owner changes or marks it given.
+- Photos: up to six (photo_1 to photo_6), each optional.
 """
 import frappe
 from frappe import _
@@ -14,7 +15,7 @@ KINDS = ("For sale", "Gift", "Available (price later)")
 GRADES = ("Excellent", "Good", "Usable", "Damaged / worn")
 DELIVERY = ("Pickup", "Courier", "Both")
 PUBLIC_FIELDS = ["name", "title", "author", "book", "condition", "condition_grade", "kind", "price",
-                 "description", "city", "area", "delivery", "photo_1", "photo_2", "photo_3",
+                 "description", "city", "area", "delivery", "photo_1", "photo_2", "photo_3", "photo_4", "photo_5", "photo_6",
                  "status", "created_on", "owner_profile"]
 
 
@@ -34,7 +35,8 @@ def _choice(value, allowed, field):
 @frappe.whitelist()
 def create_listing(title, condition, kind, city, condition_grade=None, author=None, book=None, price=0,
                    description=None, area=None, delivery="Pickup", phone=None, bank_info=None,
-                   photo_1=None, photo_2=None, photo_3=None, owner_profile=None):
+                   photo_1=None, photo_2=None, photo_3=None, photo_4=None, photo_5=None, photo_6=None,
+                   owner_profile=None):
     user = _signed_in()
     title = (title or "").strip()
     if not title:
@@ -57,6 +59,7 @@ def create_listing(title, condition, kind, city, condition_grade=None, author=No
         "delivery": delivery or "Pickup", "phone": (phone or "").strip()[:30] or None,
         "bank_info": (bank_info or "")[:500] or None,
         "photo_1": photo_1 or None, "photo_2": photo_2 or None, "photo_3": photo_3 or None,
+        "photo_4": photo_4 or None, "photo_5": photo_5 or None, "photo_6": photo_6 or None,
         "created_on": now_datetime(),
     }).insert(ignore_permissions=True)
     return {"name": doc.name, "status": doc.status}
