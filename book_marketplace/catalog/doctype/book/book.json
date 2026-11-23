@@ -10,6 +10,7 @@
   "title",
   "item_type",
   "title_en",
+  "title_ur",
   "author",
   "author_en",
   "author_profile",
@@ -89,6 +90,11 @@
    "label": "Title (English)"
   },
   {
+   "fieldname": "title_ur",
+   "fieldtype": "Data",
+   "label": "Title (Urdu)"
+  },
+  {
    "fieldname": "author_en",
    "fieldtype": "Data",
    "label": "Author (English)"
@@ -159,7 +165,7 @@
    "fieldname": "language",
    "fieldtype": "Select",
    "label": "Language",
-   "options": "Urdu\nEnglish\nArabic\nRoman Urdu\nSindhi\nPashto\nPunjabi\nBalochi\nOther"
+   "options": "Urdu\nArabic\nEnglish\nFrench\nSpanish\nTurkish\nPashto\nGerman\nBengali\nHindi\nRoman Urdu\nSindhi\nPunjabi\nBalochi\nOther"
   },
   {
    "fieldname": "languages",

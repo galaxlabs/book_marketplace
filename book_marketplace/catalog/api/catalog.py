@@ -24,7 +24,7 @@ def search(text=None, subject=None, publisher=None, author=None, language=None, 
         "Book",
         filters=filters,
         fields=[
-            "name", "title", "title_en", "subtitle", "author", "author_en", "author_profile", "publisher",
+            "name", "title", "title_en", "title_ur", "subtitle", "author", "author_en", "author_profile", "publisher",
             "book_type", "isbn", "language", "set_mrp", "primary_category",
             "genre", "religious_segment", "introduction", "creation", "item_type"
         ],
@@ -348,6 +348,7 @@ def list_catalog(profile_id, active_only=True):
             "book_mrp": book.set_mrp,
             "book_trade_price": book.trade_price,
             "language": book.language or "",
+            "title_ur": book.get("title_ur") or "",
             "genre": book.genre or "",
             "religious_segment": book.religious_segment or "",
             "selling_price": shop_general_price(profile_id, book.get("publisher"), book.get("set_mrp"), item.selling_price, item.book)
@@ -609,7 +610,7 @@ def update_book_details(profile_id, book_id, data):
         frappe.throw(_("Author is required."))
     if is_book and "item_type" in d and not str(d.get("author") or book.author or "").strip():
         frappe.throw(_("Author is required for a book."))
-    for key in ("title", "author", "title_en", "author_en", "language", "book_type", "binding", "isbn", "subtitle", "introduction", "description"):
+    for key in ("title", "author", "title_en", "title_ur", "author_en", "language", "book_type", "binding", "isbn", "subtitle", "introduction", "description"):
         if key in d:
             book.set(key, (d[key] or "").strip() if isinstance(d[key], str) else d[key])
     if "page_count" in d and d["page_count"] not in (None, ""):
