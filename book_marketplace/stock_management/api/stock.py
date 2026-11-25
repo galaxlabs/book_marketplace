@@ -2,8 +2,18 @@ import frappe
 from frappe import _
 
 
+def _assert_branch_access(branch_id):
+    """Only the business that owns this branch (or an admin) may see what is kept there."""
+    profile = frappe.db.get_value("BranchLocation", branch_id, "business_profile")
+    if not profile:
+        frappe.throw(_("This storage place was not found."), frappe.DoesNotExistError)
+    _assert_publisher_profile(profile)
+    return profile
+
+
 @frappe.whitelist()
 def get_by_branch(branch_id):
+    _assert_branch_access(branch_id)
     entries = frappe.get_all(
         "StockLedger",
         filters={"branch_location": branch_id},
@@ -216,10 +226,49 @@ def my_branches(profile_id):
     rows = frappe.get_all("BranchLocation", filters={"business_profile": profile_id},
                           fields=["name", "branch_name", "location_type", "city", "address", "is_active"],
                           order_by="is_active desc, creation asc", limit_page_length=0)
+    business_name = frappe.db.get_value("BusinessProfile", profile_id, "business_name") or ""
     for r in rows:
         r["stock"] = int(frappe.db.sql("""select coalesce(sum(quantity), 0) from `tabStockLedger`
             where branch_location=%s and state='Available'""", r.name)[0][0] or 0)
+        r["business_name"] = business_name
     return rows
+
+
+@frappe.whitelist()
+def location_overview(branch):
+    """What is kept at one storage place: the page its QR opens. Books with their quantity by state, and the totals.
+    Needs a sign-in of the business that owns the place; nobody else sees quantities."""
+    profile = _assert_branch_access(branch)
+    b = frappe.db.get_value("BranchLocation", branch, ["name", "branch_name", "location_type", "city", "address", "is_active"], as_dict=True)
+    b["business_profile"] = profile
+    b["business_name"] = frappe.db.get_value("BusinessProfile", profile, "business_name") or ""
+    rows = frappe.db.sql("""select book, ifnull(volume, '') as volume, state, sum(quantity) as qty from `tabStockLedger`
+        where branch_location=%s group by book, volume, state""", branch, as_dict=True)
+    states = {"Available": "available", "Reserved": "reserved", "Incoming": "incoming", "Damaged": "damaged", "In Transit": "in_transit"}
+    books = {}
+    totals = {v: 0 for v in states.values()}
+    for r in rows:
+        key = (r.book, r.volume)
+        item = books.setdefault(key, {"book": r.book, "volume": r.volume, **{v: 0 for v in states.values()}})
+        field = states.get(r.state)
+        if field:
+            item[field] += int(r.qty or 0)
+            totals[field] += int(r.qty or 0)
+    names = list({k[0] for k in books})
+    info = {x.name: x for x in frappe.get_all("Book", filters={"name": ["in", names or [""]]},
+                                              fields=["name", "title", "author", "cover_image"])}
+    out = []
+    for item in books.values():
+        i = info.get(item["book"])
+        item["title"] = i.title if i else item["book"]
+        item["author"] = (i.author if i else "") or ""
+        item["cover_image"] = (i.cover_image if i else "") or ""
+        item["total"] = sum(item[v] for v in states.values())
+        if item["total"] > 0:
+            out.append(item)
+    out.sort(key=lambda x: (x["title"], x["volume"]))
+    return {"branch": b, "books": out,
+            "totals": {"titles": len({x["book"] for x in out}), "lines": len(out), "units": sum(x["total"] for x in out), **totals}}
 
 
 @frappe.whitelist()
