@@ -1,3 +1,4 @@
+import re
 import frappe
 from frappe import _
 
@@ -60,7 +61,52 @@ def get_book(book_id):
         "stock_summary": stock_summary,
         "price": price_view(book.set_mrp, publisher_discount(book=book.as_dict())),
         "images": [{"image": i.image, "caption": i.caption or ""} for i in book.get("images", []) if i.image],
+        **_related_books(book),
     }
+
+
+def _core_title(title):
+    """The text's own name: no brackets, no «مع شرح ...», no edition words (عربی، محشی، مجلد)."""
+    t = re.sub(r"[\u064B-\u065F\u0670]", "", title or "")
+    t = re.sub(r"\(.*?\)", " ", t)
+    t = re.split(r"\s+مع\s+", t)[0]
+    for a, b in (("ۂ", "ہ"), ("ۃ", "ہ"), ("ة", "ہ"), ("ي", "ی"), ("ك", "ک"), ("أ", "ا"), ("إ", "ا"), ("آ", "ا")):
+        t = t.replace(a, b)
+    t = re.sub(r"\b(عربی|اردو|محشی|مجلد|درسی|کامل|مکمل)\b", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _related_books(book):
+    """For the book page: the text it explains, its commentaries (شروحات), and the same text from other publishers."""
+    fields = ["name", "title", "author", "language", "set_mrp", "publisher", "cover_image"]
+
+    def with_publisher(rows):
+        names = {r.publisher for r in rows if r.publisher}
+        pub = {p.name: p.business_name for p in frappe.get_all(
+            "BusinessProfile", filters={"name": ["in", list(names)]}, fields=["name", "business_name"])} if names else {}
+        listed = set(frappe.get_all("BusinessCatalogItem", filters={"book": ["in", [r.name for r in rows]], "is_active": 1},
+                                    pluck="book")) if rows else set()
+        return [{**r, "publisher_name": pub.get(r.publisher, ""), "listed": r.name in listed} for r in rows]
+
+    text = None
+    if book.get("sharh_of") and frappe.db.exists("Book", book.sharh_of):
+        text = with_publisher([frappe.db.get_value("Book", book.sharh_of, fields, as_dict=True)])[0]
+    commentaries = with_publisher(frappe.get_all("Book", filters={"sharh_of": book.name, "global_visibility": 1},
+                                                 fields=fields, order_by="title asc", limit_page_length=100))
+    core = _core_title(book.title)
+    editions = []
+    if len(core) >= 3:
+        index = frappe.cache().get_value("bm_core_title_index")
+        if not index:
+            index = {}
+            for r in frappe.get_all("Book", filters={"global_visibility": 1}, fields=["name", "title"], limit_page_length=0):
+                index.setdefault(_core_title(r.title), []).append(r.name)
+            frappe.cache().set_value("bm_core_title_index", index, expires_in_sec=600)
+        same = [n for n in index.get(core, []) if n != book.name]
+        if same:
+            editions = with_publisher(frappe.get_all("Book", filters={"name": ["in", same]}, fields=fields,
+                                                     order_by="title asc", limit_page_length=50))
+    return {"text_of": text, "commentaries": commentaries, "editions": editions}
 
 
 @frappe.whitelist(allow_guest=True)
