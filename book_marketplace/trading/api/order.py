@@ -136,7 +136,8 @@ def create_sale(seller, items, customer_name=None, customer_phone=None, payment_
         if it.get("option"):
             io.take(it["book"], it["option"], qty)
         if ledger is not None:
-            frappe.db.sql("update `tabStockLedger` set quantity = greatest(quantity - %s, 0) where name=%s", (qty, ledger))
+            from book_marketplace.stock_management import movement
+            movement.change_qty(ledger, -qty, "sold", "Order", doc.name)
     return {"name": doc.name, "total_amount": doc.total_amount, "status": doc.status}
 
 

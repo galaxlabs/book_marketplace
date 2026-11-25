@@ -74,13 +74,23 @@ def get_volume_stock(book_id, profile_id=None):
 
 @frappe.whitelist()
 def transfer(from_branch, to_branch, book, quantity, volume=None):
+    """Move copies from one storage place to another of the same business. The stock moves when the transfer is confirmed."""
+    qty = int(quantity or 0)
+    if qty <= 0:
+        frappe.throw(_("Quantity must be more than zero."))
+    if from_branch == to_branch:
+        frappe.throw(_("Choose two different storage places."))
+    p1 = _assert_branch_access(from_branch)
+    p2 = _assert_branch_access(to_branch)
+    if p1 != p2:
+        frappe.throw(_("Both storage places must belong to the same business."), frappe.PermissionError)
     doc = frappe.get_doc({
         "doctype": "StockTransfer",
         "from_branch": from_branch,
         "to_branch": to_branch,
         "book": book,
         "volume": volume,
-        "quantity": quantity,
+        "quantity": qty,
         "status": "Draft",
     })
     doc.insert()
@@ -89,7 +99,28 @@ def transfer(from_branch, to_branch, book, quantity, volume=None):
 
 @frappe.whitelist()
 def confirm_receive(transfer_id):
+    """The copies leave the first place and arrive at the second, and both sides get a history line."""
+    from book_marketplace.stock_management import movement
     doc = frappe.get_doc("StockTransfer", transfer_id)
+    profile = _assert_branch_access(doc.from_branch)
+    _assert_branch_access(doc.to_branch)
+    if doc.status in ("Received", "Cancelled"):
+        frappe.throw(_("This transfer is already {0}.").format(doc.status))
+    qty = int(doc.quantity or 0)
+    key = {"business_profile": profile, "book": doc.book, "state": "Available", "branch_location": doc.from_branch}
+    if doc.volume:
+        key["volume"] = doc.volume
+    src = frappe.db.get_value("StockLedger", key, "name")
+    have = int(frappe.db.get_value("StockLedger", src, "quantity") or 0) if src else 0
+    if have < qty:
+        frappe.throw(_("Only {0} copies are available at the first place.").format(have))
+    movement.change_qty(src, -qty, "transfer_out", "StockTransfer", doc.name)
+    dkey = {**key, "branch_location": doc.to_branch}
+    dst = frappe.db.get_value("StockLedger", dkey, "name")
+    if dst:
+        movement.change_qty(dst, qty, "transfer_in", "StockTransfer", doc.name)
+    else:
+        movement.add_row(doc.book, profile, doc.to_branch, qty, "Available", "transfer_in", "StockTransfer", doc.name, volume=doc.volume)
     doc.status = "Received"
     doc.received_on = frappe.utils.today()
     doc.save()
@@ -164,19 +195,12 @@ def set_own_book_quantity(profile_id, book_id, quantity):
         {"business_profile": profile_id, "book": book_id, "branch_location": branch, "state": "Available"},
         "name",
     )
+    from book_marketplace.stock_management import movement
     before = frappe.db.get_value("StockLedger", existing, "quantity") if existing else 0
     if existing:
-        frappe.db.set_value("StockLedger", existing, "quantity", qty)
+        movement.set_qty(existing, qty, "manual")
     else:
-        doc = frappe.get_doc({
-            "doctype": "StockLedger",
-            "book": book_id,
-            "business_profile": profile_id,
-            "branch_location": branch,
-            "quantity": qty,
-            "state": "Available",
-        })
-        doc.insert(ignore_permissions=True)
+        movement.add_row(book_id, profile_id, branch, qty, "Available", "manual")
     from book_marketplace.trading.api.customer_portal import notify_back_in_stock
     notify_back_in_stock(profile_id, book_id, before, qty)
     return {"book": book_id, "quantity": qty}
@@ -203,17 +227,57 @@ def set_catalog_quantity(profile_id, book_id, quantity):
         {"business_profile": profile_id, "book": book_id, "branch_location": branch, "state": "Available"},
         "name",
     )
+    from book_marketplace.stock_management import movement
     before = frappe.db.get_value("StockLedger", existing, "quantity") if existing else 0
     if existing:
-        frappe.db.set_value("StockLedger", existing, "quantity", qty)
+        movement.set_qty(existing, qty, "manual")
     else:
-        frappe.get_doc({
-            "doctype": "StockLedger", "book": book_id, "business_profile": profile_id,
-            "branch_location": branch, "quantity": qty, "state": "Available",
-        }).insert(ignore_permissions=True)
+        movement.add_row(book_id, profile_id, branch, qty, "Available", "manual")
     from book_marketplace.trading.api.customer_portal import notify_back_in_stock
     notify_back_in_stock(profile_id, book_id, before, qty)
     return {"book": book_id, "quantity": qty}
+
+
+@frappe.whitelist()
+def location_history(branch, from_date=None, to_date=None, book=None, limit=300):
+    """The history of one storage place: how many times goods came in and went out, and each line (newest first).
+    Same access as the overview: the owning business or an admin. Dates are optional (YYYY-MM-DD)."""
+    _assert_branch_access(branch)
+    limit = min(int(limit or 300), 1000)
+    where, args = ["branch_location = %(branch)s"], {"branch": branch}
+    if from_date:
+        where.append("occurred_on >= %(f)s")
+        args["f"] = f"{from_date} 00:00:00"
+    if to_date:
+        where.append("occurred_on <= %(t)s")
+        args["t"] = f"{to_date} 23:59:59"
+    if book:
+        where.append("book = %(book)s")
+        args["book"] = book
+    cond = " and ".join(where)
+    sums = {r.direction: r for r in frappe.db.sql(
+        f"select direction, count(*) as events, coalesce(sum(abs(`change`)), 0) as units from `tabStockMovement` where {cond} group by direction",
+        args, as_dict=True)}
+    pick = lambda d, f: int(sums[d][f]) if d in sums else 0
+    rows = frappe.db.sql(
+        f"""select m.name, m.occurred_on, m.book, m.volume, m.state, m.`change`, m.qty_before, m.qty_after, m.direction, m.reason,
+                   m.reference_type, m.reference_name, m.user from `tabStockMovement` m where {cond.replace("branch_location", "m.branch_location").replace("occurred_on", "m.occurred_on").replace("book = ", "m.book = ")}
+            order by m.occurred_on desc, m.name desc limit {limit}""", args, as_dict=True)
+    titles = {b.name: b.title for b in frappe.get_all("Book", filters={"name": ["in", list({r.book for r in rows}) or [""]]}, fields=["name", "title"])}
+    users = {u.name: u.full_name for u in frappe.get_all("User", filters={"name": ["in", list({r.user for r in rows if r.user}) or [""]]}, fields=["name", "full_name"])}
+    for r in rows:
+        r["title"] = titles.get(r.book, r.book)
+        r["user_name"] = users.get(r.user, r.user or "")
+        r["occurred_on"] = str(r["occurred_on"])
+    return {
+        "summary": {
+            "in_events": pick("In", "events"), "in_units": pick("In", "units"),
+            "out_events": pick("Out", "events"), "out_units": pick("Out", "units"),
+            "internal_events": pick("Internal", "events"), "opening_units": pick("Opening", "units"),
+        },
+        "movements": rows,
+        "shown": len(rows),
+    }
 
 
 BRANCH_TYPES = ("Shop", "Godown", "Warehouse", "Van", "Temporary")

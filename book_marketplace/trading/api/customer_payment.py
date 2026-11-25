@@ -56,18 +56,19 @@ def _move(order, to, actor, reason=None):
     doc.save(ignore_permissions=True)
     if to in RELEASING:
         for it in doc.items:
-            _release(doc.seller_profile, it.book, int(it.qty), it.get("item_option"))
+            _release(doc.seller_profile, it.book, int(it.qty), it.get("item_option"), order)
     if to == "Delivered":
         for it in doc.items:
-            _consume_reserved(doc.seller_profile, it.book, int(it.qty))
+            _consume_reserved(doc.seller_profile, it.book, int(it.qty), order)
     _emit(order, frm, to, doc.seller_profile, doc.buyer_profile)
     return {"name": order, "status": to}
 
 
-def _consume_reserved(seller, book, qty):
+def _consume_reserved(seller, book, qty, order=None):
+    from book_marketplace.stock_management import movement
     res = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Reserved"}, ["name", "quantity"], as_dict=True)
     if res:
-        frappe.db.set_value("StockLedger", res.name, "quantity", max(0, int(res.quantity or 0) - qty))
+        movement.set_qty(res.name, int(res.quantity or 0) - qty, "delivered", "Customer Order" if order else None, order)
 
 
 def _emit(order, frm, to, seller, buyer):

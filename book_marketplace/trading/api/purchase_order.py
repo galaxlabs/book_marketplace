@@ -277,7 +277,7 @@ def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider
         row.line_total = flt(row.unit_price) * q
         if row.get("item_option") and q:
             io.take(row.book, row.item_option, q)
-            io.take_shop_stock(doc.seller_profile, row.book, q)
+            io.take_shop_stock(doc.seller_profile, row.book, q, "Purchase Order Request", doc.name)
     doc.total_qty = sum(int(i.sent_qty or 0) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
     doc.transporter = (transporter or "").strip()[:140]
@@ -354,7 +354,7 @@ def respond_purchase_order(name, profile_id, decision):
     return _view(doc)
 
 
-def _add_stock(profile_id, book, qty):
+def _add_stock(profile_id, book, qty, ref=None):
     """Put received books into the buyer's own shop stock (its main branch)."""
     if qty <= 0:
         return
@@ -365,13 +365,12 @@ def _add_stock(profile_id, book, qty):
         {"business_profile": profile_id, "book": book, "branch_location": branch, "state": "Available"},
         ["name", "quantity"], as_dict=True,
     )
+    from book_marketplace.stock_management import movement
+    ref_type, ref_name = ("Purchase Order Request", ref) if ref else (None, None)
     if existing:
-        frappe.db.set_value("StockLedger", existing.name, "quantity", flt(existing.quantity) + qty)
+        movement.set_qty(existing.name, flt(existing.quantity) + qty, "received", ref_type, ref_name)
     else:
-        frappe.get_doc({
-            "doctype": "StockLedger", "book": book, "business_profile": profile_id,
-            "branch_location": branch, "quantity": qty, "state": "Available",
-        }).insert(ignore_permissions=True)
+        movement.add_row(book, profile_id, branch, qty, "Available", "received", ref_type, ref_name)
 
 
 @frappe.whitelist()
@@ -426,7 +425,7 @@ def agree_receipt(name, profile_id):
             short = True
         row.line_total = flt(row.unit_price) * good
     for row in doc.items:
-        _add_stock(doc.buyer_profile, row.book, int(row.received_qty or 0) - int(row.damaged_qty or 0))
+        _add_stock(doc.buyer_profile, row.book, int(row.received_qty or 0) - int(row.damaged_qty or 0), doc.name)
     doc.total_qty = sum(int(i.received_qty or 0) - int(i.damaged_qty or 0) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
     doc.invoice_total = flt(doc.total)  # goods only; the freight is posted separately (khata and expenses)
