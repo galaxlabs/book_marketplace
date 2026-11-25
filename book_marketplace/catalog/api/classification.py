@@ -216,7 +216,7 @@ def filter_trees(lang=None):
             subject_roots.setdefault(r.section, []).append(r)
     subject = []
     for sec in kids.get(types, []):
-        roots = sorted(subject_roots.get(sec.name, []), key=lambda r: label(r.category_name, r.category_name_ur, lang))
+        roots = sorted(subject_roots.get(sec.name, []), key=lambda r: (r.sort_order or 0, label(r.category_name, r.category_name_ur, lang)))
         if roots:
             subject.append({"name": sec.name, "label": label(sec.category_name, sec.category_name_ur, lang),
                             "children": [{"name": r.name, "label": label(r.category_name, r.category_name_ur, lang),
