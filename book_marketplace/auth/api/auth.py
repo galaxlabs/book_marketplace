@@ -38,6 +38,10 @@ def get_me():
         filters={"user": user},
         fields=["name", "profile_type", "business_name", "status"],
     )
+    for pr in profiles:
+        pr["role"] = "Owner"
+    # businesses where this user works as a team member (Approved ones only)
+    profiles += _member_profiles(user)
     buyer_profile = frappe.db.get_value("BuyerProfile", {"user": user}, "name")
     approved = [profile for profile in profiles if profile.status == "Approved"]
     pending = [profile for profile in profiles if profile.status == "Pending"]
@@ -313,6 +317,20 @@ def _is_admin():
 def _assert_admin():
     if not _is_admin():
         frappe.throw(_("Only an administrator can do this."), frappe.PermissionError)
+
+
+def _member_profiles(user):
+    """Approved businesses where the user is an active team member, each with the member's role."""
+    return frappe.db.sql(
+        """select p.name, p.profile_type, p.business_name, p.status, m.role from `tabBusinessMember` m
+           join `tabBusinessProfile` p on p.name = m.business_profile
+           where m.user = %s and m.is_active = 1 and m.status = 'Active' and p.status = 'Approved'""", user, as_dict=True)
+
+
+def _assert_profile_access(profile_id, permission):
+    """The owner and administrators may do everything; a team member only what the role gives for this permission."""
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(profile_id, permission)
 
 
 def _assert_profile_owner(profile_id):

@@ -2,12 +2,12 @@ import frappe
 from frappe import _
 
 
-def _assert_branch_access(branch_id):
-    """Only the business that owns this branch (or an admin) may see what is kept there."""
+def _assert_branch_access(branch_id, permission="stock.view"):
+    """Only the business that owns this branch (the owner, a team member with the permission, or an admin) may use it."""
     profile = frappe.db.get_value("BranchLocation", branch_id, "business_profile")
     if not profile:
         frappe.throw(_("This storage place was not found."), frappe.DoesNotExistError)
-    _assert_publisher_profile(profile)
+    _assert_publisher_profile(profile, permission)
     return profile
 
 
@@ -29,6 +29,7 @@ def get_by_branch(branch_id):
 
 @frappe.whitelist()
 def get_summary(profile_id):
+    _assert_publisher_profile(profile_id, "stock.view")
     locations = frappe.get_all("BranchLocation", filters={"business_profile": profile_id, "is_active": 1}, pluck="name")
     if not locations:
         return []
@@ -80,8 +81,8 @@ def transfer(from_branch, to_branch, book, quantity, volume=None):
         frappe.throw(_("Quantity must be more than zero."))
     if from_branch == to_branch:
         frappe.throw(_("Choose two different storage places."))
-    p1 = _assert_branch_access(from_branch)
-    p2 = _assert_branch_access(to_branch)
+    p1 = _assert_branch_access(from_branch, "stock.edit")
+    p2 = _assert_branch_access(to_branch, "stock.edit")
     if p1 != p2:
         frappe.throw(_("Both storage places must belong to the same business."), frappe.PermissionError)
     doc = frappe.get_doc({
@@ -102,8 +103,8 @@ def confirm_receive(transfer_id):
     """The copies leave the first place and arrive at the second, and both sides get a history line."""
     from book_marketplace.stock_management import movement
     doc = frappe.get_doc("StockTransfer", transfer_id)
-    profile = _assert_branch_access(doc.from_branch)
-    _assert_branch_access(doc.to_branch)
+    profile = _assert_branch_access(doc.from_branch, "stock.edit")
+    _assert_branch_access(doc.to_branch, "stock.edit")
     if doc.status in ("Received", "Cancelled"):
         frappe.throw(_("This transfer is already {0}.").format(doc.status))
     qty = int(doc.quantity or 0)
@@ -129,9 +130,10 @@ def confirm_receive(transfer_id):
 
 # ─── Publisher's own books: recorded quantity ───────────────
 
-def _assert_publisher_profile(profile_id):
-    from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(profile_id)
+def _assert_publisher_profile(profile_id, permission="stock.edit"):
+    """The owner or a team member whose role gives this permission (default: change stock)."""
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(profile_id, permission)
 
 
 def _default_branch(profile_id):
@@ -163,7 +165,7 @@ def _recorded_quantity(profile_id, book_id):
 
 @frappe.whitelist()
 def list_own_books(profile_id):
-    _assert_publisher_profile(profile_id)
+    _assert_publisher_profile(profile_id, "stock.view")
     books = frappe.get_all(
         "Book",
         filters={"publisher": profile_id, "global_visibility": 1},
@@ -178,7 +180,7 @@ def list_own_books(profile_id):
 
 @frappe.whitelist()
 def set_own_book_quantity(profile_id, book_id, quantity):
-    _assert_publisher_profile(profile_id)
+    _assert_publisher_profile(profile_id, "stock.edit")
     try:
         qty = int(quantity)
     except (TypeError, ValueError):
@@ -209,8 +211,7 @@ def set_own_book_quantity(profile_id, book_id, quantity):
 @frappe.whitelist()
 def set_catalog_quantity(profile_id, book_id, quantity):
     """Quantity of a book this business holds. Allowed when the book is in its catalog, or when it is the publisher's own book."""
-    from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(profile_id)
+    _assert_publisher_profile(profile_id, "stock.edit")
     try:
         qty = int(quantity)
     except (TypeError, ValueError):
@@ -242,7 +243,7 @@ def set_catalog_quantity(profile_id, book_id, quantity):
 def location_history(branch, from_date=None, to_date=None, book=None, limit=300):
     """The history of one storage place: how many times goods came in and went out, and each line (newest first).
     Same access as the overview: the owning business or an admin. Dates are optional (YYYY-MM-DD)."""
-    _assert_branch_access(branch)
+    _assert_branch_access(branch, "stock.view")
     limit = min(int(limit or 300), 1000)
     where, args = ["branch_location = %(branch)s"], {"branch": branch}
     if from_date:
@@ -286,7 +287,7 @@ BRANCH_TYPES = ("Shop", "Godown", "Warehouse", "Van", "Temporary")
 @frappe.whitelist()
 def my_branches(profile_id):
     """Every branch of the business (shop, godown, warehouse ...), active ones first, with the stock held there."""
-    _assert_publisher_profile(profile_id)
+    _assert_publisher_profile(profile_id, "stock.view")
     rows = frappe.get_all("BranchLocation", filters={"business_profile": profile_id},
                           fields=["name", "branch_name", "location_type", "city", "address", "is_active"],
                           order_by="is_active desc, creation asc", limit_page_length=0)
@@ -337,7 +338,7 @@ def location_overview(branch):
 
 @frappe.whitelist()
 def add_branch(profile_id, branch_name, location_type="Shop", city="", address=""):
-    _assert_publisher_profile(profile_id)
+    _assert_publisher_profile(profile_id, "locations.manage")
     branch_name = " ".join((branch_name or "").split())[:60]
     if not branch_name:
         frappe.throw(_("Write the branch name."))
@@ -353,7 +354,7 @@ def add_branch(profile_id, branch_name, location_type="Shop", city="", address="
 
 @frappe.whitelist()
 def set_branch_active(profile_id, branch, active=1):
-    _assert_publisher_profile(profile_id)
+    _assert_publisher_profile(profile_id, "locations.manage")
     if frappe.db.get_value("BranchLocation", branch, "business_profile") != profile_id:
         frappe.throw(_("This branch is not yours."), frappe.PermissionError)
     on = 1 if str(active) in ("1", "true", "True") else 0
