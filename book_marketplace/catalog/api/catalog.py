@@ -396,7 +396,8 @@ def add_to_catalog(profile_id, book_id, selling_price=None, trade_price=None, di
                    shelf=None, storage_place=None):
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     if frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id}):
         return {"error": "Book already in catalog"}
     doc = frappe.get_doc(_catalog_row(profile_id, book_id, selling_price, trade_price, discount_percent,
@@ -412,7 +413,8 @@ def add_many_to_catalog(profile_id, items):
     Books already in the catalog are skipped."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     if isinstance(items, str):
         items = frappe.parse_json(items)
     added, skipped = [], []
@@ -512,7 +514,8 @@ def set_publisher_discount(profile_id, discount_percent):
     """Publisher's general discount: used for every book that has no discount of its own."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "prices.edit")
     if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Publisher":
         frappe.throw(_("Only a publisher has a general discount."))
     before = _pct(frappe.db.get_value("BusinessProfile", profile_id, "default_discount_percent"))
@@ -535,7 +538,8 @@ def remove_from_catalog(item_id):
     if str(item_id).startswith("OWN-"):
         frappe.throw(_("This book is not in your list."))
     doc = frappe.get_doc("BusinessCatalogItem", item_id)
-    _assert_profile_owner(doc.business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(doc.business_profile, "catalog.edit")
     frappe.delete_doc("BusinessCatalogItem", item_id, ignore_permissions=True)
     return {"status": "removed"}
 
@@ -615,7 +619,8 @@ def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_
         book = frappe.get_doc("Book", book_id)
         if profile_id and profile_id != book.publisher:
             frappe.throw(_("Not permitted for this book."), frappe.PermissionError)
-        _assert_profile_owner(book.publisher)
+        from book_marketplace.auth.api.auth import _assert_profile_access
+        _assert_profile_access(book.publisher, "prices.edit")
         if selling_price is not None:
             book.set_mrp = selling_price
         if trade_price is not None:
@@ -632,7 +637,8 @@ def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_
                 "discount_percent": publisher_discount(book=book.as_dict())}
 
     doc = frappe.get_doc("BusinessCatalogItem", item_id)
-    _assert_profile_owner(doc.business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(doc.business_profile, "prices.edit")
     if selling_price is not None:
         if _publisher_of(doc.book) not in ("", doc.business_profile):
             frappe.throw(_("This book's price is the publisher's price. Change your discount instead."))
@@ -671,7 +677,8 @@ def set_book_availability(profile_id, book_id, availability):
     book = frappe.get_doc("Book", book_id)
     if book.publisher != profile_id and book.get("owner_profile") != profile_id:
         frappe.throw(_("Only the publisher or the bookseller who added this book can change its availability."), frappe.PermissionError)
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     allowed = ["Available", "Unavailable", "Out of print", "Forthcoming", "General readers only"]
     if availability not in allowed:
         frappe.throw(_("Unknown availability."))
@@ -690,7 +697,8 @@ def set_book_images(profile_id, book_id, images):
     book = frappe.get_doc("Book", book_id)
     if book.publisher != profile_id and book.get("owner_profile") != profile_id:
         frappe.throw(_("Only the publisher or the bookseller who added this book can change its images."), frappe.PermissionError)
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     items = _json.loads(images) if isinstance(images, str) else (images or [])
     if len(items) > 12:
         frappe.throw(_("Up to 12 images per book."))
@@ -712,7 +720,8 @@ def add_shop_book(profile_id, title, author=None, book_type="Single Volume", lan
     from book_marketplace.auth.api.auth import _assert_profile_owner
     from book_marketplace.stock_management.api import stock as stock_api
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     title = (title or "").strip()
     author = (author or "").strip()
     item_type = (item_type or "Book").strip()
@@ -762,7 +771,8 @@ def set_book_subjects(profile_id, book_id, subjects=None, page_count=None, cover
     if book.publisher != profile_id and book.get("owner_profile") != profile_id:
         frappe.throw(_("Only the publisher or the bookseller who added this book can change its details."),
                      frappe.PermissionError)
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     names = _json.loads(subjects) if isinstance(subjects, str) else (subjects or [])
     names = [n for n in dict.fromkeys(names) if n]
     for n in names:
@@ -791,6 +801,8 @@ def own_shop_books():
     if not frappe.session.user or frappe.session.user == "Guest":
         return []
     profiles = frappe.get_all("BusinessProfile", filters={"user": frappe.session.user}, pluck="name", limit_page_length=0)
+    from book_marketplace.auth.api.auth import _member_profiles
+    profiles += [p.name for p in _member_profiles(frappe.session.user)]
     if not profiles:
         return []
     names = set(frappe.get_all("BusinessCatalogItem", filters={"business_profile": ["in", profiles]}, pluck="book", limit_page_length=0))
@@ -803,7 +815,8 @@ def own_shop_books():
 def my_books(profile_id, text=""):
     """Books this business owns: the ones it published and the ones it added itself. Each row says which."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.view")
     filters = [["publisher", "=", profile_id]]
     rows = frappe.get_all("Book", or_filters=[["publisher", "=", profile_id], ["owner_profile", "=", profile_id]],
                           fields=["name", "title", "author", "publisher", "owner_profile", "cover_image", "page_count", "item_type"],
@@ -825,7 +838,8 @@ def update_book_details(profile_id, book_id, data):
     """The publisher or the bookseller who added the book edits its details. Other businesses cannot."""
     import json as _json
     from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     book = frappe.get_doc("Book", book_id)
     if not _owns_book(book, profile_id):
         frappe.throw(_("Only the publisher or the bookseller who added this book can edit it."), frappe.PermissionError)
@@ -892,7 +906,8 @@ def set_item_options(profile_id, book_id, options=None, pack_lines=None):
     from book_marketplace.auth.api.auth import _assert_profile_owner
     from book_marketplace.stock_management.api import stock as stock_api
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     book = frappe.get_doc("Book", book_id)
     if not _owns_book(book, profile_id):
         frappe.throw(_("Only the shop that added this item can change its options."), frappe.PermissionError)

@@ -130,7 +130,8 @@ def create_books_from_rows(rows, publisher):
     if not owner:
         frappe.throw(_("Publisher profile not found."))
     if owner != frappe.session.user and "System Manager" not in frappe.get_roles():
-        frappe.throw(_("You can only import books for your own publisher profile."), frappe.PermissionError)
+        from book_marketplace.auth.permissions import assert_access
+        assert_access(publisher, "catalog.edit")
 
     if isinstance(rows, str):
         rows = json.loads(rows)

@@ -46,7 +46,8 @@ def _check_publisher_or_admin(profile_id):
         return
     if not profile_id or frappe.db.get_value("BusinessProfile", profile_id, "profile_type") not in ("Publisher", "Bookseller", "Distributor"):
         frappe.throw(_("Only a business account or admin can do this."), frappe.PermissionError)
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
 
 
 def set_rows(book, categories):

@@ -8,7 +8,8 @@ from book_marketplace.auth.api.auth import _assert_profile_owner
 
 @frappe.whitelist()
 def market_stock(profile_id, text="", limit=50, offset=0):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "reports.view")
     if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Publisher":
         frappe.throw(frappe._("Only a publisher has market stock."))
     limit = min(frappe.utils.cint(limit) or 50, 200)

@@ -85,7 +85,8 @@ def create_sale(seller, items, customer_name=None, customer_phone=None, payment_
                  discount_percent=0, discount_amount=0):
     """A sale over the counter or to a customer without an account. Checks and reduces the shop's stock."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(seller)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(seller, "sales.create")
     if isinstance(items, str):
         items = frappe.parse_json(items)
     items = [it for it in (items or []) if it.get("book")]
@@ -144,7 +145,8 @@ def create_sale(seller, items, customer_name=None, customer_phone=None, payment_
 @frappe.whitelist()
 def list_sales(profile_id, limit=50, offset=0):
     from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "sales.view")
     rows = frappe.get_all(
         "InternalOrder",
         filters={"seller_profile": profile_id, "order_type": "Sale"},

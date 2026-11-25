@@ -34,7 +34,8 @@ def _norm_city(city):
 
 @frappe.whitelist()
 def add_transport_company(profile_id, name, cities, phone="", notes=""):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     name = " ".join((name or "").split()).strip()
     if not name:
         frappe.throw(_("Write the company name."))
@@ -67,7 +68,8 @@ def list_transport_companies(city=""):
 
 @frappe.whitelist()
 def set_city_preference(profile_id, city, transporter, purpose, rank=1):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     city = _norm_city(city)
     if not city:
         frappe.throw(_("Write the city."))
@@ -86,7 +88,8 @@ def set_city_preference(profile_id, city, transporter, purpose, rank=1):
 
 @frappe.whitelist()
 def remove_city_preference(name, profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     if frappe.db.get_value("Transport Preference", name, "business_profile") != profile_id:
         frappe.throw(_("This preference is not yours."), frappe.PermissionError)
     frappe.delete_doc("Transport Preference", name, ignore_permissions=True)
@@ -109,7 +112,8 @@ def _grouped(profile_id, purpose):
 
 @frappe.whitelist()
 def my_city_preferences(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.view")
     return {"shop_preferred": _grouped(profile_id, "Shop preferred"),
             "publisher_uses": _grouped(profile_id, "Publisher uses")}
 

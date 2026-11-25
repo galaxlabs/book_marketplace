@@ -10,7 +10,8 @@ PO_FIELDS = ["name", "status", "buyer_profile", "seller_profile", "creation", "i
 
 @frappe.whitelist()
 def order_hub(profile_id, kind="all", status=None, limit=100):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.view")
     limit = min(frappe.utils.cint(limit) or 100, 300)
     rows = []
     if kind in ("all", "purchase"):

@@ -108,7 +108,8 @@ def add_publisher_book(profile_id, title, author, book_type="Single Volume", lan
 
     if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Publisher":
         frappe.throw(_("Only publishers can add books."), frappe.PermissionError)
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     title = (title or "").strip()
     author = (author or "").strip()
     if not title or not author:

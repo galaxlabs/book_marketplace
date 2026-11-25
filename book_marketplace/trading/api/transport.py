@@ -8,7 +8,8 @@ from book_marketplace.auth.api.auth import _assert_profile_owner
 
 @frappe.whitelist()
 def track_dispatches(profile_id, query=None, limit=100):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.view")
     text = " ".join((query or "").split())
     limit = min(frappe.utils.cint(limit) or 100, 300)
     base = {"dispatched_on": ["is", "set"]}

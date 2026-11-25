@@ -13,7 +13,8 @@ OPTIONS = ("", "Store", "Books")
 
 @frappe.whitelist()
 def get_ad_option(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.view")
     option = frappe.db.get_value("BusinessProfile", profile_id, "ad_option") or ""
     count = frappe.db.count("BusinessCatalogItem", {"business_profile": profile_id, "is_advertised": 1, "is_active": 1})
     return {"option": option, "advertised_books": count, "max_books": MAX_ADVERTISED}
@@ -21,7 +22,8 @@ def get_ad_option(profile_id):
 
 @frappe.whitelist()
 def set_ad_option(profile_id, option):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     option = option or ""
     if option not in OPTIONS:
         frappe.throw(_("Choose Store, Books, or none."))
@@ -37,7 +39,8 @@ def set_ad_option(profile_id, option):
 
 @frappe.whitelist()
 def set_advertised(profile_id, item_id, advertised=1):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     if (frappe.db.get_value("BusinessProfile", profile_id, "ad_option") or "") != "Books":
         frappe.throw(_("Choose the Books option first to advertise books."))
     doc = frappe.get_doc("BusinessCatalogItem", item_id)

@@ -21,7 +21,8 @@ def _system_qty(profile_id, book):
 @frappe.whitelist()
 def audit_groups(profile_id):
     """The shop's active books grouped by publisher: [{publisher, name, count}]. Own books have no publisher."""
-    _owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "stock.view")
     rows = frappe.db.sql("""
         select b.publisher as publisher, count(*) as cnt
         from `tabBusinessCatalogItem` bci join `tabBook` b on b.name = bci.book
@@ -44,7 +45,8 @@ def audit_groups(profile_id):
 @frappe.whitelist()
 def audit_books(profile_id, publisher=""):
     """Books of one publisher group in this shop's catalog, with the system quantity to be checked."""
-    _owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "stock.view")
     rows = frappe.db.sql("""
         select bci.book as book, b.title as title, b.publisher as publisher
         from `tabBusinessCatalogItem` bci join `tabBook` b on b.name = bci.book
@@ -67,7 +69,8 @@ def save_audit(profile_id, counts):
     """counts: JSON list of {book, counted}. Each counted quantity becomes the shop's stock for that book.
     Returns the changes so the shop and the publisher can see what moved."""
     from book_marketplace.stock_management.api import stock as stock_api
-    _owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "stock.edit")
     rows = json.loads(counts) if isinstance(counts, str) else (counts or [])
     changes = []
     for r in rows:

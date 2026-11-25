@@ -18,7 +18,8 @@ def _is_admin():
 
 
 def _approved_shop(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.manage")
     status = frappe.db.get_value("BusinessProfile", profile_id, "status")
     if status != "Approved":
         frappe.throw(_("Only an approved shop can post on the board."), frappe.PermissionError)
@@ -122,7 +123,8 @@ def send_announcement(title, body):
 
 @frappe.whitelist()
 def my_announcements(profile_id, limit=30):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.view")
     rows = frappe.get_all("Admin Announcement", fields=["name", "title", "body", "created_on"],
                           order_by="created_on desc", limit_page_length=frappe.utils.cint(limit) or 30)
     read = set(frappe.get_all("Announcement Read", filters={"business_profile": profile_id,
@@ -136,7 +138,8 @@ def my_announcements(profile_id, limit=30):
 
 @frappe.whitelist()
 def mark_announcement_read(announcement, profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.view")
     if not frappe.db.exists("Announcement Read", {"announcement": announcement, "business_profile": profile_id}):
         frappe.get_doc({"doctype": "Announcement Read", "announcement": announcement,
                         "business_profile": profile_id, "read_on": now_datetime()}).insert(ignore_permissions=True)

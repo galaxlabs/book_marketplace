@@ -78,13 +78,15 @@ def design_of(profile_id):
 
 @frappe.whitelist()
 def get_design(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "sales.view")
     return design_of(profile_id)
 
 
 @frappe.whitelist()
 def save_design(profile_id, design):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     data = clean(frappe.parse_json(design) if isinstance(design, str) else design)
     frappe.db.set_value("BusinessProfile", profile_id, "print_design", json.dumps(data), update_modified=False)
     return data

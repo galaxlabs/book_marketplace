@@ -272,7 +272,10 @@ def _may_act_on(order_doc):
     if buyer and buyer == order_doc.buyer_profile:
         return True
     shops = frappe.get_all("BusinessProfile", filters={"user": frappe.session.user}, pluck="name")
-    return order_doc.seller_profile in shops or frappe.session.user == "Administrator"
+    if order_doc.seller_profile in shops or frappe.session.user == "Administrator":
+        return True
+    from book_marketplace.auth.permissions import has_access
+    return has_access(order_doc.seller_profile, "orders.manage")
 
 
 @frappe.whitelist()

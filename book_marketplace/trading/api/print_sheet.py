@@ -11,7 +11,8 @@ from book_marketplace.trading.api.design import design_of as _design
 
 @frappe.whitelist()
 def purchase_order_print(name, profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "purchases.view")
     doc = frappe.get_doc("Purchase Order Request", name)
     if profile_id not in (doc.seller_profile, doc.buyer_profile):
         frappe.throw(_("Only the buyer or the seller can print this order."), frappe.PermissionError)

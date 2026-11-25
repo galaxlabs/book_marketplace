@@ -119,14 +119,16 @@ def preview_rate(publisher, shop, bill_amount, normal_percent=0):
     from book_marketplace.auth.api.auth import _assert_profile_owner
     if frappe.session.user == "Guest":
         frappe.throw(_("Please log in."), frappe.AuthenticationError)
-    _assert_profile_owner(publisher)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(publisher, "catalog.view")
     return rate_for(publisher, shop, flt(bill_amount), flt(normal_percent))
 
 
 @frappe.whitelist()
 def my_policies(publisher):
     from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(publisher)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(publisher, "catalog.view")
     rows = frappe.get_all("Trade Discount Policy", filters={"publisher": publisher},
                           fields=["name", "policy_name", "status", "priority", "valid_from", "valid_to", "applies_to_all"],
                           order_by="priority desc, creation asc", limit_page_length=0)
@@ -145,7 +147,8 @@ def save_policy(publisher, policy_name, status="Draft", priority=0, valid_from=N
     shops: JSON list of {business_profile, note} (excluded when applies_to_all, included otherwise)."""
     import json
     from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(publisher)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(publisher, "prices.edit")
     if status not in ("Draft", "Active", "Stopped"):
         frappe.throw(_("Status must be Draft, Active or Stopped."))
     step_rows = json.loads(steps) if isinstance(steps, str) else (steps or [])

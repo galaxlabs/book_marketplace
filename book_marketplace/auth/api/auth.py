@@ -238,7 +238,8 @@ def create_business_profile(business_name, profile_type, terms_accepted=0):
 
 @frappe.whitelist()
 def list_bank_accounts(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "finance.view")
     return frappe.get_all(
         "BusinessBankAccount",
         filters={"business_profile": profile_id},
@@ -261,7 +262,8 @@ def add_bank_account(
     payment_instructions=None,
     is_default=0,
 ):
-    _assert_profile_owner(business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(business_profile, "finance.manage")
     doc = frappe.get_doc({
         "doctype": "BusinessBankAccount",
         "business_profile": business_profile,
@@ -283,7 +285,8 @@ def add_bank_account(
 @frappe.whitelist()
 def set_default_bank_account(account_id):
     doc = frappe.get_doc("BusinessBankAccount", account_id)
-    _assert_profile_owner(doc.business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(doc.business_profile, "finance.manage")
     _clear_other_default_bank_accounts(doc.business_profile, doc.name)
     doc.is_default = 1
     doc.is_active = 1
@@ -294,7 +297,8 @@ def set_default_bank_account(account_id):
 @frappe.whitelist()
 def toggle_bank_account(account_id, is_active):
     doc = frappe.get_doc("BusinessBankAccount", account_id)
-    _assert_profile_owner(doc.business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(doc.business_profile, "finance.manage")
     doc.is_active = 1 if int(is_active) else 0
     if not doc.is_active:
         doc.is_default = 0
@@ -347,11 +351,14 @@ def get_my_profiles(user=None):
     if user and user != frappe.session.user:
         _assert_admin()
     target = user or frappe.session.user
-    return frappe.get_all(
-        "BusinessProfile",
-        filters={"user": target},
-        fields=["name", "profile_type", "business_name", "status", "logo", "banner_image", "business_description", "public_message", "phone", "email", "address", "city", "country"],
-    )
+    fields = ["name", "profile_type", "business_name", "status", "logo", "banner_image", "business_description", "public_message", "phone", "email", "address", "city", "country"]
+    rows = frappe.get_all("BusinessProfile", filters={"user": target}, fields=fields)
+    if target == frappe.session.user:
+        # businesses where this account works as an active team member
+        theirs = _member_profiles(target)
+        if theirs:
+            rows += frappe.get_all("BusinessProfile", filters={"name": ["in", [t.name for t in theirs]]}, fields=fields)
+    return rows
 
 
 @frappe.whitelist()

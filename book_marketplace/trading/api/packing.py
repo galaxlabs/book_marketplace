@@ -36,13 +36,15 @@ def settings_of(profile_id):
 
 @frappe.whitelist()
 def get_packing_settings(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.view")
     return settings_of(profile_id)
 
 
 @frappe.whitelist()
 def save_packing_settings(profile_id, **values):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     data = {}
     for k in ("packet_max_books", "books_per_packet", "carton_books", "page_basis"):
         if k in values:
@@ -113,7 +115,8 @@ def charges(settings, cartons, packets, tape_status, same_city):
 def suggest_packing(name, profile_id, items=None):
     """What to pack for an accepted order: packets or cartons, and the charges. items: optional JSON [{book, sent_qty}]."""
     import json
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.view")
     doc = frappe.get_doc("Purchase Order Request", name)
     if profile_id != doc.seller_profile:
         frappe.throw(_("Only the seller packs this order."), frappe.PermissionError)

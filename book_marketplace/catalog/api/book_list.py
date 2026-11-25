@@ -11,7 +11,8 @@ from book_marketplace.auth.api.auth import _assert_profile_owner
 
 @frappe.whitelist()
 def book_list(profile_id, text="", availability="all", published="all", limit=50, offset=0, item_type="", sort="alpha"):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.view")
     limit = min(frappe.utils.cint(limit) or 50, 200)
     offset = frappe.utils.cint(offset)
 
