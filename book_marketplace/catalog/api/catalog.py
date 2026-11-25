@@ -118,10 +118,109 @@ def _related_books(book):
         from_publisher = sorted(with_publisher(rows), key=lambda r: (not r["listed"], r["title"]))[:8]
     holder = [{"name": book.name}]
     _attach_classifications(holder)
+    # more books from each published shop that lists this book (shops other than the publisher's own first)
+    from_shops = []
+    shop_ids = list(dict.fromkeys(frappe.get_all(
+        "BusinessCatalogItem", filters={"book": book.name, "is_active": 1}, pluck="business_profile")))
+    stores = {st.business_profile: st for st in frappe.get_all(
+        "BusinessStore", filters={"business_profile": ["in", shop_ids or [""]], "is_published": 1},
+        fields=["business_profile", "slug", "store_name", "city"])}
+    for prof in sorted((x for x in shop_ids if x in stores), key=lambda x: x == book.publisher)[:3]:
+        names = [n for n in dict.fromkeys(frappe.get_all(
+            "BusinessCatalogItem", filters={"business_profile": prof, "is_active": 1, "book": ["!=", book.name]},
+            pluck="book", limit_page_length=200))]
+        if not names:
+            continue
+        rows = frappe.get_all("Book", filters={"name": ["in", names], "global_visibility": 1}, fields=fields,
+                              limit_page_length=60)
+        # the shop's books closest to this one first: the most classifications in common, then by title
+        mine = frappe.get_all("BookClassification", filters={"parent": book.name, "parenttype": "Book"}, pluck="category")
+        common = {}
+        if mine and rows:
+            for r in frappe.get_all("BookClassification", filters={"parent": ["in", [x.name for x in rows]],
+                                    "parenttype": "Book", "category": ["in", mine]}, fields=["parent"], limit_page_length=3000):
+                common[r.parent] = common.get(r.parent, 0) + 1
+        rows = sorted(with_publisher(rows), key=lambda r: (-common.get(r["name"], 0), r["title"]))[:8]
+        st = stores[prof]
+        from_shops.append({"business_profile": prof, "slug": st.slug, "store_name": st.store_name, "city": st.city or "",
+                           "total": len(names), "books": rows})
     publisher_label = frappe.db.get_value("BusinessProfile", book.publisher, "business_name") if book.publisher else ""
     return {"text_of": text, "commentaries": commentaries, "editions": editions, "related": related, "related_by": reason,
-            "classifications": holder[0]["classifications"], "from_publisher": from_publisher,
+            "classifications": holder[0]["classifications"], "from_publisher": from_publisher, "from_shops": from_shops,
+            "shelves": _shelves(book, fields, with_publisher, from_shops),
             "publisher_label": publisher_label or ""}
+
+
+def _shelves(book, fields, with_publisher, from_shops):
+    """The book page's rows. Each row holds only one kind of book:
+    same darja (exactly that darja), same publisher, each shop, same subject, same broader department, same title type.
+    Commentaries are left out of the classification rows: they show under their text."""
+    from book_marketplace.catalog.api.classification import descendants
+    own = frappe.get_all("BookClassification", filters={"parent": book.name, "parenttype": "Book"}, pluck="category")
+    cats = frappe.get_all("Book Category", filters={"name": ["in", own or [""]]},
+                          fields=["name", "category_type", "category_name_ur", "category_name", "is_group", "parent_book_category"])
+    lab = lambda c: c.category_name_ur or c.category_name
+
+    def books_in(names, with_sharh=False, extra_filters=None):
+        if not names:
+            return 0, []
+        filt = {"name": ["in", names], "global_visibility": 1, "name": ["not in", [book.name]]}
+        rows = frappe.get_all("Book", filters={"name": ["in", names], "global_visibility": 1}, fields=fields + ["sharh_of"],
+                              limit_page_length=300)
+        rows = [r for r in rows if r.name != book.name and (with_sharh or not r.get("sharh_of"))]
+        out = sorted(with_publisher(rows), key=lambda r: (not r["listed"], r["title"]))
+        return len(out), out[:12]
+
+    def members(cat_names):
+        return list({r for r in frappe.get_all("BookClassification", filters={"category": ["in", cat_names], "parenttype": "Book"},
+                                               pluck="parent", limit_page_length=3000)})
+
+    shelves = []
+    # 1. same darja: the book's leaf departments, exactly
+    for c in [x for x in cats if x.category_type == "Department" and not x.is_group]:
+        total, rows = books_in(members([c.name]))
+        if rows:
+            shelves.append({"kind": "darja", "label": f"اسی درجے کی کتابیں: {lab(c)}", "ref": c.name, "ref_type": "Department",
+                            "total": total, "books": rows})
+    # 2. same publisher (everything of the publisher)
+    if book.publisher:
+        names = frappe.get_all("Book", filters={"publisher": book.publisher, "name": ["!=", book.name]}, pluck="name", limit_page_length=500)
+        total, rows = books_in(names, with_sharh=True)
+        if rows:
+            label = frappe.db.get_value("BusinessProfile", book.publisher, "business_name") or ""
+            shelves.append({"kind": "publisher", "label": f"اسی ناشر کی کتابیں: {label}".strip(": "), "ref": book.publisher,
+                            "ref_type": "Publisher", "total": total, "books": rows})
+    # 3. each shop that lists this book
+    for sh in from_shops:
+        shelves.append({"kind": "shop", "label": f"اسی دکان سے: {sh['store_name']}", "ref": sh["slug"], "ref_type": "Shop",
+                        "total": sh["total"], "books": sh["books"]})
+    # 4. same subject (leaf subjects, up to two)
+    for c in [x for x in cats if x.category_type == "Subject" and not x.is_group][:2]:
+        total, rows = books_in(members([c.name]))
+        if rows:
+            shelves.append({"kind": "subject", "label": f"اسی موضوع کی کتابیں: {lab(c)}", "ref": c.name, "ref_type": "Subject",
+                            "total": total, "books": rows})
+    # 5. same broader department (the stage above the darja), without the darja's own books
+    for c in [x for x in cats if x.category_type == "Department" and not x.is_group]:
+        parent = c.parent_book_category
+        if not parent:
+            continue
+        pc = frappe.db.get_value("Book Category", parent, ["category_name", "category_name_ur", "parent_book_category"], as_dict=True)
+        if not pc or not pc.parent_book_category:
+            continue
+        mine = set(members([c.name]))
+        pool = [n for n in members(list(descendants([parent]))) if n not in mine]
+        total, rows = books_in(pool)
+        if rows:
+            shelves.append({"kind": "department", "label": f"اسی شعبے کی دوسری کتابیں: {pc.category_name_ur or pc.category_name}",
+                            "ref": parent, "ref_type": "Department", "total": total, "books": rows})
+    # 6. same title type
+    for c in [x for x in cats if x.category_type == "Title Type"]:
+        total, rows = books_in(members([c.name]))
+        if rows:
+            shelves.append({"kind": "form", "label": f"اسی قسم کی کتابیں: {lab(c)}", "ref": c.name, "ref_type": "Title Type",
+                            "total": total, "books": rows})
+    return shelves
 
 
 # weights of the recommendation signals (higher = closer)
@@ -1164,15 +1263,23 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     if text:
         or_filters = _offer_text_filter(text)
 
-    from book_marketplace.catalog.api.classification import book_names_for_categories
+    from book_marketplace.catalog.api.classification import book_names_for_categories, descendants
 
     for picked in (subject, category, department, form):
         if picked:
             picked_books = book_names_for_categories([picked])
             if with_commentaries and picked_books:
                 # a commentary (شرح) shows with its text, so it takes the text's darja and department
-                picked_books = list(set(picked_books) | set(frappe.get_all(
-                    "Book", filters={"sharh_of": ["in", picked_books]}, pluck="name", limit_page_length=0)))
+                extra = set(frappe.get_all("Book", filters={"sharh_of": ["in", picked_books]}, pluck="name", limit_page_length=0))
+                if extra and frappe.db.get_value("Book Category", picked, "category_type") == "Department":
+                    # a commentary with a darja of its own elsewhere belongs to that darja, not to this one
+                    inside = descendants([picked])
+                    own_elsewhere = {r.parent for r in frappe.db.sql(
+                        """select c.parent from tabBookClassification c join `tabBook Category` k on k.name = c.category
+                           where c.parent in %(b)s and k.category_type = 'Department' and k.is_group = 0
+                           and c.category not in %(inside)s""", {"b": tuple(extra), "inside": tuple(inside)}, as_dict=True)}
+                    extra -= own_elsewhere
+                picked_books = list(set(picked_books) | extra)
             if not picked_books:
                 return {"books": [], "total": 0, "cities": _published_cities()}
             existing = book_filters.get("name")
@@ -1204,9 +1311,18 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
                         "own_discount", "discount_percent", "is_discontinued", "sharh_of"])
         # commentaries of the books found join the results; the store shows them under their text
         have = [b.name for b in books]
+        skip = set()
+        if department:
+            # a commentary with a darja of its own elsewhere belongs to that darja, not to this department view
+            inside = tuple(descendants([department]))
+            skip = {r.parent for r in frappe.db.sql(
+                """select c.parent from tabBookClassification c join `tabBook Category` k on k.name = c.category
+                   where k.category_type = 'Department' and k.is_group = 0 and c.category not in %(inside)s
+                   and c.parent in (select name from tabBook where sharh_of in %(have)s)""",
+                {"inside": inside, "have": tuple(have)}, as_dict=True)}
         books = list(books) + frappe.get_all(
             "Book",
-            filters={"sharh_of": ["in", have], "name": ["not in", have], "global_visibility": 1},
+            filters={"sharh_of": ["in", have], "name": ["not in", list(have) + list(skip)], "global_visibility": 1},
             fields=["name", "title", "subtitle", "author", "book_type", "language",
                     "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher",
                     "own_discount", "discount_percent", "is_discontinued", "sharh_of"],
