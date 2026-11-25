@@ -106,7 +106,31 @@ def _related_books(book):
         if same:
             editions = with_publisher(frappe.get_all("Book", filters={"name": ["in", same]}, fields=fields,
                                                      order_by="title asc", limit_page_length=50))
-    return {"text_of": text, "commentaries": commentaries, "editions": editions}
+    shown = {book.name} | {c["name"] for c in commentaries} | {e["name"] for e in editions}
+    if text:
+        shown.add(text["name"])
+    related, reason = [], ""
+    own = frappe.get_all("BookClassification", filters={"parent": book.name, "parenttype": "Book"}, pluck="category")
+    if own:
+        cats = frappe.get_all("Book Category", filters={"name": ["in", own], "category_type": ["in", ["Department", "Subject"]]},
+                              fields=["name", "category_type", "category_name_ur", "category_name", "is_group"])
+        # most specific first: a darja or other leaf department, then a leaf subject, then any subject
+        cats.sort(key=lambda c: (c.is_group, c.category_type != "Department"))
+        for c in cats:
+            names = [n for n in frappe.get_all("BookClassification", filters={"category": c.name, "parenttype": "Book"},
+                                               pluck="parent", limit_page_length=200) if n not in shown]
+            if not names:
+                continue
+            rows = frappe.get_all("Book", filters={"name": ["in", names], "global_visibility": 1, "sharh_of": ["is", "not set"]},
+                                  fields=fields, limit_page_length=40)
+            if rows:
+                related = sorted(with_publisher(rows), key=lambda r: (not r["listed"], r["title"]))[:8]
+                reason = c.category_name_ur or c.category_name
+                break
+    holder = [{"name": book.name}]
+    _attach_classifications(holder)
+    return {"text_of": text, "commentaries": commentaries, "editions": editions, "related": related, "related_by": reason,
+            "classifications": holder[0]["classifications"]}
 
 
 @frappe.whitelist(allow_guest=True)
@@ -1098,6 +1122,26 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
         order_by="modified desc",
         limit_page_length=2000,
     )
+    if with_commentaries and books:
+        # the text of each commentary found joins too (even with no shop), so the commentary shows under it
+        have = [b.name for b in books]
+        missing_texts = list({b.sharh_of for b in books if b.get("sharh_of")} - set(have))
+        if missing_texts:
+            books = list(books) + frappe.get_all(
+                "Book", filters={"name": ["in", missing_texts], "global_visibility": 1},
+                fields=["name", "title", "subtitle", "author", "book_type", "language",
+                        "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher",
+                        "own_discount", "discount_percent", "is_discontinued", "sharh_of"])
+        # commentaries of the books found join the results; the store shows them under their text
+        have = [b.name for b in books]
+        books = list(books) + frappe.get_all(
+            "Book",
+            filters={"sharh_of": ["in", have], "name": ["not in", have], "global_visibility": 1},
+            fields=["name", "title", "subtitle", "author", "book_type", "language",
+                    "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher",
+                    "own_discount", "discount_percent", "is_discontinued", "sharh_of"],
+            limit_page_length=500,
+        )
     if not books:
         return {"books": [], "total": 0, "cities": _published_cities()}
 
@@ -1161,11 +1205,13 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
             "in_city": bool(city) and seller_city.strip().lower() == city.lower(),
         })
 
+    # a text with no shop still shows when one of its commentaries is listed, so the group has a head
+    texts_of_listed = {b.sharh_of for b in books if b.get("sharh_of") and offers_by_book.get(b.name)}
     result = []
     for book in books:
         sellers = offers_by_book.get(book.name)
         if not sellers:
-            if not include_unlisted:
+            if not include_unlisted and not (with_commentaries and book.name in texts_of_listed):
                 continue
             # syllabus view: the book is shown even if no shop lists it yet
             result.append({**book, "in_stock": False, "sellers": [], "seller_count": 0, "in_city_count": 0,
