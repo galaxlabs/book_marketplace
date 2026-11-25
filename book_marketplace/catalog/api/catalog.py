@@ -109,28 +109,92 @@ def _related_books(book):
     shown = {book.name} | {c["name"] for c in commentaries} | {e["name"] for e in editions}
     if text:
         shown.add(text["name"])
-    related, reason = [], ""
-    own = frappe.get_all("BookClassification", filters={"parent": book.name, "parenttype": "Book"}, pluck="category")
-    if own:
-        cats = frappe.get_all("Book Category", filters={"name": ["in", own], "category_type": ["in", ["Department", "Subject"]]},
-                              fields=["name", "category_type", "category_name_ur", "category_name", "is_group"])
-        # most specific first: a darja or other leaf department, then a leaf subject, then any subject
-        cats.sort(key=lambda c: (c.is_group, c.category_type != "Department"))
-        for c in cats:
-            names = [n for n in frappe.get_all("BookClassification", filters={"category": c.name, "parenttype": "Book"},
-                                               pluck="parent", limit_page_length=200) if n not in shown]
-            if not names:
-                continue
-            rows = frappe.get_all("Book", filters={"name": ["in", names], "global_visibility": 1, "sharh_of": ["is", "not set"]},
-                                  fields=fields, limit_page_length=40)
-            if rows:
-                related = sorted(with_publisher(rows), key=lambda r: (not r["listed"], r["title"]))[:8]
-                reason = c.category_name_ur or c.category_name
-                break
+    related, reason = _recommend(book, shown, fields, with_publisher)
+    from_publisher = []
+    if book.publisher:
+        rows = frappe.get_all("Book", filters={"publisher": book.publisher, "global_visibility": 1,
+                                               "name": ["not in", list(shown)]},
+                              fields=fields, limit_page_length=60)
+        from_publisher = sorted(with_publisher(rows), key=lambda r: (not r["listed"], r["title"]))[:8]
     holder = [{"name": book.name}]
     _attach_classifications(holder)
+    publisher_label = frappe.db.get_value("BusinessProfile", book.publisher, "business_name") if book.publisher else ""
     return {"text_of": text, "commentaries": commentaries, "editions": editions, "related": related, "related_by": reason,
-            "classifications": holder[0]["classifications"]}
+            "classifications": holder[0]["classifications"], "from_publisher": from_publisher,
+            "publisher_label": publisher_label or ""}
+
+
+# weights of the recommendation signals (higher = closer)
+RECO_WEIGHTS = {"darja": 5, "subject": 4, "publisher": 3, "shop": 2, "department": 2, "form": 1, "listed": 1, "commentary": -1}
+
+
+def _recommend(book, shown, fields, with_publisher, limit=12):
+    """Related books by score. Signals: same darja or specific department, same specific subject, same publisher,
+    sold by the same shop, same broader department, same title type; a shop listing adds a little, a commentary of
+    another text loses a little. Each result carries the reasons that matched."""
+    own = frappe.get_all("BookClassification", filters={"parent": book.name, "parenttype": "Book"}, pluck="category")
+    cats = {c.name: c for c in frappe.get_all(
+        "Book Category", filters={"name": ["in", own or [""]]},
+        fields=["name", "category_type", "category_name_ur", "category_name", "is_group"])}
+    score, reasons = {}, {}
+
+    def add(name, key, label):
+        if name in shown:
+            return
+        score[name] = score.get(name, 0) + RECO_WEIGHTS[key]
+        if label:
+            reasons.setdefault(name, []).append(label)
+
+    if cats:
+        for r in frappe.get_all("BookClassification", filters={"category": ["in", list(cats)], "parenttype": "Book"},
+                                fields=["parent", "category"], limit_page_length=3000):
+            c = cats[r.category]
+            lab = c.category_name_ur or c.category_name
+            if c.category_type == "Department":
+                add(r.parent, "department" if c.is_group else "darja", lab)
+            elif c.category_type == "Subject":
+                add(r.parent, "department" if c.is_group else "subject", lab)
+            elif c.category_type == "Title Type":
+                add(r.parent, "form", None)
+    if book.publisher:
+        pub_label = frappe.db.get_value("BusinessProfile", book.publisher, "business_name") or ""
+        for n in frappe.get_all("Book", filters={"publisher": book.publisher}, pluck="name", limit_page_length=500):
+            add(n, "publisher", f"اسی ناشر: {pub_label}" if pub_label else "اسی ناشر")
+    shops = frappe.get_all("BusinessCatalogItem", filters={"book": book.name, "is_active": 1}, pluck="business_profile")
+    if shops:
+        shop_names = {p.name: p.business_name for p in frappe.get_all(
+            "BusinessProfile", filters={"name": ["in", shops]}, fields=["name", "business_name"])}
+        seen = {}
+        for r in frappe.get_all("BusinessCatalogItem", filters={"business_profile": ["in", shops], "is_active": 1},
+                                fields=["book", "business_profile"], limit_page_length=2000):
+            seen.setdefault(r.book, set()).add(r.business_profile)
+        for n, profs in seen.items():
+            for prof in list(profs)[:2]:
+                add(n, "shop", f"اسی دکان پر: {shop_names.get(prof, '')}")
+    if not score:
+        return [], ""
+    top = sorted(score, key=lambda n: -score[n])[:80]
+    rows = {r.name: r for r in frappe.get_all("Book", filters={"name": ["in", top], "global_visibility": 1},
+                                             fields=fields + ["sharh_of"], limit_page_length=80)}
+    listed = set(frappe.get_all("BusinessCatalogItem", filters={"book": ["in", list(rows) or [""]], "is_active": 1},
+                                pluck="book"))
+    for n, r in rows.items():
+        if n in listed:
+            score[n] += RECO_WEIGHTS["listed"]
+        if r.get("sharh_of"):
+            score[n] += RECO_WEIGHTS["commentary"]
+    best = sorted(rows, key=lambda n: (-score[n], rows[n].title))[:limit]
+    out = with_publisher([rows[n] for n in best])
+    for r in out:
+        # keep each reason once, most informative first
+        seen_r = []
+        for x in reasons.get(r["name"], []):
+            if x not in seen_r:
+                seen_r.append(x)
+        r["reasons"] = seen_r[:3]
+        r["score"] = score[r["name"]]
+    top_reason = out[0]["reasons"][0] if out and out[0]["reasons"] else ""
+    return out, top_reason
 
 
 @frappe.whitelist(allow_guest=True)
@@ -1037,9 +1101,13 @@ def get_filters():
     )
     subjects = [{"name": c.name, "subject_name": c.category_name, "parent_subject": c.parent_book_category} for c in cats]
     languages = frappe.get_all("Book", fields=["language"], distinct=1)
+    pubs = frappe.db.sql(
+        """select p.name, p.business_name, count(*) as books from tabBook b join tabBusinessProfile p on p.name = b.publisher
+           where b.global_visibility = 1 group by p.name, p.business_name order by books desc""", as_dict=True)
     return {
         "subjects": subjects,
         "languages": [l.language for l in languages if l.language],
+        "publishers": [{"name": r.name, "label": r.business_name or r.name, "books": r.books} for r in pubs],
     }
 
 
@@ -1065,7 +1133,7 @@ def list_authors(text=None, limit=400):
 
 
 @frappe.whitelist(allow_guest=True)
-def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None, form=None, author=None, with_commentaries=0, include_unlisted=0):
+def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None, form=None, author=None, with_commentaries=0, include_unlisted=0, publisher=None):
     """Each book once, with every published seller that stocks it.
 
     Sellers in `city` come first, and books that have a seller in `city`
@@ -1080,6 +1148,8 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     book_filters = {"global_visibility": 1}
     if author:
         book_filters["author"] = author
+    if publisher:
+        book_filters["publisher"] = publisher
     if book_type:
         book_filters["book_type"] = book_type
     if binding:
@@ -1236,7 +1306,17 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     total = len(result)
     page = result[offset:offset + limit]
     _attach_classifications(page)
+    _attach_publisher_names(page)
     return {"books": page, "total": total, "cities": _published_cities()}
+
+
+def _attach_publisher_names(books):
+    """The publisher's name on each card."""
+    ids = list({b.get("publisher") for b in books if b.get("publisher")})
+    names = {p.name: p.business_name for p in frappe.get_all(
+        "BusinessProfile", filters={"name": ["in", ids]}, fields=["name", "business_name"])} if ids else {}
+    for b in books:
+        b["publisher_name"] = names.get(b.get("publisher"), "")
 
 
 def _attach_classifications(books):
