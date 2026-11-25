@@ -995,7 +995,7 @@ def list_authors(text=None, limit=400):
 
 
 @frappe.whitelist(allow_guest=True)
-def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None, form=None, author=None):
+def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None, form=None, author=None, with_commentaries=0, include_unlisted=0):
     """Each book once, with every published seller that stocks it.
 
     Sellers in `city` come first, and books that have a seller in `city`
@@ -1004,6 +1004,8 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     limit = min(int(limit or 24), 100)
     offset = int(offset or 0)
     city = (city or "").strip()
+    with_commentaries = str(with_commentaries) in ("1", "true", "True")
+    include_unlisted = str(include_unlisted) in ("1", "true", "True")
 
     book_filters = {"global_visibility": 1}
     if author:
@@ -1027,6 +1029,10 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     for picked in (subject, category, department, form):
         if picked:
             picked_books = book_names_for_categories([picked])
+            if with_commentaries and picked_books:
+                # a commentary (شرح) shows with its text, so it takes the text's darja and department
+                picked_books = list(set(picked_books) | set(frappe.get_all(
+                    "Book", filters={"sharh_of": ["in", picked_books]}, pluck="name", limit_page_length=0)))
             if not picked_books:
                 return {"books": [], "total": 0, "cities": _published_cities()}
             existing = book_filters.get("name")
@@ -1042,7 +1048,7 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
         or_filters=or_filters,
         fields=["name", "title", "subtitle", "author", "book_type", "language",
                 "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher",
-                "own_discount", "discount_percent", "is_discontinued"],
+                "own_discount", "discount_percent", "is_discontinued", "sharh_of"],
         order_by="modified desc",
         limit_page_length=2000,
     )
@@ -1113,6 +1119,11 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     for book in books:
         sellers = offers_by_book.get(book.name)
         if not sellers:
+            if not include_unlisted:
+                continue
+            # syllabus view: the book is shown even if no shop lists it yet
+            result.append({**book, "in_stock": False, "sellers": [], "seller_count": 0, "in_city_count": 0,
+                           "min_price": None, "unlisted": True})
             continue
         sellers.sort(key=lambda s: (not s["in_city"], s["selling_price"] is None, s["selling_price"] or 0))
         prices = [s["selling_price"] for s in sellers if s["selling_price"] is not None]
@@ -1127,6 +1138,8 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
 
     if city:
         result.sort(key=lambda b: b["in_city_count"] == 0)
+    if include_unlisted:
+        result.sort(key=lambda b: bool(b.get("unlisted")))
 
     total = len(result)
     page = result[offset:offset + limit]

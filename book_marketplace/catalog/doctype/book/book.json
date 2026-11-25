@@ -24,6 +24,11 @@
   "language",
   "languages",
   "board",
+  "is_textbook",
+  "exam_boards",
+  "is_dars_e_nizami",
+  "darja",
+  "sharh_of",
   "binding",
   "size",
   "paper",
@@ -177,6 +182,39 @@
    "fieldname": "board",
    "fieldtype": "Data",
    "label": "Board / Syllabus"
+  },
+  {
+   "fieldname": "is_textbook",
+   "fieldtype": "Check",
+   "label": "Textbook / درسی کتاب"
+  },
+  {
+   "fieldname": "exam_boards",
+   "fieldtype": "Table",
+   "label": "Exam boards / امتحانی بورڈز",
+   "options": "BookExamBoard",
+   "depends_on": "eval:doc.is_textbook"
+  },
+  {
+   "fieldname": "is_dars_e_nizami",
+   "fieldtype": "Check",
+   "label": "Dars-e-Nizami / درسِ نظامی",
+   "depends_on": "eval:doc.is_textbook"
+  },
+  {
+   "fieldname": "darja",
+   "fieldtype": "Link",
+   "label": "Darja / درجہ",
+   "options": "Book Category",
+   "depends_on": "eval:doc.is_dars_e_nizami",
+   "mandatory_depends_on": "eval:doc.is_dars_e_nizami"
+  },
+  {
+   "fieldname": "sharh_of",
+   "fieldtype": "Link",
+   "options": "Book",
+   "label": "Commentary on / شرح بر (اصل متن)",
+   "description": "If this book is a commentary (شرح، حاشیہ، حل), pick the text it explains. It then shows with that text and its darja."
   },
   {
    "fieldname": "binding",

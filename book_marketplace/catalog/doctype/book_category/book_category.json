@@ -1,8 +1,8 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "hash",
- "creation": "2026-11-16 10:00:00.000000",
+ "autoname": "",
+ "creation": "2026-11-16 10:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -15,7 +15,10 @@
   "is_group",
   "sort_order",
   "section_description",
-  "description"
+  "description",
+  "lft",
+  "rgt",
+  "old_parent"
  ],
  "fields": [
   {
@@ -33,15 +36,15 @@
   {
    "fieldname": "parent_book_category",
    "fieldtype": "Link",
-   "options": "Book Category",
-   "label": "Parent Category / والد قسم"
+   "label": "Parent Category / والد قسم",
+   "options": "Book Category"
   },
   {
+   "description": "For subject roots: the قسم they belong to",
    "fieldname": "section",
    "fieldtype": "Link",
    "label": "Section (قسم)",
-   "options": "Book Category",
-   "description": "For subject roots: the قسم they belong to"
+   "options": "Book Category"
   },
   {
    "fieldname": "column_break_info",
@@ -72,16 +75,41 @@
    "label": "Description / تفصیل"
   },
   {
+   "description": "Lower comes first among siblings. 0 = by name.",
    "fieldname": "sort_order",
    "fieldtype": "Int",
-   "label": "Sort order / ترتیب",
-   "description": "Lower comes first among siblings. 0 = by name."
+   "label": "Sort order / ترتیب"
+  },
+  {
+   "fieldname": "lft",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Left",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "rgt",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Right",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "old_parent",
+   "fieldtype": "Link",
+   "label": "Old Parent",
+   "options": "Book Category"
   }
  ],
- "modified": "2026-11-16 10:00:00.000000",
+ "is_tree": 1,
+ "links": [],
+ "modified": "2026-11-25 11:27:33.838683",
  "modified_by": "Administrator",
  "module": "Catalog",
  "name": "Book Category",
+ "nsm_parent_field": "parent_book_category",
  "owner": "Administrator",
  "permissions": [
   {
@@ -97,43 +125,23 @@
    "write": 1
   },
   {
-   "create": 0,
-   "delete": 0,
-   "email": 0,
-   "export": 0,
-   "print": 0,
    "read": 1,
-   "report": 0,
-   "role": "Publisher",
-   "share": 0,
-   "write": 0
+   "role": "Publisher"
   },
   {
-   "create": 0,
-   "delete": 0,
-   "email": 0,
-   "export": 0,
-   "print": 0,
    "read": 1,
-   "report": 0,
-   "role": "Bookseller",
-   "share": 0,
-   "write": 0
+   "role": "Bookseller"
   },
   {
-   "create": 0,
-   "delete": 0,
-   "email": 0,
-   "export": 0,
-   "print": 0,
    "read": 1,
-   "report": 0,
-   "role": "Customer",
-   "share": 0,
-   "write": 0
+   "role": "Customer"
   }
  ],
+ "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "category_name",
+ "naming_rule": "By script"
 }
