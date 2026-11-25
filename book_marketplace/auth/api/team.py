@@ -2,6 +2,7 @@
 import secrets
 
 import frappe
+from frappe.rate_limiter import rate_limit
 from frappe import _
 from frappe.utils import now_datetime, validate_email_address
 
@@ -108,6 +109,7 @@ def remove_member(profile_id, member):
 
 
 @frappe.whitelist(allow_guest=True)
+@rate_limit(limit=30, seconds=600)
 def invite_info(token):
     """What the join page shows to the person who holds the link: the business, the role, the email."""
     row = frappe.db.get_value("BusinessMember", {"invite_token": token or "", "status": "Invited"},
@@ -120,6 +122,7 @@ def invite_info(token):
 
 
 @frappe.whitelist(allow_guest=True)
+@rate_limit(limit=30, seconds=600)
 def accept_invite(token, full_name=None, password=None):
     """Join the team. A new person sets a name and a password. Someone who already has an account must be signed in with
     the invited email. The invitation works once."""
