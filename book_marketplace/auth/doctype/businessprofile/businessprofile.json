@@ -8,6 +8,7 @@
  "field_order": [
   "user",
   "profile_type",
+  "publisher_code",
   "business_name",
   "business_name_local",
   "business_name_spelling",
@@ -61,6 +62,16 @@
    "label": "Profile Type",
    "options": "Publisher\nBookseller\nDistributor\nAgent",
    "reqd": 1
+  },
+  {
+   "fieldname": "publisher_code",
+   "fieldtype": "Data",
+   "label": "Publisher Code / پبلشر کوڈ",
+   "length": 6,
+   "unique": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "6-character code, given automatically and never changed"
   },
   {
    "fieldname": "business_name",

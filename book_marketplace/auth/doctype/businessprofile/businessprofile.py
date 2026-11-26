@@ -1,3 +1,5 @@
+import secrets
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -9,6 +11,8 @@ class BusinessProfile(Document):
     def validate(self):
         self.validate_enabled_type()
         self.validate_one_profile_per_type()
+        if not self.publisher_code:
+            self.publisher_code = new_publisher_code()
 
     def before_save(self):
         if self.status == "Approved" and not self.approved_on:
@@ -34,6 +38,17 @@ class BusinessProfile(Document):
         )
         if duplicate:
             frappe.throw(_("This user already has a {0} profile ({1}).").format(self.profile_type, duplicate))
+
+
+PUBLISHER_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O or 1/I, so it reads clearly
+
+
+def new_publisher_code():
+    """A random 6-character code that no other profile has."""
+    while True:
+        code = "".join(secrets.choice(PUBLISHER_CODE_ALPHABET) for _ in range(6))
+        if not frappe.db.exists("BusinessProfile", {"publisher_code": code}):
+            return code
 
 
 def ensure_publisher_store(profile):
