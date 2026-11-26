@@ -1,3 +1,6 @@
+import itertools
+import math
+
 import frappe
 import json
 from frappe.model.document import Document
@@ -36,9 +39,69 @@ class Book(Document):
         self.validate_volumes()
         self.validate_textbook()
         self.validate_sharh_of()
+        self.validate_variants()
 
     def after_save(self):
         self.generate_qr_code()
+        self.apply_variant_renames()
+
+    def validate_variants(self):
+        """Like ERPNext item variants. Each variant row has a key; its attribute rows are in Variant Attributes.
+        A variant with attributes gets its name and code built from them (e.g. 'Hard، Glossy', 'HD-GL').
+        Rows without attributes keep the typed name (older rows). Each combination is unique per book."""
+        old = self.get_doc_before_save()
+        old_names = {r.name: r.variant_name for r in (old.get("variants") or [])} if old else {}
+        renames = {}
+
+        for row in self.get("variants") or []:
+            if not row.variant_key:
+                row.variant_key = frappe.generate_hash(length=10)
+
+        keys = {r.variant_key for r in self.get("variants") or []}
+        groups = {}
+        for a in self.get("variant_attributes") or []:
+            if a.variant_key not in keys:
+                frappe.throw(f"Variant Attributes کی قطار {a.attribute_value} کسی ویریئنٹ سے نہیں جڑی۔")
+            groups.setdefault(a.variant_key, []).append(a)
+
+        seen = set()
+        for row in self.get("variants") or []:
+            attrs = sorted(groups.get(row.variant_key, []), key=lambda a: a.attribute)
+            if not attrs:
+                if not (row.variant_name or "").strip():
+                    frappe.throw("ویریئنٹ کا نام لازمی ہے، یا اس کی نوعیت (Variant Attributes) منتخب کریں۔")
+                row.variant_code = None
+                continue
+            codes, names, key = [], [], []
+            for a in attrs:
+                abbr = frappe.db.get_value(
+                    "Book Attribute Value",
+                    {"parent": a.attribute, "parenttype": "Book Attribute", "attribute_value": a.attribute_value},
+                    "abbr",
+                )
+                if not abbr:
+                    frappe.throw(f"{a.attribute_value} نوعیت {a.attribute} کی قدر نہیں ہے۔")
+                codes.append(abbr)
+                names.append(a.attribute_value)
+                key.append((a.attribute, a.attribute_value))
+            key = tuple(key)
+            if key in seen:
+                frappe.throw("ایک ہی کتاب میں ایک جیسی نوعیتوں کا ویریئنٹ دو بار نہیں ہو سکتا۔")
+            seen.add(key)
+            row.variant_code = "-".join(codes)
+            row.variant_name = "، ".join(names)
+            old_name = old_names.get(row.name)
+            if old_name and old_name != row.variant_name:
+                renames[old_name] = row.variant_name
+        self.flags.variant_renames = renames
+
+    def apply_variant_renames(self):
+        """When a variant's name changes, its publisher rows (Business Catalog Item) follow the new name."""
+        for old, new in (self.flags.get("variant_renames") or {}).items():
+            frappe.db.sql(
+                "update `tabBusiness Catalog Item` set variant_name=%s where book=%s and variant_name=%s",
+                (new, self.name, old),
+            )
 
     def sync_primary_language(self):
         rows = [r.language for r in (self.get("languages") or []) if r.language]
@@ -145,3 +208,56 @@ class Book(Document):
             self.db_set("qr_code", file_doc.file_url)
         except ImportError:
             pass
+
+
+MAX_VARIANTS_AT_ONCE = 500
+
+
+@frappe.whitelist()
+def get_attribute_options():
+    """Attributes and their values for the Create Variants dialog."""
+    frappe.has_permission("Book", ptype="read", throw=True)
+    out = []
+    for name in frappe.get_all("Book Attribute", filters={"disabled": 0}, pluck="name", order_by="name asc"):
+        values = frappe.get_all(
+            "Book Attribute Value", filters={"parent": name, "parenttype": "Book Attribute"},
+            pluck="attribute_value", order_by="idx asc",
+        )
+        out.append({"attribute_name": name, "values": values})
+    return out
+
+
+@frappe.whitelist(methods=["POST"])
+def create_multiple_variants(book, args):
+    """args = {attribute: [value, ...], ...}. Adds one variant for every combination not yet present."""
+    frappe.has_permission("Book", ptype="write", doc=book, throw=True)
+    args = frappe.parse_json(args) or {}
+    args = {k: [v for v in (vals or []) if v] for k, vals in args.items()}
+    args = {k: v for k, v in args.items() if v}
+    if not args:
+        frappe.throw("کم از کم ایک نوعیت کی قدر منتخب کریں۔")
+    total = math.prod(len(v) for v in args.values())
+    if total > MAX_VARIANTS_AT_ONCE:
+        frappe.throw(f"ایک وقت میں {MAX_VARIANTS_AT_ONCE} سے زیادہ ویریئنٹ نہیں بنائے جا سکتے۔")
+
+    doc = frappe.get_doc("Book", book)
+    groups = {}
+    for a in doc.get("variant_attributes") or []:
+        groups.setdefault(a.variant_key, []).append((a.attribute, a.attribute_value))
+    existing = {tuple(sorted(v)) for v in groups.values()}
+
+    added = 0
+    pairs = [[(k, val) for val in vals] for k, vals in args.items()]
+    for combo in itertools.product(*pairs):
+        key = tuple(sorted(combo))
+        if key in existing:
+            continue
+        existing.add(key)
+        variant_key = frappe.generate_hash(length=10)
+        doc.append("variants", {"variant_key": variant_key})
+        for attribute, value in combo:
+            doc.append("variant_attributes", {"variant_key": variant_key, "attribute": attribute, "attribute_value": value})
+        added += 1
+    if added:
+        doc.save()
+    return added

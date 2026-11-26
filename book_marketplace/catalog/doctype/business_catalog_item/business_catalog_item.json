@@ -8,6 +8,7 @@
  "field_order": [
   "business_profile",
   "book",
+  "variant_name",
   "is_active",
   "is_advertised",
   "added_on",
@@ -35,6 +36,12 @@
    "label": "Book",
    "options": "Book",
    "reqd": 1
+  },
+  {
+   "fieldname": "variant_name",
+   "fieldtype": "Data",
+   "label": "Variant / ویریئنٹ",
+   "in_list_view": 1
   },
   {
    "fieldname": "selling_price",
@@ -73,23 +80,23 @@
   {
    "fieldname": "discount_percent",
    "fieldtype": "Percent",
-   "label": "Discount % / \u0631\u0639\u0627\u06cc\u062a"
+   "label": "Discount % / رعایت"
   },
   {
    "fieldname": "location_section",
    "fieldtype": "Section Break",
-   "label": "Where it is kept / \u06a9\u06c1\u0627\u06ba \u0631\u06a9\u06be\u06cc \u06c1\u06d2"
+   "label": "Where it is kept / کہاں رکھی ہے"
   },
   {
    "fieldname": "storage_place",
    "fieldtype": "Select",
-   "label": "Place / \u062c\u06af\u06c1",
+   "label": "Place / جگہ",
    "options": "\nShop\nWarehouse"
   },
   {
    "fieldname": "condition",
    "fieldtype": "Select",
-   "label": "Condition / \u062d\u0627\u0644\u062a",
+   "label": "Condition / حالت",
    "options": "New\nUsed\nRare\nManuscript",
    "default": "New",
    "in_list_view": 1
@@ -101,7 +108,7 @@
   {
    "fieldname": "shelf",
    "fieldtype": "Data",
-   "label": "Shelf / \u0634\u06cc\u0644\u0641"
+   "label": "Shelf / شیلف"
   }
  ],
  "index_web_pages_for_search": 0,

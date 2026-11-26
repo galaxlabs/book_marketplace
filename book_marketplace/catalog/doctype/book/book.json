@@ -1,6 +1,5 @@
 {
  "actions": [],
- "allow_rename": 0,
  "autoname": "Prompt",
  "creation": "2026-07-15 00:00:00",
  "doctype": "DocType",
@@ -8,41 +7,43 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
-  "item_type",
   "title_en",
-  "title_ur",
-  "author",
   "author_en",
-  "author_profile",
-  "publisher",
   "owner_profile",
   "book_type",
-  "isbn",
   "barcode",
-  "article_number",
   "qr_code",
-  "language",
-  "languages",
   "board",
   "is_textbook",
-  "exam_boards",
-  "is_dars_e_nizami",
-  "darja",
   "sharh_of",
-  "binding",
-  "size",
+  "is_dars_e_nizami",
   "paper",
-  "print_type",
   "print_quality",
-  "colours",
   "availability",
+  "trade_price",
   "is_discontinued",
   "imported",
-  "set_mrp",
-  "trade_price",
-  "images",
   "own_discount",
+  "column_break_reee",
+  "item_type",
+  "title_ur",
+  "author",
+  "author_profile",
+  "publisher",
+  "isbn",
+  "article_number",
+  "darja",
+  "language",
+  "size",
+  "binding",
+  "colours",
+  "print_type",
+  "set_mrp",
   "discount_percent",
+  "section_break_owzw",
+  "images",
+  "languages",
+  "exam_boards",
   "profile_section",
   "subtitle",
   "introduction",
@@ -67,26 +68,27 @@
   "volumes",
   "variants_section",
   "variants",
+  "variant_attributes",
   "item_options_section",
   "item_options",
   "item_options_col",
-  "pack_lines"
+  "pack_lines",
+  "cover_image"
  ],
  "fields": [
   {
    "fieldname": "title",
    "fieldtype": "Data",
    "label": "Title",
-   "reqd": 1,
-   "unique": 0
+   "reqd": 1
   },
   {
+   "default": "Book",
    "fieldname": "item_type",
    "fieldtype": "Select",
-   "label": "Item Type",
-   "default": "Book",
    "in_list_view": 1,
    "in_standard_filter": 1,
+   "label": "Item Type",
    "options": "Book\nStationery\nGift\nPerfume & Attar\nCap (Topi)\nTasbih\nPrayer Mat\nGift Box\nPaper & Printing\nIhram & Hajj Pack\nOther"
   },
   {
@@ -108,15 +110,14 @@
    "fieldname": "author",
    "fieldtype": "Data",
    "label": "Author",
-   "reqd": 0,
    "mandatory_depends_on": "eval:(doc.item_type || \"Book\") == \"Book\""
   },
   {
+   "description": "Optional structured author profile linked to this book",
    "fieldname": "author_profile",
    "fieldtype": "Link",
    "label": "Author Profile",
-   "options": "AuthorProfile",
-   "description": "Optional structured author profile linked to this book"
+   "options": "AuthorProfile"
   },
   {
    "fieldname": "publisher",
@@ -132,33 +133,32 @@
    "read_only": 1
   },
   {
+   "default": "Single Volume",
    "fieldname": "book_type",
    "fieldtype": "Select",
    "label": "Book Type",
    "options": "Single Volume\nMulti Volume",
-   "default": "Single Volume",
    "reqd": 1
   },
   {
+   "description": "ISBN-10 or ISBN-13",
    "fieldname": "isbn",
    "fieldtype": "Data",
-   "label": "ISBN",
-   "description": "ISBN-10 or ISBN-13"
+   "label": "ISBN"
   },
   {
+   "description": "Internal SKU or scannable barcode identifier",
    "fieldname": "barcode",
    "fieldtype": "Data",
-   "label": "Barcode / SKU",
-   "description": "Internal SKU or scannable barcode identifier"
+   "label": "Barcode / SKU"
   },
   {
    "fieldname": "article_number",
    "fieldtype": "Data",
-   "label": "Article Number / آرٹیکل نمبر",
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "search_index": 1,
-   "unique": 0
+   "label": "Article Number / آرٹیکل نمبر",
+   "search_index": 1
   },
   {
    "fieldname": "qr_code",
@@ -184,43 +184,45 @@
    "label": "Board / Syllabus"
   },
   {
+   "default": "0",
    "fieldname": "is_textbook",
    "fieldtype": "Check",
    "label": "Textbook / درسی کتاب"
   },
   {
+   "depends_on": "eval:doc.is_textbook",
    "fieldname": "exam_boards",
    "fieldtype": "Table",
    "label": "Exam boards / امتحانی بورڈز",
-   "options": "BookExamBoard",
-   "depends_on": "eval:doc.is_textbook"
+   "options": "BookExamBoard"
   },
   {
+   "default": "0",
+   "depends_on": "eval:doc.is_textbook",
    "fieldname": "is_dars_e_nizami",
    "fieldtype": "Check",
-   "label": "Dars-e-Nizami / درسِ نظامی",
-   "depends_on": "eval:doc.is_textbook"
+   "label": "Dars-e-Nizami / درسِ نظامی"
   },
   {
+   "depends_on": "eval:doc.is_dars_e_nizami",
    "fieldname": "darja",
    "fieldtype": "Link",
    "label": "Darja / درجہ",
-   "options": "Book Category",
-   "depends_on": "eval:doc.is_dars_e_nizami",
-   "mandatory_depends_on": "eval:doc.is_dars_e_nizami"
+   "mandatory_depends_on": "eval:doc.is_dars_e_nizami",
+   "options": "Book Category"
   },
   {
+   "description": "If this book is a commentary (شرح، حاشیہ، حل), pick the text it explains. It then shows with that text and its darja.",
    "fieldname": "sharh_of",
    "fieldtype": "Link",
-   "options": "Book",
    "label": "Commentary on / شرح بر (اصل متن)",
-   "description": "If this book is a commentary (شرح، حاشیہ، حل), pick the text it explains. It then shows with that text and its darja."
+   "options": "Book"
   },
   {
    "fieldname": "binding",
-   "fieldtype": "Select",
+   "fieldtype": "Link",
    "label": "Binding / Format (بائنڈنگ / فارمیٹ)",
-   "options": "Paperback\nHardcover\nSpiral\nBoard Book\nFlexi Bind\nEbook/PDF\nAudiobook\nOther"
+   "options": "Book Binding Type"
   },
   {
    "fieldname": "size",
@@ -229,13 +231,15 @@
   },
   {
    "fieldname": "paper",
-   "fieldtype": "Data",
-   "label": "Paper"
+   "fieldtype": "Link",
+   "label": "Paper",
+   "options": "Book Paper Type"
   },
   {
    "fieldname": "print_type",
-   "fieldtype": "Data",
-   "label": "Print Type"
+   "fieldtype": "Link",
+   "label": "Print Type",
+   "options": "Book Printing Type"
   },
   {
    "fieldname": "print_quality",
@@ -250,35 +254,37 @@
    "options": "\n1 colour (black)\n2 colours\nFull colour (4 colours)"
   },
   {
+   "default": "Available",
    "fieldname": "availability",
    "fieldtype": "Select",
    "label": "Availability / دستیابی",
-   "options": "Available\nUnavailable\nOut of print\nForthcoming\nGeneral readers only",
-   "default": "Available"
+   "options": "Available\nUnavailable\nOut of print\nForthcoming\nGeneral readers only"
   },
   {
+   "default": "0",
    "fieldname": "is_discontinued",
    "fieldtype": "Check",
    "label": "Discontinued (no more production) / پیداوار بند"
   },
   {
+   "default": "0",
    "fieldname": "imported",
    "fieldtype": "Check",
    "label": "Imported"
   },
   {
+   "description": "Complete set price for multi-volume books",
    "fieldname": "set_mrp",
    "fieldtype": "Currency",
    "label": "Set MRP",
-   "options": "currency",
-   "description": "Complete set price for multi-volume books"
+   "options": "currency"
   },
   {
+   "description": "Price for sellers (dealers)",
    "fieldname": "trade_price",
    "fieldtype": "Currency",
    "label": "Trade Price",
-   "options": "currency",
-   "description": "Price for sellers (dealers)"
+   "options": "currency"
   },
   {
    "fieldname": "cover_image",
@@ -337,16 +343,16 @@
    "label": "Publication Year"
   },
   {
+   "default": "0",
    "fieldname": "is_bound",
    "fieldtype": "Check",
-   "label": "Bound / مجلد",
-   "default": "0"
+   "label": "Bound / مجلد"
   },
   {
+   "default": "0",
    "fieldname": "is_set",
    "fieldtype": "Check",
-   "label": "Set / سیٹ",
-   "default": "0"
+   "label": "Set / سیٹ"
   },
   {
    "fieldname": "volume_count",
@@ -376,10 +382,10 @@
    "options": "\nQuran Kareem\nPanj Para\nPanj Surah\nWazaif\nHadith\nTafseer\nIslamic Children\nOther"
   },
   {
+   "default": "1",
    "fieldname": "global_visibility",
    "fieldtype": "Check",
-   "label": "Visible in Marketplace",
-   "default": "1"
+   "label": "Visible in Marketplace"
   },
   {
    "fieldname": "subjects_section",
@@ -390,8 +396,7 @@
    "fieldname": "subjects",
    "fieldtype": "Table",
    "label": "Subjects",
-   "options": "BookSubject",
-   "reqd": 0
+   "options": "BookSubject"
   },
   {
    "fieldname": "classifications",
@@ -400,17 +405,17 @@
    "options": "BookClassification"
   },
   {
+   "depends_on": "eval:doc.book_type=='Multi Volume'",
    "fieldname": "volumes_section",
    "fieldtype": "Section Break",
-   "label": "Volumes",
-   "depends_on": "eval:doc.book_type=='Multi Volume'"
+   "label": "Volumes"
   },
   {
+   "depends_on": "eval:doc.book_type=='Multi Volume'",
    "fieldname": "volumes",
    "fieldtype": "Table",
    "label": "Volumes",
-   "options": "BookVolume",
-   "depends_on": "eval:doc.book_type=='Multi Volume'"
+   "options": "BookVolume"
   },
   {
    "fieldname": "variants_section",
@@ -418,29 +423,35 @@
    "label": "Variants"
   },
   {
+   "description": "Binding/quality/language variants such as اعلی, سادہ, غیر مجلد, مجلد",
    "fieldname": "variants",
    "fieldtype": "Table",
    "label": "Variants",
-   "options": "BookVariant",
-   "description": "Binding/quality/language variants such as اعلی, سادہ, غیر مجلد, مجلد"
+   "options": "BookVariant"
   },
   {
+   "fieldname": "variant_attributes",
+   "fieldtype": "Table",
+   "label": "Variant Attributes",
+   "options": "Book Variant Attribute"
+  },
+  {
+   "default": "0",
    "fieldname": "own_discount",
    "fieldtype": "Check",
-   "label": "Own discount for this book / اس کتاب کی الگ رعایت",
-   "default": "0"
+   "label": "Own discount for this book / اس کتاب کی الگ رعایت"
   },
   {
+   "depends_on": "own_discount",
    "fieldname": "discount_percent",
    "fieldtype": "Percent",
-   "label": "Discount % / رعایت",
-   "depends_on": "own_discount"
+   "label": "Discount % / رعایت"
   },
   {
+   "depends_on": "eval:(doc.item_type || 'Book') != 'Book'",
    "fieldname": "item_options_section",
    "fieldtype": "Section Break",
-   "label": "Item Options / سائز، رنگ، مقدار",
-   "depends_on": "eval:(doc.item_type || 'Book') != 'Book'"
+   "label": "Item Options / سائز، رنگ، مقدار"
   },
   {
    "fieldname": "item_options",
@@ -457,14 +468,23 @@
    "fieldtype": "Table",
    "label": "Pack contents / پیک میں کیا ہے",
    "options": "Item Pack Line"
+  },
+  {
+   "fieldname": "column_break_reee",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_owzw",
+   "fieldtype": "Section Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-07-15 00:00:00",
+ "modified": "2026-11-26 17:28:06.347786",
  "modified_by": "Administrator",
  "module": "Catalog",
  "name": "Book",
+ "naming_rule": "Set by user",
  "owner": "Administrator",
  "permissions": [
   {
@@ -481,7 +501,6 @@
   },
   {
    "create": 1,
-   "delete": 0,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -492,31 +511,21 @@
    "write": 1
   },
   {
-   "create": 0,
-   "delete": 0,
    "email": 1,
-   "export": 0,
    "print": 1,
    "read": 1,
-   "report": 0,
-   "role": "Bookseller",
-   "share": 0,
-   "write": 0
+   "role": "Bookseller"
   },
   {
-   "create": 0,
-   "delete": 0,
    "email": 1,
-   "export": 0,
    "print": 1,
    "read": 1,
-   "report": 0,
-   "role": "Customer",
-   "share": 0,
-   "write": 0
+   "role": "Customer"
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }
