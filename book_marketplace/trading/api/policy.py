@@ -126,7 +126,8 @@ def after_receipt(profile):
 
 @frappe.whitelist()
 def my_restrictions(profile_id):
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.view")
     return frappe.get_all(
         "Shop Restriction", filters={"business_profile": profile_id},
         fields=["name", "kind", "level", "status", "starts_on", "ends_on", "reason",
@@ -138,7 +139,8 @@ def my_restrictions(profile_id):
 @frappe.whitelist()
 def submit_appeal(name, profile_id, note):
     """The shop appeals once. The admin decides."""
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     doc = frappe.get_doc("Shop Restriction", name)
     if doc.business_profile != profile_id:
         frappe.throw(_("Only the restricted shop can appeal."), frappe.PermissionError)
@@ -235,7 +237,8 @@ def shop_reputation(business_profile):
 @frappe.whitelist()
 def rate_order(purchase_order, profile_id, stars, comment=""):
     """The buyer rates the seller once, after the receipt is agreed."""
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.manage")
     po = frappe.get_doc("Purchase Order Request", purchase_order)
     if po.buyer_profile != profile_id:
         frappe.throw(_("Only the buyer rates this order."), frappe.PermissionError)
@@ -272,7 +275,8 @@ def add_feedback(business_profile, kind, text="", profile_id=None):
     if frappe.session.user == "Guest":
         frappe.throw(_("Please log in."), frappe.AuthenticationError)
     if profile_id:
-        _profile_of_user(profile_id)
+        from book_marketplace.auth.api.auth import _assert_profile_access
+        _assert_profile_access(profile_id, "orders.manage")
     if kind not in ("Comment", "Like", "Report"):
         frappe.throw(_("Kind must be Comment, Like or Report."))
     if not frappe.db.exists("BusinessProfile", business_profile):

@@ -78,7 +78,8 @@ def on_general_discount_change(publisher, old_disc, new_disc):
 @frappe.whitelist()
 def price_change_status(profile_id):
     """Books whose price changed and that the shop has not opened the catalogue since (highlighted)."""
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.view")
     return [r.book for r in frappe.get_all("Catalog Price Change",
                                            filters={"business_profile": profile_id, "seen": 0},
                                            fields=["book"], limit_page_length=0, distinct=1)]
@@ -86,6 +87,7 @@ def price_change_status(profile_id):
 
 @frappe.whitelist()
 def mark_price_changes_seen(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.view")
     frappe.db.sql("update `tabCatalog Price Change` set seen = 1 where business_profile = %s and seen = 0", (profile_id,))
     return {"status": "seen"}

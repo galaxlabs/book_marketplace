@@ -18,7 +18,8 @@ def _profiles(names):
 
 @frappe.whitelist()
 def shop_publishers(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.view")
     rows = frappe.db.sql("""
         SELECT b.publisher AS publisher, COUNT(*) AS books
         FROM `tabBusinessCatalogItem` bci
@@ -35,7 +36,8 @@ def shop_publishers(profile_id):
 
 @frappe.whitelist()
 def publisher_stockists(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.view")
     if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Publisher":
         frappe.throw(_("Only a publisher sees its stockists."), frappe.PermissionError)
     rows = frappe.db.sql("""
@@ -56,7 +58,8 @@ def publisher_stockists(profile_id):
 def remove_publisher_books(profile_id, publisher):
     """Takes every book of one publisher off this shop's list. The books stay with the publisher.
     A publisher's own books are not removed here (it unpublishes them instead)."""
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     if publisher == profile_id:
         frappe.throw(_("A publisher cannot remove its own books from its list."))
     items = frappe.db.sql("""

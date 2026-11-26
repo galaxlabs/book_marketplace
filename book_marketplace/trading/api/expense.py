@@ -25,7 +25,8 @@ def _clean_category(category):
 
 @frappe.whitelist()
 def add_expense(business_profile, category, amount, expense_date=None, note=None):
-    _assert_profile_owner(business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(business_profile, "finance.manage")
     category = _clean_category(category)
     if flt(amount) <= 0:
         frappe.throw(_("Amount must be greater than zero."))
@@ -48,7 +49,8 @@ def _month_range(month):
 
 @frappe.whitelist()
 def list_expenses(business_profile, month=None):
-    _assert_profile_owner(business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(business_profile, "finance.view")
     first, last = _month_range(month)
     return frappe.get_all(
         "Shop Expense",
@@ -62,7 +64,8 @@ def list_expenses(business_profile, month=None):
 @frappe.whitelist()
 def expense_summary(business_profile, month=None):
     """Monthly report: total per category and the grand total for the month."""
-    _assert_profile_owner(business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(business_profile, "finance.view")
     first, last = _month_range(month)
     rows = frappe.get_all(
         "Shop Expense",

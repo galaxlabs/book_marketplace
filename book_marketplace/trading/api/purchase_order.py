@@ -47,9 +47,11 @@ def _create_po(buyer_profile, seller_profile, items, notes="", by_principal=Fals
     """Builds the order. by_principal: the publisher places it for a buyer (through an agent); never reachable by users."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
     if by_principal:
-        _assert_profile_owner(seller_profile)
+        from book_marketplace.auth.api.auth import _assert_profile_access
+        _assert_profile_access(seller_profile, "purchases.manage")
     else:
-        _profile_of_user(buyer_profile)
+        from book_marketplace.auth.api.auth import _assert_profile_access
+        _assert_profile_access(buyer_profile, "purchases.manage")
     policy.assert_can_order(buyer_profile)
     if buyer_profile == seller_profile:
         frappe.throw(_("Choose another business for the order."))
@@ -257,7 +259,8 @@ def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider
     """The seller prepares the order: writes the quantity it sends for each book, then packs and dispatches.
     items: JSON list of {book, sent_qty}. Only the seller, only while the order is Accepted."""
     from frappe.utils import now_datetime
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "purchases.manage")
     doc = frappe.get_doc("Purchase Order Request", name)
     if profile_id != doc.seller_profile:
         frappe.throw(_("Only the seller dispatches this order."), frappe.PermissionError)
@@ -277,7 +280,7 @@ def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider
         row.line_total = flt(row.unit_price) * q
         if row.get("item_option") and q:
             io.take(row.book, row.item_option, q)
-            io.take_shop_stock(doc.seller_profile, row.book, q)
+            io.take_shop_stock(doc.seller_profile, row.book, q, "Purchase Order Request", doc.name)
     doc.total_qty = sum(int(i.sent_qty or 0) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
     doc.transporter = (transporter or "").strip()[:140]
@@ -318,7 +321,8 @@ def set_dispatch(name, profile_id, items, transporter=None, bilty_no=None, rider
 @frappe.whitelist()
 def purchase_orders(profile_id, direction="buy"):
     """direction 'buy': orders this profile placed. 'sell': orders this profile received."""
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "purchases.view")
     field = "buyer_profile" if direction == "buy" else "seller_profile"
     names = frappe.get_all("Purchase Order Request", filters={field: profile_id}, pluck="name",
                            order_by="creation desc", limit_page_length=200)
@@ -331,14 +335,17 @@ def purchase_order_detail(name):
     mine = [p for p in (doc.buyer_profile, doc.seller_profile)
             if frappe.db.get_value("BusinessProfile", p, "user") == frappe.session.user]
     if not mine and frappe.session.user != "Administrator":
-        frappe.throw(_("This order is not yours."), frappe.PermissionError)
+        from book_marketplace.auth.permissions import has_access
+        if not any(has_access(p, "purchases.view") for p in (doc.buyer_profile, doc.seller_profile)):
+            frappe.throw(_("This order is not yours."), frappe.PermissionError)
     return _view(doc)
 
 
 @frappe.whitelist()
 def respond_purchase_order(name, profile_id, decision):
     """The seller accepts or rejects a sent order. Only the seller can answer; the buyer can cancel while it is sent."""
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "purchases.manage")
     doc = frappe.get_doc("Purchase Order Request", name)
     if decision not in ("Accepted", "Rejected", "Cancelled"):
         frappe.throw(_("Unknown decision."))
@@ -354,7 +361,7 @@ def respond_purchase_order(name, profile_id, decision):
     return _view(doc)
 
 
-def _add_stock(profile_id, book, qty):
+def _add_stock(profile_id, book, qty, ref=None):
     """Put received books into the buyer's own shop stock (its main branch)."""
     if qty <= 0:
         return
@@ -365,13 +372,12 @@ def _add_stock(profile_id, book, qty):
         {"business_profile": profile_id, "book": book, "branch_location": branch, "state": "Available"},
         ["name", "quantity"], as_dict=True,
     )
+    from book_marketplace.stock_management import movement
+    ref_type, ref_name = ("Purchase Order Request", ref) if ref else (None, None)
     if existing:
-        frappe.db.set_value("StockLedger", existing.name, "quantity", flt(existing.quantity) + qty)
+        movement.set_qty(existing.name, flt(existing.quantity) + qty, "received", ref_type, ref_name)
     else:
-        frappe.get_doc({
-            "doctype": "StockLedger", "book": book, "business_profile": profile_id,
-            "branch_location": branch, "quantity": qty, "state": "Available",
-        }).insert(ignore_permissions=True)
+        movement.add_row(book, profile_id, branch, qty, "Available", "received", ref_type, ref_name)
 
 
 @frappe.whitelist()
@@ -380,7 +386,8 @@ def receive_purchase_order(name, profile_id, items):
     received_qty may be more or less than sent; damaged_qty are copies returned to the seller (not stocked, not billed).
     Nothing is stocked or billed yet: the seller must agree (agree_receipt). Status becomes Awaiting Agreement."""
     from frappe.utils import now_datetime
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "stock.edit")
     doc = frappe.get_doc("Purchase Order Request", name)
     if profile_id != doc.buyer_profile:
         frappe.throw(_("Only the buyer records the receipt."), frappe.PermissionError)
@@ -411,7 +418,8 @@ def agree_receipt(name, profile_id):
     """The seller agrees to the buyer's count. Only then: stock goes to the buyer, the invoice is final,
     and the khata shows the amount on both sides (seller: to receive; buyer: to pay)."""
     from frappe.utils import now_datetime
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "purchases.manage")
     doc = frappe.get_doc("Purchase Order Request", name)
     if profile_id != doc.seller_profile:
         frappe.throw(_("Only the seller agrees to the receipt."), frappe.PermissionError)
@@ -426,7 +434,7 @@ def agree_receipt(name, profile_id):
             short = True
         row.line_total = flt(row.unit_price) * good
     for row in doc.items:
-        _add_stock(doc.buyer_profile, row.book, int(row.received_qty or 0) - int(row.damaged_qty or 0))
+        _add_stock(doc.buyer_profile, row.book, int(row.received_qty or 0) - int(row.damaged_qty or 0), doc.name)
     doc.total_qty = sum(int(i.received_qty or 0) - int(i.damaged_qty or 0) for i in doc.items)
     doc.total = sum(flt(i.line_total) for i in doc.items)
     doc.invoice_total = flt(doc.total)  # goods only; the freight is posted separately (khata and expenses)
@@ -446,7 +454,8 @@ def agree_receipt(name, profile_id):
 @frappe.whitelist()
 def dispute_receipt(name, profile_id, note):
     """The seller does not agree: the order goes back to Dispatched; the buyer records the count again."""
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "purchases.manage")
     doc = frappe.get_doc("Purchase Order Request", name)
     if profile_id != doc.seller_profile:
         frappe.throw(_("Only the seller answers the receipt."), frappe.PermissionError)
@@ -537,7 +546,8 @@ def _post_freight(doc):
 @frappe.whitelist()
 def return_summary(profile_id):
     """Seller view: damaged copies to return, per buyer city and book, from receipts on the seller's side."""
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "purchases.view")
     rows = frappe.db.sql("""
         select b.city as city, i.book as book, sum(i.damaged_qty) as damaged
         from `tabPurchase Order Request Item` i
@@ -564,7 +574,8 @@ def _expiry(doc):
 def respond_to_dispute(name, profile_id, response, image=None):
     """The shop explains its position after the seller disputed the receipt. The seller sees it with the order."""
     from frappe.utils import now_datetime
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "purchases.manage")
     doc = frappe.get_doc("Purchase Order Request", name)
     if profile_id != doc.buyer_profile:
         frappe.throw(_("Only the buyer answers the dispute."), frappe.PermissionError)

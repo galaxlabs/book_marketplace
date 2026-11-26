@@ -1,3 +1,4 @@
+import re
 import frappe
 from frappe import _
 
@@ -60,7 +61,239 @@ def get_book(book_id):
         "stock_summary": stock_summary,
         "price": price_view(book.set_mrp, publisher_discount(book=book.as_dict())),
         "images": [{"image": i.image, "caption": i.caption or ""} for i in book.get("images", []) if i.image],
+        **_related_books(book),
     }
+
+
+def _core_title(title):
+    """The text's own name: no brackets, no «مع شرح ...», no edition words (عربی، محشی، مجلد)."""
+    t = re.sub(r"[\u064B-\u065F\u0670]", "", title or "")
+    t = re.sub(r"\(.*?\)", " ", t)
+    t = re.split(r"\s+مع\s+", t)[0]
+    for a, b in (("ۂ", "ہ"), ("ۃ", "ہ"), ("ة", "ہ"), ("ي", "ی"), ("ك", "ک"), ("أ", "ا"), ("إ", "ا"), ("آ", "ا")):
+        t = t.replace(a, b)
+    t = re.sub(r"\b(عربی|اردو|محشی|مجلد|درسی|کامل|مکمل)\b", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _related_books(book):
+    """For the book page: the text it explains, its commentaries (شروحات), and the same text from other publishers."""
+    fields = ["name", "title", "author", "language", "set_mrp", "publisher", "cover_image"]
+
+    def with_publisher(rows):
+        names = {r.publisher for r in rows if r.publisher}
+        pub = {p.name: p.business_name for p in frappe.get_all(
+            "BusinessProfile", filters={"name": ["in", list(names)]}, fields=["name", "business_name"])} if names else {}
+        listed = set(frappe.get_all("BusinessCatalogItem", filters={"book": ["in", [r.name for r in rows]], "is_active": 1},
+                                    pluck="book")) if rows else set()
+        return [{**r, "publisher_name": pub.get(r.publisher, ""), "listed": r.name in listed} for r in rows]
+
+    text = None
+    if book.get("sharh_of") and frappe.db.exists("Book", book.sharh_of):
+        text = with_publisher([frappe.db.get_value("Book", book.sharh_of, fields, as_dict=True)])[0]
+    commentaries = with_publisher(frappe.get_all("Book", filters={"sharh_of": book.name, "global_visibility": 1},
+                                                 fields=fields, order_by="title asc", limit_page_length=100))
+    core = _core_title(book.title)
+    editions = []
+    if len(core) >= 3:
+        index = frappe.cache().get_value("bm_core_title_index")
+        if not index:
+            index = {}
+            for r in frappe.get_all("Book", filters={"global_visibility": 1}, fields=["name", "title"], limit_page_length=0):
+                index.setdefault(_core_title(r.title), []).append(r.name)
+            frappe.cache().set_value("bm_core_title_index", index, expires_in_sec=600)
+        same = [n for n in index.get(core, []) if n != book.name]
+        if same:
+            editions = with_publisher(frappe.get_all("Book", filters={"name": ["in", same]}, fields=fields,
+                                                     order_by="title asc", limit_page_length=50))
+    shown = {book.name} | {c["name"] for c in commentaries} | {e["name"] for e in editions}
+    if text:
+        shown.add(text["name"])
+    related, reason = _recommend(book, shown, fields, with_publisher)
+    from_publisher = []
+    if book.publisher:
+        rows = frappe.get_all("Book", filters={"publisher": book.publisher, "global_visibility": 1,
+                                               "name": ["not in", list(shown)]},
+                              fields=fields, limit_page_length=60)
+        from_publisher = sorted(with_publisher(rows), key=lambda r: (not r["listed"], r["title"]))[:8]
+    holder = [{"name": book.name}]
+    _attach_classifications(holder)
+    # more books from each published shop that lists this book (shops other than the publisher's own first)
+    from_shops = []
+    shop_ids = list(dict.fromkeys(frappe.get_all(
+        "BusinessCatalogItem", filters={"book": book.name, "is_active": 1}, pluck="business_profile")))
+    stores = {st.business_profile: st for st in frappe.get_all(
+        "BusinessStore", filters={"business_profile": ["in", shop_ids or [""]], "is_published": 1},
+        fields=["business_profile", "slug", "store_name", "city"])}
+    for prof in sorted((x for x in shop_ids if x in stores), key=lambda x: x == book.publisher)[:3]:
+        names = [n for n in dict.fromkeys(frappe.get_all(
+            "BusinessCatalogItem", filters={"business_profile": prof, "is_active": 1, "book": ["!=", book.name]},
+            pluck="book", limit_page_length=200))]
+        if not names:
+            continue
+        rows = frappe.get_all("Book", filters={"name": ["in", names], "global_visibility": 1}, fields=fields,
+                              limit_page_length=60)
+        # the shop's books closest to this one first: the most classifications in common, then by title
+        mine = frappe.get_all("BookClassification", filters={"parent": book.name, "parenttype": "Book"}, pluck="category")
+        common = {}
+        if mine and rows:
+            for r in frappe.get_all("BookClassification", filters={"parent": ["in", [x.name for x in rows]],
+                                    "parenttype": "Book", "category": ["in", mine]}, fields=["parent"], limit_page_length=3000):
+                common[r.parent] = common.get(r.parent, 0) + 1
+        rows = sorted(with_publisher(rows), key=lambda r: (-common.get(r["name"], 0), r["title"]))[:8]
+        st = stores[prof]
+        from_shops.append({"business_profile": prof, "slug": st.slug, "store_name": st.store_name, "city": st.city or "",
+                           "total": len(names), "books": rows})
+    publisher_label = frappe.db.get_value("BusinessProfile", book.publisher, "business_name") if book.publisher else ""
+    return {"text_of": text, "commentaries": commentaries, "editions": editions, "related": related, "related_by": reason,
+            "classifications": holder[0]["classifications"], "from_publisher": from_publisher, "from_shops": from_shops,
+            "shelves": _shelves(book, fields, with_publisher, from_shops),
+            "publisher_label": publisher_label or ""}
+
+
+def _shelves(book, fields, with_publisher, from_shops):
+    """The book page's rows. Each row holds only one kind of book:
+    same darja (exactly that darja), same publisher, each shop, same subject, same broader department, same title type.
+    Commentaries are left out of the classification rows: they show under their text."""
+    from book_marketplace.catalog.api.classification import descendants
+    own = frappe.get_all("BookClassification", filters={"parent": book.name, "parenttype": "Book"}, pluck="category")
+    cats = frappe.get_all("Book Category", filters={"name": ["in", own or [""]]},
+                          fields=["name", "category_type", "category_name_ur", "category_name", "is_group", "parent_book_category"])
+    lab = lambda c: c.category_name_ur or c.category_name
+
+    def books_in(names, with_sharh=False, extra_filters=None):
+        if not names:
+            return 0, []
+        filt = {"name": ["in", names], "global_visibility": 1, "name": ["not in", [book.name]]}
+        rows = frappe.get_all("Book", filters={"name": ["in", names], "global_visibility": 1}, fields=fields + ["sharh_of"],
+                              limit_page_length=300)
+        rows = [r for r in rows if r.name != book.name and (with_sharh or not r.get("sharh_of"))]
+        out = sorted(with_publisher(rows), key=lambda r: (not r["listed"], r["title"]))
+        return len(out), out[:12]
+
+    def members(cat_names):
+        return list({r for r in frappe.get_all("BookClassification", filters={"category": ["in", cat_names], "parenttype": "Book"},
+                                               pluck="parent", limit_page_length=3000)})
+
+    shelves = []
+    # 1. same darja: the book's leaf departments, exactly
+    for c in [x for x in cats if x.category_type == "Department" and not x.is_group]:
+        total, rows = books_in(members([c.name]))
+        if rows:
+            shelves.append({"kind": "darja", "label": f"اسی درجے کی کتابیں: {lab(c)}", "ref": c.name, "ref_type": "Department",
+                            "total": total, "books": rows})
+    # 2. same publisher (everything of the publisher)
+    if book.publisher:
+        names = frappe.get_all("Book", filters={"publisher": book.publisher, "name": ["!=", book.name]}, pluck="name", limit_page_length=500)
+        total, rows = books_in(names, with_sharh=True)
+        if rows:
+            label = frappe.db.get_value("BusinessProfile", book.publisher, "business_name") or ""
+            shelves.append({"kind": "publisher", "label": f"اسی ناشر کی کتابیں: {label}".strip(": "), "ref": book.publisher,
+                            "ref_type": "Publisher", "total": total, "books": rows})
+    # 3. each shop that lists this book
+    for sh in from_shops:
+        shelves.append({"kind": "shop", "label": f"اسی دکان سے: {sh['store_name']}", "ref": sh["slug"], "ref_type": "Shop",
+                        "total": sh["total"], "books": sh["books"]})
+    # 4. same subject (leaf subjects, up to two)
+    for c in [x for x in cats if x.category_type == "Subject" and not x.is_group][:2]:
+        total, rows = books_in(members([c.name]))
+        if rows:
+            shelves.append({"kind": "subject", "label": f"اسی موضوع کی کتابیں: {lab(c)}", "ref": c.name, "ref_type": "Subject",
+                            "total": total, "books": rows})
+    # 5. same broader department (the stage above the darja), without the darja's own books
+    for c in [x for x in cats if x.category_type == "Department" and not x.is_group]:
+        parent = c.parent_book_category
+        if not parent:
+            continue
+        pc = frappe.db.get_value("Book Category", parent, ["category_name", "category_name_ur", "parent_book_category"], as_dict=True)
+        if not pc or not pc.parent_book_category:
+            continue
+        mine = set(members([c.name]))
+        pool = [n for n in members(list(descendants([parent]))) if n not in mine]
+        total, rows = books_in(pool)
+        if rows:
+            shelves.append({"kind": "department", "label": f"اسی شعبے کی دوسری کتابیں: {pc.category_name_ur or pc.category_name}",
+                            "ref": parent, "ref_type": "Department", "total": total, "books": rows})
+    # 6. same title type
+    for c in [x for x in cats if x.category_type == "Title Type"]:
+        total, rows = books_in(members([c.name]))
+        if rows:
+            shelves.append({"kind": "form", "label": f"اسی قسم کی کتابیں: {lab(c)}", "ref": c.name, "ref_type": "Title Type",
+                            "total": total, "books": rows})
+    return shelves
+
+
+# weights of the recommendation signals (higher = closer)
+RECO_WEIGHTS = {"darja": 5, "subject": 4, "publisher": 3, "shop": 2, "department": 2, "form": 1, "listed": 1, "commentary": -1}
+
+
+def _recommend(book, shown, fields, with_publisher, limit=12):
+    """Related books by score. Signals: same darja or specific department, same specific subject, same publisher,
+    sold by the same shop, same broader department, same title type; a shop listing adds a little, a commentary of
+    another text loses a little. Each result carries the reasons that matched."""
+    own = frappe.get_all("BookClassification", filters={"parent": book.name, "parenttype": "Book"}, pluck="category")
+    cats = {c.name: c for c in frappe.get_all(
+        "Book Category", filters={"name": ["in", own or [""]]},
+        fields=["name", "category_type", "category_name_ur", "category_name", "is_group"])}
+    score, reasons = {}, {}
+
+    def add(name, key, label):
+        if name in shown:
+            return
+        score[name] = score.get(name, 0) + RECO_WEIGHTS[key]
+        if label:
+            reasons.setdefault(name, []).append(label)
+
+    if cats:
+        for r in frappe.get_all("BookClassification", filters={"category": ["in", list(cats)], "parenttype": "Book"},
+                                fields=["parent", "category"], limit_page_length=3000):
+            c = cats[r.category]
+            lab = c.category_name_ur or c.category_name
+            if c.category_type == "Department":
+                add(r.parent, "department" if c.is_group else "darja", lab)
+            elif c.category_type == "Subject":
+                add(r.parent, "department" if c.is_group else "subject", lab)
+            elif c.category_type == "Title Type":
+                add(r.parent, "form", None)
+    if book.publisher:
+        pub_label = frappe.db.get_value("BusinessProfile", book.publisher, "business_name") or ""
+        for n in frappe.get_all("Book", filters={"publisher": book.publisher}, pluck="name", limit_page_length=500):
+            add(n, "publisher", f"اسی ناشر: {pub_label}" if pub_label else "اسی ناشر")
+    shops = frappe.get_all("BusinessCatalogItem", filters={"book": book.name, "is_active": 1}, pluck="business_profile")
+    if shops:
+        shop_names = {p.name: p.business_name for p in frappe.get_all(
+            "BusinessProfile", filters={"name": ["in", shops]}, fields=["name", "business_name"])}
+        seen = {}
+        for r in frappe.get_all("BusinessCatalogItem", filters={"business_profile": ["in", shops], "is_active": 1},
+                                fields=["book", "business_profile"], limit_page_length=2000):
+            seen.setdefault(r.book, set()).add(r.business_profile)
+        for n, profs in seen.items():
+            for prof in list(profs)[:2]:
+                add(n, "shop", f"اسی دکان پر: {shop_names.get(prof, '')}")
+    if not score:
+        return [], ""
+    top = sorted(score, key=lambda n: -score[n])[:80]
+    rows = {r.name: r for r in frappe.get_all("Book", filters={"name": ["in", top], "global_visibility": 1},
+                                             fields=fields + ["sharh_of"], limit_page_length=80)}
+    listed = set(frappe.get_all("BusinessCatalogItem", filters={"book": ["in", list(rows) or [""]], "is_active": 1},
+                                pluck="book"))
+    for n, r in rows.items():
+        if n in listed:
+            score[n] += RECO_WEIGHTS["listed"]
+        if r.get("sharh_of"):
+            score[n] += RECO_WEIGHTS["commentary"]
+    best = sorted(rows, key=lambda n: (-score[n], rows[n].title))[:limit]
+    out = with_publisher([rows[n] for n in best])
+    for r in out:
+        # keep each reason once, most informative first
+        seen_r = []
+        for x in reasons.get(r["name"], []):
+            if x not in seen_r:
+                seen_r.append(x)
+        r["reasons"] = seen_r[:3]
+        r["score"] = score[r["name"]]
+    top_reason = out[0]["reasons"][0] if out and out[0]["reasons"] else ""
+    return out, top_reason
 
 
 @frappe.whitelist(allow_guest=True)
@@ -163,7 +396,8 @@ def add_to_catalog(profile_id, book_id, selling_price=None, trade_price=None, di
                    shelf=None, storage_place=None):
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     if frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id}):
         return {"error": "Book already in catalog"}
     doc = frappe.get_doc(_catalog_row(profile_id, book_id, selling_price, trade_price, discount_percent,
@@ -179,7 +413,8 @@ def add_many_to_catalog(profile_id, items):
     Books already in the catalog are skipped."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     if isinstance(items, str):
         items = frappe.parse_json(items)
     added, skipped = [], []
@@ -279,7 +514,8 @@ def set_publisher_discount(profile_id, discount_percent):
     """Publisher's general discount: used for every book that has no discount of its own."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "prices.edit")
     if frappe.db.get_value("BusinessProfile", profile_id, "profile_type") != "Publisher":
         frappe.throw(_("Only a publisher has a general discount."))
     before = _pct(frappe.db.get_value("BusinessProfile", profile_id, "default_discount_percent"))
@@ -302,7 +538,8 @@ def remove_from_catalog(item_id):
     if str(item_id).startswith("OWN-"):
         frappe.throw(_("This book is not in your list."))
     doc = frappe.get_doc("BusinessCatalogItem", item_id)
-    _assert_profile_owner(doc.business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(doc.business_profile, "catalog.edit")
     frappe.delete_doc("BusinessCatalogItem", item_id, ignore_permissions=True)
     return {"status": "removed"}
 
@@ -382,7 +619,8 @@ def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_
         book = frappe.get_doc("Book", book_id)
         if profile_id and profile_id != book.publisher:
             frappe.throw(_("Not permitted for this book."), frappe.PermissionError)
-        _assert_profile_owner(book.publisher)
+        from book_marketplace.auth.api.auth import _assert_profile_access
+        _assert_profile_access(book.publisher, "prices.edit")
         if selling_price is not None:
             book.set_mrp = selling_price
         if trade_price is not None:
@@ -399,7 +637,8 @@ def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_
                 "discount_percent": publisher_discount(book=book.as_dict())}
 
     doc = frappe.get_doc("BusinessCatalogItem", item_id)
-    _assert_profile_owner(doc.business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(doc.business_profile, "prices.edit")
     if selling_price is not None:
         if _publisher_of(doc.book) not in ("", doc.business_profile):
             frappe.throw(_("This book's price is the publisher's price. Change your discount instead."))
@@ -438,7 +677,8 @@ def set_book_availability(profile_id, book_id, availability):
     book = frappe.get_doc("Book", book_id)
     if book.publisher != profile_id and book.get("owner_profile") != profile_id:
         frappe.throw(_("Only the publisher or the bookseller who added this book can change its availability."), frappe.PermissionError)
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     allowed = ["Available", "Unavailable", "Out of print", "Forthcoming", "General readers only"]
     if availability not in allowed:
         frappe.throw(_("Unknown availability."))
@@ -457,7 +697,8 @@ def set_book_images(profile_id, book_id, images):
     book = frappe.get_doc("Book", book_id)
     if book.publisher != profile_id and book.get("owner_profile") != profile_id:
         frappe.throw(_("Only the publisher or the bookseller who added this book can change its images."), frappe.PermissionError)
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     items = _json.loads(images) if isinstance(images, str) else (images or [])
     if len(items) > 12:
         frappe.throw(_("Up to 12 images per book."))
@@ -479,7 +720,8 @@ def add_shop_book(profile_id, title, author=None, book_type="Single Volume", lan
     from book_marketplace.auth.api.auth import _assert_profile_owner
     from book_marketplace.stock_management.api import stock as stock_api
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     title = (title or "").strip()
     author = (author or "").strip()
     item_type = (item_type or "Book").strip()
@@ -529,7 +771,8 @@ def set_book_subjects(profile_id, book_id, subjects=None, page_count=None, cover
     if book.publisher != profile_id and book.get("owner_profile") != profile_id:
         frappe.throw(_("Only the publisher or the bookseller who added this book can change its details."),
                      frappe.PermissionError)
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     names = _json.loads(subjects) if isinstance(subjects, str) else (subjects or [])
     names = [n for n in dict.fromkeys(names) if n]
     for n in names:
@@ -558,6 +801,8 @@ def own_shop_books():
     if not frappe.session.user or frappe.session.user == "Guest":
         return []
     profiles = frappe.get_all("BusinessProfile", filters={"user": frappe.session.user}, pluck="name", limit_page_length=0)
+    from book_marketplace.auth.api.auth import _member_profiles
+    profiles += [p.name for p in _member_profiles(frappe.session.user)]
     if not profiles:
         return []
     names = set(frappe.get_all("BusinessCatalogItem", filters={"business_profile": ["in", profiles]}, pluck="book", limit_page_length=0))
@@ -570,7 +815,8 @@ def own_shop_books():
 def my_books(profile_id, text=""):
     """Books this business owns: the ones it published and the ones it added itself. Each row says which."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.view")
     filters = [["publisher", "=", profile_id]]
     rows = frappe.get_all("Book", or_filters=[["publisher", "=", profile_id], ["owner_profile", "=", profile_id]],
                           fields=["name", "title", "author", "publisher", "owner_profile", "cover_image", "page_count", "item_type"],
@@ -592,7 +838,8 @@ def update_book_details(profile_id, book_id, data):
     """The publisher or the bookseller who added the book edits its details. Other businesses cannot."""
     import json as _json
     from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     book = frappe.get_doc("Book", book_id)
     if not _owns_book(book, profile_id):
         frappe.throw(_("Only the publisher or the bookseller who added this book can edit it."), frappe.PermissionError)
@@ -659,7 +906,8 @@ def set_item_options(profile_id, book_id, options=None, pack_lines=None):
     from book_marketplace.auth.api.auth import _assert_profile_owner
     from book_marketplace.stock_management.api import stock as stock_api
 
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
     book = frappe.get_doc("Book", book_id)
     if not _owns_book(book, profile_id):
         frappe.throw(_("Only the shop that added this item can change its options."), frappe.PermissionError)
@@ -967,9 +1215,13 @@ def get_filters():
     )
     subjects = [{"name": c.name, "subject_name": c.category_name, "parent_subject": c.parent_book_category} for c in cats]
     languages = frappe.get_all("Book", fields=["language"], distinct=1)
+    pubs = frappe.db.sql(
+        """select p.name, p.business_name, count(*) as books from tabBook b join tabBusinessProfile p on p.name = b.publisher
+           where b.global_visibility = 1 group by p.name, p.business_name order by books desc""", as_dict=True)
     return {
         "subjects": subjects,
         "languages": [l.language for l in languages if l.language],
+        "publishers": [{"name": r.name, "label": r.business_name or r.name, "books": r.books} for r in pubs],
     }
 
 
@@ -995,7 +1247,7 @@ def list_authors(text=None, limit=400):
 
 
 @frappe.whitelist(allow_guest=True)
-def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None, form=None, author=None):
+def search_offers(text=None, subject=None, book_type=None, language=None, city=None, limit=24, offset=0, category=None, department=None, binding=None, form=None, author=None, with_commentaries=0, include_unlisted=0, publisher=None):
     """Each book once, with every published seller that stocks it.
 
     Sellers in `city` come first, and books that have a seller in `city`
@@ -1004,10 +1256,14 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     limit = min(int(limit or 24), 100)
     offset = int(offset or 0)
     city = (city or "").strip()
+    with_commentaries = str(with_commentaries) in ("1", "true", "True")
+    include_unlisted = str(include_unlisted) in ("1", "true", "True")
 
     book_filters = {"global_visibility": 1}
     if author:
         book_filters["author"] = author
+    if publisher:
+        book_filters["publisher"] = publisher
     if book_type:
         book_filters["book_type"] = book_type
     if binding:
@@ -1022,11 +1278,23 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
     if text:
         or_filters = _offer_text_filter(text)
 
-    from book_marketplace.catalog.api.classification import book_names_for_categories
+    from book_marketplace.catalog.api.classification import book_names_for_categories, descendants
 
     for picked in (subject, category, department, form):
         if picked:
             picked_books = book_names_for_categories([picked])
+            if with_commentaries and picked_books:
+                # a commentary (شرح) shows with its text, so it takes the text's darja and department
+                extra = set(frappe.get_all("Book", filters={"sharh_of": ["in", picked_books]}, pluck="name", limit_page_length=0))
+                if extra and frappe.db.get_value("Book Category", picked, "category_type") == "Department":
+                    # a commentary with a darja of its own elsewhere belongs to that darja, not to this one
+                    inside = descendants([picked])
+                    own_elsewhere = {r.parent for r in frappe.db.sql(
+                        """select c.parent from tabBookClassification c join `tabBook Category` k on k.name = c.category
+                           where c.parent in %(b)s and k.category_type = 'Department' and k.is_group = 0
+                           and c.category not in %(inside)s""", {"b": tuple(extra), "inside": tuple(inside)}, as_dict=True)}
+                    extra -= own_elsewhere
+                picked_books = list(set(picked_books) | extra)
             if not picked_books:
                 return {"books": [], "total": 0, "cities": _published_cities()}
             existing = book_filters.get("name")
@@ -1042,10 +1310,39 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
         or_filters=or_filters,
         fields=["name", "title", "subtitle", "author", "book_type", "language",
                 "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher",
-                "own_discount", "discount_percent", "is_discontinued"],
+                "own_discount", "discount_percent", "is_discontinued", "sharh_of"],
         order_by="modified desc",
         limit_page_length=2000,
     )
+    if with_commentaries and books:
+        # the text of each commentary found joins too (even with no shop), so the commentary shows under it
+        have = [b.name for b in books]
+        missing_texts = list({b.sharh_of for b in books if b.get("sharh_of")} - set(have))
+        if missing_texts:
+            books = list(books) + frappe.get_all(
+                "Book", filters={"name": ["in", missing_texts], "global_visibility": 1},
+                fields=["name", "title", "subtitle", "author", "book_type", "language",
+                        "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher",
+                        "own_discount", "discount_percent", "is_discontinued", "sharh_of"])
+        # commentaries of the books found join the results; the store shows them under their text
+        have = [b.name for b in books]
+        skip = set()
+        if department:
+            # a commentary with a darja of its own elsewhere belongs to that darja, not to this department view
+            inside = tuple(descendants([department]))
+            skip = {r.parent for r in frappe.db.sql(
+                """select c.parent from tabBookClassification c join `tabBook Category` k on k.name = c.category
+                   where k.category_type = 'Department' and k.is_group = 0 and c.category not in %(inside)s
+                   and c.parent in (select name from tabBook where sharh_of in %(have)s)""",
+                {"inside": inside, "have": tuple(have)}, as_dict=True)}
+        books = list(books) + frappe.get_all(
+            "Book",
+            filters={"sharh_of": ["in", have], "name": ["not in", list(have) + list(skip)], "global_visibility": 1},
+            fields=["name", "title", "subtitle", "author", "book_type", "language",
+                    "set_mrp", "cover_image", "primary_category", "genre", "religious_segment", "publisher",
+                    "own_discount", "discount_percent", "is_discontinued", "sharh_of"],
+            limit_page_length=500,
+        )
     if not books:
         return {"books": [], "total": 0, "cities": _published_cities()}
 
@@ -1109,10 +1406,17 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
             "in_city": bool(city) and seller_city.strip().lower() == city.lower(),
         })
 
+    # a text with no shop still shows when one of its commentaries is listed, so the group has a head
+    texts_of_listed = {b.sharh_of for b in books if b.get("sharh_of") and offers_by_book.get(b.name)}
     result = []
     for book in books:
         sellers = offers_by_book.get(book.name)
         if not sellers:
+            if not include_unlisted and not (with_commentaries and book.name in texts_of_listed):
+                continue
+            # syllabus view: the book is shown even if no shop lists it yet
+            result.append({**book, "in_stock": False, "sellers": [], "seller_count": 0, "in_city_count": 0,
+                           "min_price": None, "unlisted": True})
             continue
         sellers.sort(key=lambda s: (not s["in_city"], s["selling_price"] is None, s["selling_price"] or 0))
         prices = [s["selling_price"] for s in sellers if s["selling_price"] is not None]
@@ -1127,11 +1431,23 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
 
     if city:
         result.sort(key=lambda b: b["in_city_count"] == 0)
+    if include_unlisted:
+        result.sort(key=lambda b: bool(b.get("unlisted")))
 
     total = len(result)
     page = result[offset:offset + limit]
     _attach_classifications(page)
+    _attach_publisher_names(page)
     return {"books": page, "total": total, "cities": _published_cities()}
+
+
+def _attach_publisher_names(books):
+    """The publisher's name on each card."""
+    ids = list({b.get("publisher") for b in books if b.get("publisher")})
+    names = {p.name: p.business_name for p in frappe.get_all(
+        "BusinessProfile", filters={"name": ["in", ids]}, fields=["name", "business_name"])} if ids else {}
+    for b in books:
+        b["publisher_name"] = names.get(b.get("publisher"), "")
 
 
 def _attach_classifications(books):

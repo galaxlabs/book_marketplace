@@ -13,7 +13,8 @@ from book_marketplace.auth.api.auth import _assert_profile_owner
 
 @frappe.whitelist()
 def dues_summary(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "finance.view")
     rows = frappe.get_all("Khata Entry", filters={"business_profile": profile_id},
                           fields=["party_profile", "party_name", "entry_type", "amount", "entry_date", "reference"],
                           order_by="entry_date asc", limit_page_length=0)
@@ -50,7 +51,8 @@ def dues_summary(profile_id):
 def dashboard_today(profile_id):
     """Numbers for the dashboard cards, each linked to the page where the work is done."""
     from frappe.utils import nowdate, get_first_day
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "reports.view")
     today = nowdate()
     received_today = frappe.db.count("Purchase Order Request", {"seller_profile": profile_id, "creation": [">=", today]})
     bought_today = frappe.db.count("Purchase Order Request", {"buyer_profile": profile_id, "creation": [">=", today]})

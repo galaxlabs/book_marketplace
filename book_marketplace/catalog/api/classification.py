@@ -46,7 +46,8 @@ def _check_publisher_or_admin(profile_id):
         return
     if not profile_id or frappe.db.get_value("BusinessProfile", profile_id, "profile_type") not in ("Publisher", "Bookseller", "Distributor"):
         frappe.throw(_("Only a business account or admin can do this."), frappe.PermissionError)
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "catalog.edit")
 
 
 def set_rows(book, categories):
@@ -216,7 +217,7 @@ def filter_trees(lang=None):
             subject_roots.setdefault(r.section, []).append(r)
     subject = []
     for sec in kids.get(types, []):
-        roots = sorted(subject_roots.get(sec.name, []), key=lambda r: label(r.category_name, r.category_name_ur, lang))
+        roots = sorted(subject_roots.get(sec.name, []), key=lambda r: (r.sort_order or 0, label(r.category_name, r.category_name_ur, lang)))
         if roots:
             subject.append({"name": sec.name, "label": label(sec.category_name, sec.category_name_ur, lang),
                             "children": [{"name": r.name, "label": label(r.category_name, r.category_name_ur, lang),

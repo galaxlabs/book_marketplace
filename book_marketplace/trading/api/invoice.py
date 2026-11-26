@@ -31,7 +31,8 @@ def _party(profile_id):
 @frappe.whitelist()
 def list_invoices(profile_id, direction="sales"):
     """direction: 'sales' (this profile issued them as seller) or 'purchase' (this profile received them as buyer)."""
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "sales.view")
     field = "seller_profile" if direction == "sales" else "buyer_profile"
     other = "buyer_profile" if direction == "sales" else "seller_profile"
     rows = frappe.get_all(
@@ -65,7 +66,8 @@ def design_of(profile_id):
 @frappe.whitelist()
 def get_invoice(name, profile_id):
     """The full invoice for printing (letterhead of the seller, bill to the buyer). Only the two parties."""
-    _profile_of_user(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "sales.view")
     doc = frappe.get_doc("Purchase Order Request", name)
     if profile_id not in (doc.seller_profile, doc.buyer_profile):
         frappe.throw(_("Only the buyer or the seller can open this invoice."), frappe.PermissionError)

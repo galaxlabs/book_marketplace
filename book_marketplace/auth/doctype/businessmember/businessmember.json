@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "autoname": "format:BMB-{#####}",
+ "creation": "2026-11-25 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "business_profile",
+  "user",
+  "email",
+  "full_name",
+  "role",
+  "status",
+  "is_active",
+  "extra_permissions",
+  "removed_permissions",
+  "invite_token",
+  "invited_by",
+  "invited_on",
+  "accepted_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Business",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Invited email",
+   "options": "Email",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "Name"
+  },
+  {
+   "fieldname": "role",
+   "fieldtype": "Select",
+   "label": "Role",
+   "options": "Manager\nStorekeeper\nCashier\nViewer",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Invited\nActive\nDisabled",
+   "default": "Invited",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1"
+  },
+  {
+   "fieldname": "extra_permissions",
+   "fieldtype": "Small Text",
+   "label": "Extra permissions (codes)"
+  },
+  {
+   "fieldname": "removed_permissions",
+   "fieldtype": "Small Text",
+   "label": "Permissions taken away (codes)"
+  },
+  {
+   "fieldname": "invite_token",
+   "fieldtype": "Data",
+   "label": "Invitation token",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "invited_by",
+   "fieldtype": "Link",
+   "label": "Invited by",
+   "options": "User"
+  },
+  {
+   "fieldname": "invited_on",
+   "fieldtype": "Datetime",
+   "label": "Invited on"
+  },
+  {
+   "fieldname": "accepted_on",
+   "fieldtype": "Datetime",
+   "label": "Joined on"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-25 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Auth",
+ "name": "BusinessMember",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

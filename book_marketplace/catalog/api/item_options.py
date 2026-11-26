@@ -63,11 +63,12 @@ def give_back(book, option_id, qty):
         frappe.db.sql("update `tabItem Option` set stock_qty = stock_qty + %s where name=%s and parent=%s", (qty, option_id, book))
 
 
-def take_shop_stock(profile_id, book, qty):
+def take_shop_stock(profile_id, book, qty, ref_type=None, ref_name=None):
     """The seller's total Available stock goes down with the option (never below zero)."""
+    from book_marketplace.stock_management import movement
     led = frappe.db.get_value("StockLedger", {"business_profile": profile_id, "book": book, "state": "Available"}, "name")
     if led:
-        frappe.db.sql("update `tabStockLedger` set quantity = greatest(quantity - %s, 0) where name=%s", (cint(qty), led))
+        movement.change_qty(led, -cint(qty), "sold", ref_type, ref_name)
 
 
 @frappe.whitelist(allow_guest=True)

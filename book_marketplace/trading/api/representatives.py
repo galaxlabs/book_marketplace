@@ -22,7 +22,8 @@ def _row(name):
 
 @frappe.whitelist()
 def appoint(principal, representative, note="", payment_route="Customer account", commission_customer=0, commission_agent=0):
-    _assert_profile_owner(principal)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(principal, "settings.manage")
     if principal == representative:
         frappe.throw(_("A business cannot be its own representative."))
     if not frappe.db.exists("BusinessProfile", representative):
@@ -53,7 +54,8 @@ def respond(name, profile, accept=1):
     row = _row(name)
     if not row:
         frappe.throw(_("Not found."))
-    _assert_profile_owner(row.representative)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(row.representative, "settings.manage")
     if profile != row.representative:
         frappe.throw(_("Only the representative answers."), frappe.PermissionError)
     if row.status != "Pending":
@@ -74,14 +76,16 @@ def end(name, profile):
         frappe.throw(_("Not found."))
     if profile not in (row.principal, row.representative):
         frappe.throw(_("Not yours."), frappe.PermissionError)
-    _assert_profile_owner(profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile, "settings.manage")
     frappe.db.set_value("Business Representative", name, {"status": "Ended", "answered_on": now_datetime()})
     return {"name": name, "status": "Ended"}
 
 
 @frappe.whitelist()
 def my_appointments(profile):
-    _assert_profile_owner(profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile, "settings.manage")
     rows = frappe.get_all("Business Representative", filters={"principal": profile, "status": ["!=", "Ended"]},
                           fields=["name", "representative", "status", "note", "appointed_on", "payment_route",
                                   "commission_customer", "commission_agent"], order_by="creation desc", limit_page_length=0)
@@ -92,7 +96,8 @@ def my_appointments(profile):
 
 @frappe.whitelist()
 def my_representations(profile):
-    _assert_profile_owner(profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile, "settings.manage")
     rows = frappe.get_all("Business Representative", filters={"representative": profile, "status": ["!=", "Ended"]},
                           fields=["name", "principal", "status", "note", "appointed_on", "payment_route",
                                   "commission_customer", "commission_agent"], order_by="creation desc", limit_page_length=0)
@@ -109,7 +114,8 @@ def debtors_for(principal, representative):
                                                           "status": "Active"}, "name")
     if not row:
         frappe.throw(_("You are not an active representative of this business."), frappe.PermissionError)
-    _assert_profile_owner(representative)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(representative, "finance.view")
     d = dues_summary(principal)
     return [{"party_profile": p["party_profile"], "business_name": p["business_name"], "city": p["city"],
              "due": flt(p["due"]), "last": p["last"]} for p in d["parties"] if flt(p["due"]) > 0]
@@ -130,7 +136,8 @@ def send_visit_notice(principal, representative, visit_date, debtors):
                                                           "status": "Active"}, "name")
     if not row:
         frappe.throw(_("You are not an active representative of this business."), frappe.PermissionError)
-    _assert_profile_owner(representative)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(representative, "settings.manage")
     if not visit_date:
         frappe.throw(_("Choose the visit date."))
     if getdate(visit_date) < getdate():
@@ -161,7 +168,8 @@ def debtors_for_principal(principal):
 
 @frappe.whitelist()
 def set_visit_greeting(profile, text=""):
-    _assert_profile_owner(profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile, "settings.manage")
     frappe.db.set_value("BusinessProfile", profile, "visit_greeting", (text or "").strip()[:600])
     return {"status": "saved"}
 
@@ -169,7 +177,8 @@ def set_visit_greeting(profile, text=""):
 @frappe.whitelist()
 def visit_greeting(profile):
     """This business's welcome text for visit notices."""
-    _assert_profile_owner(profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile, "sales.view")
     return frappe.db.get_value("BusinessProfile", profile, "visit_greeting") or ""
 
 
@@ -184,7 +193,8 @@ def create_agent_order(principal, agent, buyer, items, notes=""):
     """The publisher places an order for a buyer through an active agent. The order shows the agent; the payment
     goes to the route chosen at appointment; the commission is the rate of that route."""
     import json
-    _assert_profile_owner(principal)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(principal, "sales.create")
     rep = _active_rep(principal, agent)
     if not rep:
         frappe.throw(_("This business is not an active representative."), frappe.PermissionError)
@@ -210,7 +220,8 @@ def accrue_commission(order, base, route, pct):
 def record_recovery(principal, order, amount):
     """The publisher records money it received from the buyer of an agent order (customer account route).
     The commission on that amount accrues for the agent."""
-    _assert_profile_owner(principal)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(principal, "finance.manage")
     o = frappe.get_doc("Purchase Order Request", order)
     if o.seller_profile != principal:
         frappe.throw(_("Not your order."), frappe.PermissionError)
@@ -235,7 +246,8 @@ def record_recovery(principal, order, amount):
 @frappe.whitelist()
 def my_commissions(profile):
     """As an agent: what I earn. As a publisher: what I owe my agents."""
-    _assert_profile_owner(profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile, "finance.view")
     rows = frappe.get_all("Agent Commission", or_filters=[["agent", "=", profile], ["principal", "=", profile]],
                           fields=["name", "principal", "agent", "order", "route", "base", "percent", "amount", "status", "created_on"],
                           order_by="created_on desc", limit_page_length=0)
@@ -249,7 +261,8 @@ def my_commissions(profile):
 @frappe.whitelist()
 def mark_commission_paid(name, profile):
     """The publisher marks a commission as paid to its agent."""
-    _assert_profile_owner(profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile, "finance.manage")
     row = frappe.get_doc("Agent Commission", name)
     if row.principal != profile:
         frappe.throw(_("Only the publisher pays the commission."), frappe.PermissionError)

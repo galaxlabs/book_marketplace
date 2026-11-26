@@ -11,7 +11,8 @@ PAYMENT_FIELDS = ["name", "order", "buyer_profile", "seller_profile", "amount", 
 def _get_owned_business_profile(profile_id):
     doc = frappe.get_doc("BusinessProfile", profile_id)
     if doc.user != frappe.session.user and "System Manager" not in frappe.get_roles():
-        frappe.throw(_("Not permitted"), frappe.PermissionError)
+        from book_marketplace.auth.permissions import assert_access
+        assert_access(profile_id, "settings.manage")
     return doc
 
 

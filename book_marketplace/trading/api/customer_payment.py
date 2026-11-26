@@ -36,7 +36,8 @@ def _order_owner_check(order, actor):
             frappe.throw(_("Not your order."), frappe.PermissionError)
     elif actor == "seller":
         from book_marketplace.auth.api.auth import _assert_profile_owner
-        _assert_profile_owner(frappe.db.get_value("Customer Order", order, "seller_profile"))
+        from book_marketplace.auth.api.auth import _assert_profile_access
+        _assert_profile_access(frappe.db.get_value('Customer Order', order, 'seller_profile'), "orders.manage")
 
 
 def _move(order, to, actor, reason=None):
@@ -56,18 +57,19 @@ def _move(order, to, actor, reason=None):
     doc.save(ignore_permissions=True)
     if to in RELEASING:
         for it in doc.items:
-            _release(doc.seller_profile, it.book, int(it.qty), it.get("item_option"))
+            _release(doc.seller_profile, it.book, int(it.qty), it.get("item_option"), order)
     if to == "Delivered":
         for it in doc.items:
-            _consume_reserved(doc.seller_profile, it.book, int(it.qty))
+            _consume_reserved(doc.seller_profile, it.book, int(it.qty), order)
     _emit(order, frm, to, doc.seller_profile, doc.buyer_profile)
     return {"name": order, "status": to}
 
 
-def _consume_reserved(seller, book, qty):
+def _consume_reserved(seller, book, qty, order=None):
+    from book_marketplace.stock_management import movement
     res = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Reserved"}, ["name", "quantity"], as_dict=True)
     if res:
-        frappe.db.set_value("StockLedger", res.name, "quantity", max(0, int(res.quantity or 0) - qty))
+        movement.set_qty(res.name, int(res.quantity or 0) - qty, "delivered", "Customer Order" if order else None, order)
 
 
 def _emit(order, frm, to, seller, buyer):
@@ -145,7 +147,8 @@ def seller_set_status(order, to):
 def seller_orders(profile_id, status=None, limit=50, offset=0):
     """Incoming customer orders for one shop (no buyer's contact here; the detail view gives it, for this order only)."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "orders.view")
     f = {"seller_profile": profile_id}
     if status:
         f["status"] = status
@@ -165,7 +168,8 @@ def seller_order_detail(order):
     """One order for its shop: items, payment proofs, and the buyer's contact for this order only."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
     doc = frappe.get_doc("Customer Order", order)
-    _assert_profile_owner(doc.seller_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(doc.seller_profile, "orders.view")
     buyer = frappe.db.get_value("BuyerProfile", doc.buyer_profile, ["full_name", "phone", "email"], as_dict=True) or {}
     items = [{"book": i.book, "title": frappe.db.get_value("Book", i.book, "title"), "qty": i.qty,
               "option_label": i.get("option_label") or "",
@@ -255,7 +259,8 @@ def seller_confirm(order, mode, discount_chain=None, received_amount=None, diffe
     from book_marketplace.auth.api.auth import _assert_profile_owner
 
     doc = frappe.get_doc("Customer Order", order)
-    _assert_profile_owner(doc.seller_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(doc.seller_profile, "orders.manage")
     if mode not in ("credit", "pay_on_pickup"):
         frappe.throw(_("Unknown confirmation."))
 

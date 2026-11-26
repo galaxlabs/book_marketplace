@@ -11,7 +11,8 @@ def market_watch(profile_id, text="", max_quantity=None, publishers=None, limit=
     """Books sorted by copies in the market, fewest first (a book nobody holds comes first).
     text: title or author. max_quantity: only books with at most this many copies in the market.
     publishers: the publisher(s) whose books to check (a list, or one id); empty means all."""
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "reports.view")
     if not frappe.db.get_value("BusinessProfile", profile_id, "verified_badge"):
         frappe.throw(frappe._("Market Watch is a paid tool. It opens after payment for your business."))
     limit = min(frappe.utils.cint(limit) or 50, 200)

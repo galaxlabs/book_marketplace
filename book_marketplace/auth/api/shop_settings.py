@@ -42,7 +42,8 @@ def _t(v):
 
 @frappe.whitelist()
 def get_shop_settings(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     doc = frappe.get_doc("BusinessProfile", profile_id)
     hours = {h.day: h for h in doc.get("weekly_hours") or []}
     return {
@@ -61,7 +62,8 @@ def get_shop_settings(profile_id):
 
 @frappe.whitelist()
 def save_item_types(profile_id, item_types):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     chosen = json.loads(item_types) if isinstance(item_types, str) else (item_types or [])
     allowed = _types()
     bad = [t for t in chosen if t not in allowed]
@@ -85,7 +87,8 @@ def _valid_time(v):
 
 @frappe.whitelist()
 def save_shop_hours(profile_id, weekly_hours=None, holidays=None, closed_note=""):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     week = json.loads(weekly_hours) if isinstance(weekly_hours, str) else (weekly_hours or [])
     days = json.loads(holidays) if isinstance(holidays, str) else (holidays or [])
     doc = frappe.get_doc("BusinessProfile", profile_id)

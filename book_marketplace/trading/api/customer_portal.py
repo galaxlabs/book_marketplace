@@ -232,7 +232,8 @@ def seller_order_bill(order):
     """For the shop's billing screen: the order's lines as a bill (scan its QR). Shop-only; no buyer's contact here."""
     from book_marketplace.auth.api.auth import _assert_profile_owner
     doc = frappe.get_doc("Customer Order", order)
-    _assert_profile_owner(doc.seller_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(doc.seller_profile, "orders.view")
     buyer_name = frappe.db.get_value("BuyerProfile", doc.buyer_profile, "full_name")
     items = [{"book": i.book, "title": frappe.db.get_value("Book", i.book, "title"), "qty": int(i.qty),
               "unit_price": flt(i.unit_price), "line_total": flt(i.line_total)} for i in doc.items]

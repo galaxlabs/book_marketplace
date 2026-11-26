@@ -1,0 +1,143 @@
+{
+ "actions": [],
+ "autoname": "format:MOV-{#######}",
+ "creation": "2026-11-25 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "occurred_on",
+  "business_profile",
+  "branch_location",
+  "book",
+  "volume",
+  "state",
+  "change",
+  "qty_before",
+  "qty_after",
+  "direction",
+  "reason",
+  "reference_type",
+  "reference_name",
+  "user",
+  "ledger"
+ ],
+ "fields": [
+  {
+   "fieldname": "occurred_on",
+   "fieldtype": "Datetime",
+   "label": "When",
+   "default": "Now",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Business",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "branch_location",
+   "fieldtype": "Link",
+   "label": "Storage place",
+   "options": "BranchLocation",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "book",
+   "fieldtype": "Link",
+   "label": "Book",
+   "options": "Book",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "volume",
+   "fieldtype": "Data",
+   "label": "Volume"
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Data",
+   "label": "Stock state"
+  },
+  {
+   "fieldname": "change",
+   "fieldtype": "Int",
+   "label": "Change (+ in, - out)",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "qty_before",
+   "fieldtype": "Int",
+   "label": "Before"
+  },
+  {
+   "fieldname": "qty_after",
+   "fieldtype": "Int",
+   "label": "After"
+  },
+  {
+   "fieldname": "direction",
+   "fieldtype": "Select",
+   "label": "Direction",
+   "options": "In\nOut\nInternal\nOpening",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Data",
+   "label": "Reason",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reference_type",
+   "fieldtype": "Data",
+   "label": "Reference type"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Data",
+   "label": "Reference"
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "Done by",
+   "options": "User"
+  },
+  {
+   "fieldname": "ledger",
+   "fieldtype": "Data",
+   "label": "Ledger row"
+  }
+ ],
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-11-25 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Stock Management",
+ "name": "StockMovement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager"
+  }
+ ],
+ "read_only": 1,
+ "sort_field": "occurred_on",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

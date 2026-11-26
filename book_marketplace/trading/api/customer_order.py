@@ -56,24 +56,27 @@ def _offers(book):
     return out
 
 
-def _reserve(seller, book, qty, ledger, branch):
+def _reserve(seller, book, qty, ledger, branch, ref=None):
+    from book_marketplace.stock_management import movement
+    ref_type, ref_name = ("Customer Order", ref) if ref else (None, None)
     cur = frappe.db.sql("select quantity from `tabStockLedger` where name=%s for update", ledger)
     have = int(cur[0][0] or 0) if cur else 0
     if have < qty:
         return False
-    frappe.db.set_value("StockLedger", ledger, "quantity", have - qty)
+    movement.set_qty(ledger, have - qty, "reserved", ref_type, ref_name)
     res = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Reserved",
                                               "branch_location": branch}, ["name", "quantity"], as_dict=True)
     if res:
-        frappe.db.set_value("StockLedger", res.name, "quantity", int(res.quantity or 0) + qty)
+        movement.set_qty(res.name, int(res.quantity or 0) + qty, "reserved", ref_type, ref_name)
     else:
-        frappe.get_doc({"doctype": "StockLedger", "book": book, "business_profile": seller,
-                        "branch_location": branch, "quantity": qty, "state": "Reserved"}).insert(ignore_permissions=True)
+        movement.add_row(book, seller, branch, qty, "Reserved", "reserved", ref_type, ref_name)
     return True
 
 
-def _release(seller, book, qty, option=None):
+def _release(seller, book, qty, option=None, ref=None):
     from book_marketplace.trading.api.customer_portal import notify_back_in_stock
+    from book_marketplace.stock_management import movement
+    ref_type, ref_name = ("Customer Order", ref) if ref else (None, None)
     if option:
         from book_marketplace.catalog.api import item_options as io
         io.give_back(book, option, qty)
@@ -81,13 +84,12 @@ def _release(seller, book, qty, option=None):
     res = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Reserved"},
                               ["name", "quantity", "branch_location"], as_dict=True)
     if res:
-        frappe.db.set_value("StockLedger", res.name, "quantity", max(0, int(res.quantity or 0) - qty))
+        movement.set_qty(res.name, int(res.quantity or 0) - qty, "released", ref_type, ref_name)
     av = frappe.db.get_value("StockLedger", {"business_profile": seller, "book": book, "state": "Available"}, "name")
     if av:
-        frappe.db.sql("update `tabStockLedger` set quantity = quantity + %s where name=%s", (qty, av))
+        movement.change_qty(av, qty, "released", ref_type, ref_name)
     elif res:
-        frappe.get_doc({"doctype": "StockLedger", "book": book, "business_profile": seller,
-                        "branch_location": res.branch_location, "quantity": qty, "state": "Available"}).insert(ignore_permissions=True)
+        movement.add_row(book, seller, res.branch_location, qty, "Available", "released", ref_type, ref_name)
     notify_back_in_stock(seller, book, before, int(before) + qty)
 
 
@@ -270,7 +272,10 @@ def _may_act_on(order_doc):
     if buyer and buyer == order_doc.buyer_profile:
         return True
     shops = frappe.get_all("BusinessProfile", filters={"user": frappe.session.user}, pluck="name")
-    return order_doc.seller_profile in shops or frappe.session.user == "Administrator"
+    if order_doc.seller_profile in shops or frappe.session.user == "Administrator":
+        return True
+    from book_marketplace.auth.permissions import has_access
+    return has_access(order_doc.seller_profile, "orders.manage")
 
 
 @frappe.whitelist()

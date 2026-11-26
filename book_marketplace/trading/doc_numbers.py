@@ -81,7 +81,8 @@ def remember_party(owner_profile, party_profile, party_type):
 
 @frappe.whitelist()
 def get_number_settings(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "sales.view")
     prefix, letters = business_prefix(profile_id)
     own = frappe.db.get_value("Document Number Setting", profile_id, "prefix") or ""
     return {"prefix": own, "effective_prefix": prefix, "add_party_letters": 1 if letters else 0,
@@ -90,7 +91,8 @@ def get_number_settings(profile_id):
 
 @frappe.whitelist()
 def save_number_settings(profile_id, prefix="", add_party_letters=1):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "settings.manage")
     p = _clean(prefix)
     if prefix and not (2 <= len(p) <= 8):
         frappe.throw(_("The prefix is 2 to 8 English letters or digits."))
@@ -112,7 +114,8 @@ FIELDS = ["name", "party_name", "party_type", "party_code", "linked_profile", "p
 
 @frappe.whitelist()
 def my_parties(profile_id, party_type="", text=""):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "sales.view")
     filters = {"business_profile": profile_id}
     if party_type in ("Buyer", "Seller"):
         filters["party_type"] = ["in", [party_type, "Both"]]
@@ -129,7 +132,8 @@ def my_parties(profile_id, party_type="", text=""):
 
 @frappe.whitelist()
 def save_party(profile_id, party_name, party_type="Buyer", party_code="", phone="", city="", address="", linked_profile=None, name=None):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "sales.create")
     party_name = " ".join((party_name or "").split())
     if not party_name:
         frappe.throw(_("Write the name."))
@@ -155,7 +159,8 @@ def save_party(profile_id, party_name, party_type="Buyer", party_code="", phone=
 
 @frappe.whitelist()
 def delete_party(profile_id, name):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "sales.create")
     if frappe.db.get_value("Business Party", name, "business_profile") != profile_id:
         frappe.throw(_("This contact is not yours."), frappe.PermissionError)
     frappe.delete_doc("Business Party", name, ignore_permissions=True)

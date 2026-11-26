@@ -19,7 +19,8 @@ ENTRY_TYPES = RECEIVABLE_UP + RECEIVABLE_DOWN + PAYABLE_UP + PAYABLE_DOWN
 
 @frappe.whitelist()
 def add_khata_entry(business_profile, party_name, entry_type, amount, entry_date=None, reference=None, notes=None, party_profile=None):
-    _assert_profile_owner(business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(business_profile, "finance.manage")
     if entry_type not in ENTRY_TYPES:
         frappe.throw(_("Unknown entry type."))
     if flt(amount) <= 0:
@@ -55,7 +56,8 @@ def _signed(entry_type, amount):
 @frappe.whitelist()
 def get_khata_summary(business_profile):
     """Balances per party plus totals. to_receive: parties owe you. to_pay: you owe parties."""
-    _assert_profile_owner(business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(business_profile, "finance.view")
     rows = frappe.get_all(
         "Khata Entry",
         filters={"business_profile": business_profile},
@@ -85,7 +87,8 @@ def get_khata_summary(business_profile):
 
 @frappe.whitelist()
 def list_khata_entries(business_profile, party_name=None, limit=100):
-    _assert_profile_owner(business_profile)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(business_profile, "finance.view")
     filters = {"business_profile": business_profile}
     if party_name:
         filters["party_name"] = party_name

@@ -19,7 +19,8 @@ def _month_key(value):
 
 @frappe.whitelist()
 def get_dashboard_stats(profile_id):
-    _assert_profile_owner(profile_id)
+    from book_marketplace.auth.api.auth import _assert_profile_access
+    _assert_profile_access(profile_id, "reports.view")
 
     # books and other items this business holds as its own: published by it, or added by it
     books = frappe.db.sql(
