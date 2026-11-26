@@ -1,0 +1,87 @@
+{
+ "name": "Publisher Catalogue List",
+ "module": "Catalog",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "autoname": "format:PCL-{#######}",
+ "track_changes": 1,
+ "is_submittable": 0,
+ "istable": 0,
+ "title_field": "list_title",
+ "search_fields": "list_title,source_file",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "field_order": [
+  "business_profile",
+  "list_title",
+  "list_date",
+  "source_file",
+  "is_latest",
+  "status",
+  "items_count",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "business_profile",
+   "fieldtype": "Link",
+   "label": "Publisher / shop",
+   "options": "BusinessProfile",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "list_title",
+   "fieldtype": "Data",
+   "label": "List name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "list_date",
+   "fieldtype": "Data",
+   "label": "List date (as written)",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "source_file",
+   "fieldtype": "Data",
+   "label": "Source file"
+  },
+  {
+   "fieldname": "is_latest",
+   "fieldtype": "Check",
+   "label": "Latest list of this shop",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Not transcribed\nTranscribed\nProofed\nWritten to system",
+   "default": "Not transcribed",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "items_count",
+   "fieldtype": "Int",
+   "label": "Items"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1
+  }
+ ]
+}
