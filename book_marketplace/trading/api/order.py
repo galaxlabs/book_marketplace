@@ -4,6 +4,8 @@ from frappe import _
 
 @frappe.whitelist()
 def create(buyer, seller, items, order_type="Purchase", delivery_method=None):
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(buyer, "purchases.manage")
     doc = frappe.get_doc({
         "doctype": "InternalOrder",
         "order_type": order_type,
@@ -28,6 +30,8 @@ def create(buyer, seller, items, order_type="Purchase", delivery_method=None):
 
 @frappe.whitelist()
 def list_by_profile(profile_id, status=None, limit=20, offset=0):
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(profile_id, "purchases.view")
     filters = frappe._dict()
     filters.buyer_profile = profile_id
     if status:

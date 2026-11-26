@@ -56,6 +56,9 @@ def get_summary(profile_id):
 
 @frappe.whitelist()
 def get_volume_stock(book_id, profile_id=None):
+    from book_marketplace.auth.permissions import assert_access
+    if profile_id:
+        assert_access(profile_id, "stock.view")
     filters = {"book": book_id, "state": "Available"}
     if profile_id:
         filters["business_profile"] = profile_id

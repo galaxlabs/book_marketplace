@@ -11,6 +11,9 @@ def import_books_csv(csv_text, publisher_profile=None, dry_run=1):
     Expected columns: title, author, isbn, language, category, genre, mrp,
     book_type, variant_name, binding_type, quality_grade, volume_number.
     """
+    from book_marketplace.auth.permissions import assert_access
+    if publisher_profile:
+        assert_access(publisher_profile, "catalog.edit")
     rows = list(csv.DictReader(io.StringIO(csv_text or "")))
     results = []
     for index, row in enumerate(rows, start=1):

@@ -59,6 +59,8 @@ def list_invoices(profile_id, direction="sales"):
 
 @frappe.whitelist()
 def design_of(profile_id):
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(profile_id, "sales.view")
     from book_marketplace.trading.api.design import design_of as _d
     return _d(profile_id)
 

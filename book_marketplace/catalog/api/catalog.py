@@ -454,6 +454,8 @@ def list_publishers():
 def publisher_books(profile_id, publishers, text=None, limit=50, offset=0, available_only=0):
     """Books of one or more publishers, for a shop to tick and add.
     Each row has the publisher's general price, its discount and trade price, and whether the shop already has it."""
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(profile_id, "catalog.view")
     if isinstance(publishers, str):
         publishers = frappe.parse_json(publishers) if publishers.strip().startswith("[") else [publishers]
     publishers = [p for p in (publishers or []) if p]
@@ -527,6 +529,8 @@ def set_publisher_discount(profile_id, discount_percent):
 
 @frappe.whitelist()
 def get_publisher_discount(profile_id):
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(profile_id, "catalog.view")
     return {"default_discount_percent": _pct(frappe.db.get_value("BusinessProfile", profile_id, "default_discount_percent"))}
 
 
@@ -556,6 +560,8 @@ def _stock_for(book_id, profile_id):
 def list_catalog(profile_id, active_only=True):
     """Catalog rows with general (selling) and trade prices.
     A publisher also sees its own visible books as OWN-<book> rows."""
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(profile_id, "catalog.view")
     filters = {"business_profile": profile_id}
     if frappe.utils.cint(active_only):
         filters["is_active"] = 1
@@ -1116,6 +1122,8 @@ def get_store_by_profile(profile_id):
 
 @frappe.whitelist()
 def create_or_update_store(profile_id, store_name, slug, description=None, contact_phone=None, contact_email=None, address=None, city=None, is_published=None, history=None, key_info=None, province=None, district=None, map_link=None):
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(profile_id, "settings.manage")
     existing = frappe.db.get_value("BusinessStore", {"business_profile": profile_id}, "name")
     if existing:
         doc = frappe.get_doc("BusinessStore", existing)
@@ -1146,6 +1154,8 @@ def create_or_update_store(profile_id, store_name, slug, description=None, conta
 
 @frappe.whitelist()
 def get_my_store(profile_id):
+    from book_marketplace.auth.permissions import assert_access
+    assert_access(profile_id, "catalog.view")
     store = frappe.db.get_value(
         "BusinessStore",
         {"business_profile": profile_id},
