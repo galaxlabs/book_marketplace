@@ -218,7 +218,7 @@ def set_catalog_quantity(profile_id, book_id, quantity):
         frappe.throw(_("Quantity must be a whole number."))
     if qty < 0:
         frappe.throw(_("Quantity cannot be negative."))
-    in_catalog = frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id})
+    in_catalog = frappe.db.exists("Business Catalog Item", {"business_profile": profile_id, "book": book_id})
     is_publisher = frappe.db.get_value("Book", book_id, "publisher") == profile_id
     if not (in_catalog or is_publisher):
         frappe.throw(_("Add this book to your catalog first."), frappe.PermissionError)

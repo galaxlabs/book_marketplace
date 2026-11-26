@@ -16,7 +16,7 @@ def get_ad_option(profile_id):
     from book_marketplace.auth.api.auth import _assert_profile_access
     _assert_profile_access(profile_id, "catalog.view")
     option = frappe.db.get_value("BusinessProfile", profile_id, "ad_option") or ""
-    count = frappe.db.count("BusinessCatalogItem", {"business_profile": profile_id, "is_advertised": 1, "is_active": 1})
+    count = frappe.db.count("Business Catalog Item", {"business_profile": profile_id, "is_advertised": 1, "is_active": 1})
     return {"option": option, "advertised_books": count, "max_books": MAX_ADVERTISED}
 
 
@@ -30,9 +30,9 @@ def set_ad_option(profile_id, option):
     previous = frappe.db.get_value("BusinessProfile", profile_id, "ad_option") or ""
     if previous == "Books" and option != "Books":
         # the book ads go with the Books option
-        for name in frappe.get_all("BusinessCatalogItem", filters={"business_profile": profile_id, "is_advertised": 1},
+        for name in frappe.get_all("Business Catalog Item", filters={"business_profile": profile_id, "is_advertised": 1},
                                    pluck="name"):
-            frappe.db.set_value("BusinessCatalogItem", name, "is_advertised", 0)
+            frappe.db.set_value("Business Catalog Item", name, "is_advertised", 0)
     frappe.db.set_value("BusinessProfile", profile_id, "ad_option", option or None)
     return get_ad_option(profile_id)
 
@@ -43,14 +43,14 @@ def set_advertised(profile_id, item_id, advertised=1):
     _assert_profile_access(profile_id, "catalog.edit")
     if (frappe.db.get_value("BusinessProfile", profile_id, "ad_option") or "") != "Books":
         frappe.throw(_("Choose the Books option first to advertise books."))
-    doc = frappe.get_doc("BusinessCatalogItem", item_id)
+    doc = frappe.get_doc("Business Catalog Item", item_id)
     if doc.business_profile != profile_id:
         frappe.throw(_("Not permitted for this book."), frappe.PermissionError)
     on = frappe.utils.cint(advertised) == 1
     if on and not doc.is_advertised:
         if not doc.is_active:
             frappe.throw(_("Make the book visible on the store before advertising it."))
-        count = frappe.db.count("BusinessCatalogItem",
+        count = frappe.db.count("Business Catalog Item",
                                 {"business_profile": profile_id, "is_advertised": 1, "is_active": 1})
         if count >= MAX_ADVERTISED:
             frappe.throw(_("A business can advertise at most {0} books. Remove one first.").format(MAX_ADVERTISED))

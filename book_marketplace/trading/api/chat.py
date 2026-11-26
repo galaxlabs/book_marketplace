@@ -239,7 +239,7 @@ def _shop_users_for_book(book_id):
     """Shops with this book in their active catalog: [{user, business_name, city}]."""
     rows = frappe.db.sql("""
         select distinct bp.user as user, bp.name as business_profile, bp.business_name as business_name, bp.city as city
-        from `tabBusinessCatalogItem` bci
+        from `tabBusiness Catalog Item` bci
         join `tabBusinessProfile` bp on bp.name = bci.business_profile
         where bci.book = %s and bci.is_active = 1 and ifnull(bp.user, '') != ''
     """, (book_id,), as_dict=True)

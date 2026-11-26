@@ -84,7 +84,7 @@ def _related_books(book):
         names = {r.publisher for r in rows if r.publisher}
         pub = {p.name: p.business_name for p in frappe.get_all(
             "BusinessProfile", filters={"name": ["in", list(names)]}, fields=["name", "business_name"])} if names else {}
-        listed = set(frappe.get_all("BusinessCatalogItem", filters={"book": ["in", [r.name for r in rows]], "is_active": 1},
+        listed = set(frappe.get_all("Business Catalog Item", filters={"book": ["in", [r.name for r in rows]], "is_active": 1},
                                     pluck="book")) if rows else set()
         return [{**r, "publisher_name": pub.get(r.publisher, ""), "listed": r.name in listed} for r in rows]
 
@@ -121,13 +121,13 @@ def _related_books(book):
     # more books from each published shop that lists this book (shops other than the publisher's own first)
     from_shops = []
     shop_ids = list(dict.fromkeys(frappe.get_all(
-        "BusinessCatalogItem", filters={"book": book.name, "is_active": 1}, pluck="business_profile")))
+        "Business Catalog Item", filters={"book": book.name, "is_active": 1}, pluck="business_profile")))
     stores = {st.business_profile: st for st in frappe.get_all(
         "BusinessStore", filters={"business_profile": ["in", shop_ids or [""]], "is_published": 1},
         fields=["business_profile", "slug", "store_name", "city"])}
     for prof in sorted((x for x in shop_ids if x in stores), key=lambda x: x == book.publisher)[:3]:
         names = [n for n in dict.fromkeys(frappe.get_all(
-            "BusinessCatalogItem", filters={"business_profile": prof, "is_active": 1, "book": ["!=", book.name]},
+            "Business Catalog Item", filters={"business_profile": prof, "is_active": 1, "book": ["!=", book.name]},
             pluck="book", limit_page_length=200))]
         if not names:
             continue
@@ -259,12 +259,12 @@ def _recommend(book, shown, fields, with_publisher, limit=12):
         pub_label = frappe.db.get_value("BusinessProfile", book.publisher, "business_name") or ""
         for n in frappe.get_all("Book", filters={"publisher": book.publisher}, pluck="name", limit_page_length=500):
             add(n, "publisher", f"اسی ناشر: {pub_label}" if pub_label else "اسی ناشر")
-    shops = frappe.get_all("BusinessCatalogItem", filters={"book": book.name, "is_active": 1}, pluck="business_profile")
+    shops = frappe.get_all("Business Catalog Item", filters={"book": book.name, "is_active": 1}, pluck="business_profile")
     if shops:
         shop_names = {p.name: p.business_name for p in frappe.get_all(
             "BusinessProfile", filters={"name": ["in", shops]}, fields=["name", "business_name"])}
         seen = {}
-        for r in frappe.get_all("BusinessCatalogItem", filters={"business_profile": ["in", shops], "is_active": 1},
+        for r in frappe.get_all("Business Catalog Item", filters={"business_profile": ["in", shops], "is_active": 1},
                                 fields=["book", "business_profile"], limit_page_length=2000):
             seen.setdefault(r.book, set()).add(r.business_profile)
         for n, profs in seen.items():
@@ -275,7 +275,7 @@ def _recommend(book, shown, fields, with_publisher, limit=12):
     top = sorted(score, key=lambda n: -score[n])[:80]
     rows = {r.name: r for r in frappe.get_all("Book", filters={"name": ["in", top], "global_visibility": 1},
                                              fields=fields + ["sharh_of"], limit_page_length=80)}
-    listed = set(frappe.get_all("BusinessCatalogItem", filters={"book": ["in", list(rows) or [""]], "is_active": 1},
+    listed = set(frappe.get_all("Business Catalog Item", filters={"book": ["in", list(rows) or [""]], "is_active": 1},
                                 pluck="book"))
     for n, r in rows.items():
         if n in listed:
@@ -357,7 +357,7 @@ def publisher_discount(book_id=None, book=None, _cache=None):
 
 def publisher_list_price(book_id, publisher, set_mrp):
     """The publisher's own general price, as its list sets it: its catalog row's price, else the book's MRP."""
-    row_price = frappe.db.get_value("BusinessCatalogItem", {"business_profile": publisher, "book": book_id},
+    row_price = frappe.db.get_value("Business Catalog Item", {"business_profile": publisher, "book": book_id},
                                     "selling_price") if book_id and publisher else None
     return frappe.utils.flt(row_price) or frappe.utils.flt(set_mrp)
 
@@ -378,7 +378,7 @@ def _catalog_row(profile_id, book_id, selling_price=None, trade_price=None, disc
     if storage_place not in STORAGE_PLACES:
         frappe.throw(_("Place must be Shop or Warehouse."))
     return {
-        "doctype": "BusinessCatalogItem",
+        "doctype": "Business Catalog Item",
         "business_profile": profile_id,
         "book": book_id,
         # a book from another publisher keeps no price of its own: the publisher's price is read when shown
@@ -398,7 +398,7 @@ def add_to_catalog(profile_id, book_id, selling_price=None, trade_price=None, di
 
     from book_marketplace.auth.api.auth import _assert_profile_access
     _assert_profile_access(profile_id, "catalog.edit")
-    if frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id}):
+    if frappe.db.exists("Business Catalog Item", {"business_profile": profile_id, "book": book_id}):
         return {"error": "Book already in catalog"}
     doc = frappe.get_doc(_catalog_row(profile_id, book_id, selling_price, trade_price, discount_percent,
                                       shelf, storage_place))
@@ -423,7 +423,7 @@ def add_many_to_catalog(profile_id, items):
         if not book_id or not frappe.db.exists("Book", book_id):
             skipped.append({"book": book_id, "reason": "not found"})
             continue
-        if frappe.db.exists("BusinessCatalogItem", {"business_profile": profile_id, "book": book_id}):
+        if frappe.db.exists("Business Catalog Item", {"business_profile": profile_id, "book": book_id}):
             skipped.append({"book": book_id, "reason": "already in catalog"})
             continue
         doc = frappe.get_doc(_catalog_row(profile_id, book_id, it.get("selling_price"), it.get("trade_price"),
@@ -479,7 +479,7 @@ def publisher_books(profile_id, publishers, text=None, limit=50, offset=0, avail
                 "discount_percent", "availability", "language", "binding", "is_discontinued"],
         order_by="title asc", limit_start=offset, limit_page_length=limit,
     )
-    have = set(frappe.get_all("BusinessCatalogItem", filters={"business_profile": profile_id,
+    have = set(frappe.get_all("Business Catalog Item", filters={"business_profile": profile_id,
                                                               "book": ["in", [b.name for b in books] or [""]]},
                               pluck="book"))
     names = {p.name: p.business_name for p in frappe.get_all(
@@ -488,7 +488,7 @@ def publisher_books(profile_id, publishers, text=None, limit=50, offset=0, avail
     # The price shown is the publisher's own price (the one its public store shows): its catalog row's price,
     # discount and trade price, else the book's MRP and the publisher's discount.
     own_rows = {(r.business_profile, r.book): r for r in frappe.get_all(
-        "BusinessCatalogItem",
+        "Business Catalog Item",
         filters={"business_profile": ["in", publishers], "book": ["in", [b.name for b in books] or [""]]},
         fields=["business_profile", "book", "selling_price", "discount_percent", "trade_price"], limit_page_length=0)}
     rows = []
@@ -537,10 +537,10 @@ def remove_from_catalog(item_id):
 
     if str(item_id).startswith("OWN-"):
         frappe.throw(_("This book is not in your list."))
-    doc = frappe.get_doc("BusinessCatalogItem", item_id)
+    doc = frappe.get_doc("Business Catalog Item", item_id)
     from book_marketplace.auth.api.auth import _assert_profile_access
     _assert_profile_access(doc.business_profile, "catalog.edit")
-    frappe.delete_doc("BusinessCatalogItem", item_id, ignore_permissions=True)
+    frappe.delete_doc("Business Catalog Item", item_id, ignore_permissions=True)
     return {"status": "removed"}
 
 
@@ -560,7 +560,7 @@ def list_catalog(profile_id, active_only=True):
     if frappe.utils.cint(active_only):
         filters["is_active"] = 1
     items = frappe.get_all(
-        "BusinessCatalogItem",
+        "Business Catalog Item",
         filters=filters,
         fields=["name", "book", "selling_price", "trade_price", "is_active", "added_on",
                 "discount_percent", "shelf", "storage_place", "is_advertised"],
@@ -636,7 +636,7 @@ def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_
         return {"name": item_id, "selling_price": book.set_mrp, "trade_price": book.trade_price,
                 "discount_percent": publisher_discount(book=book.as_dict())}
 
-    doc = frappe.get_doc("BusinessCatalogItem", item_id)
+    doc = frappe.get_doc("Business Catalog Item", item_id)
     from book_marketplace.auth.api.auth import _assert_profile_access
     _assert_profile_access(doc.business_profile, "prices.edit")
     if selling_price is not None:
@@ -660,7 +660,7 @@ def update_catalog_price(item_id, selling_price=None, trade_price=None, profile_
 
 @frappe.whitelist()
 def toggle_catalog_item(item_id, is_active):
-    doc = frappe.get_doc("BusinessCatalogItem", item_id)
+    doc = frappe.get_doc("Business Catalog Item", item_id)
     doc.is_active = is_active
     doc.save()
     return {"name": doc.name, "is_active": is_active}
@@ -752,7 +752,7 @@ def add_shop_book(profile_id, title, author=None, book_type="Single Volume", lan
         "owner_profile": None if is_publisher else profile_id, "global_visibility": 1,
     }).insert(ignore_permissions=True)
     frappe.get_doc({
-        "doctype": "BusinessCatalogItem", "business_profile": profile_id, "book": book.name,
+        "doctype": "Business Catalog Item", "business_profile": profile_id, "book": book.name,
         "selling_price": selling_price or set_mrp, "is_active": 1, "added_on": nowdate(),
     }).insert(ignore_permissions=True)
     if int(quantity or 0) > 0:
@@ -805,7 +805,7 @@ def own_shop_books():
     profiles += [p.name for p in _member_profiles(frappe.session.user)]
     if not profiles:
         return []
-    names = set(frappe.get_all("BusinessCatalogItem", filters={"business_profile": ["in", profiles]}, pluck="book", limit_page_length=0))
+    names = set(frappe.get_all("Business Catalog Item", filters={"business_profile": ["in", profiles]}, pluck="book", limit_page_length=0))
     names |= set(frappe.get_all("Book", filters={"publisher": ["in", profiles]}, pluck="name", limit_page_length=0))
     names |= set(frappe.get_all("Book", filters={"owner_profile": ["in", profiles]}, pluck="name", limit_page_length=0))
     return sorted(n for n in names if n)
@@ -960,9 +960,9 @@ def set_item_options(profile_id, book_id, options=None, pack_lines=None):
     if clean:
         stock_api.set_own_book_quantity(profile_id, book.name, sum(r["stock_qty"] for r in clean))
     if prices:
-        item = frappe.db.get_value("BusinessCatalogItem", {"business_profile": profile_id, "book": book.name}, "name")
+        item = frappe.db.get_value("Business Catalog Item", {"business_profile": profile_id, "book": book.name}, "name")
         if item:
-            frappe.db.set_value("BusinessCatalogItem", item, "selling_price", min(prices))
+            frappe.db.set_value("Business Catalog Item", item, "selling_price", min(prices))
     return {"name": book.name, "options": [o.as_dict() for o in book.item_options],
             "pack_lines": [x.as_dict() for x in book.pack_lines],
             "stock": sum(r["stock_qty"] for r in clean), "from_price": min(prices) if prices else None}
@@ -1090,7 +1090,7 @@ def _store_items(profile_name, profile_type):
     """Active catalog rows for a store. A publisher's own visible books are added too,
     with no selling price, so the store shows MRP for them."""
     items = list(frappe.get_all(
-        "BusinessCatalogItem",
+        "Business Catalog Item",
         filters={"business_profile": profile_name, "is_active": 1},
         fields=["name", "book", "selling_price", "discount_percent", "is_advertised"],
         order_by="modified desc",
@@ -1348,7 +1348,7 @@ def search_offers(text=None, subject=None, book_type=None, language=None, city=N
 
     book_names = [b.name for b in books]
     items = list(frappe.get_all(
-        "BusinessCatalogItem",
+        "Business Catalog Item",
         filters={"book": ["in", book_names], "is_active": 1},
         fields=["book", "business_profile", "selling_price", "discount_percent"],
     ))

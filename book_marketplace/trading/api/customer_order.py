@@ -31,7 +31,7 @@ def _offers(book):
     if not bk or not bk.global_visibility:
         return []
     cands = {}
-    for r in frappe.get_all("BusinessCatalogItem", filters={"book": book, "is_active": 1},
+    for r in frappe.get_all("Business Catalog Item", filters={"book": book, "is_active": 1},
                             fields=["business_profile", "selling_price", "discount_percent"]):
         disc = flt(r.discount_percent)
         if not disc and r.business_profile == bk.publisher:
@@ -180,7 +180,7 @@ def checkout_for(buyer, client_id, items, choices=None, payment_mode="online", d
             if flt(opt.price):
                 from book_marketplace.catalog.api.catalog import price_view
                 for o in offers:
-                    pct = frappe.db.get_value("BusinessCatalogItem", {"business_profile": o["seller"], "book": book}, "discount_percent")
+                    pct = frappe.db.get_value("Business Catalog Item", {"business_profile": o["seller"], "book": book}, "discount_percent")
                     o["unit_price"] = price_view(flt(opt.price), flt(pct))["net_price"] or flt(opt.price)
         ok = [o for o in offers if o["have"] >= qty]
         if not ok:

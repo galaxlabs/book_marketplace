@@ -23,7 +23,7 @@ def _price_info(seller, book):
     A publisher's own book not in its catalog uses the publisher's general discount rate on the MRP.
     Any other book must be listed by the seller."""
     mrp = flt(frappe.db.get_value("Book", book, "set_mrp"))
-    row = frappe.db.get_value("BusinessCatalogItem", {"business_profile": seller, "book": book, "is_active": 1},
+    row = frappe.db.get_value("Business Catalog Item", {"business_profile": seller, "book": book, "is_active": 1},
                               ["selling_price", "trade_price", "discount_percent"], as_dict=True)
     if row:
         # a listed book with no price of its own is sold at its MRP
@@ -217,7 +217,7 @@ def seller_catalog(seller_profile, buyer_profile=None, available_only=0):
 def _seller_books(seller_profile):
     """Each row: title, author, MRP, the discount rate that applies, the net price, and the estimate basis."""
     listed = {r.book for r in frappe.get_all(
-        "BusinessCatalogItem", filters={"business_profile": seller_profile, "is_active": 1},
+        "Business Catalog Item", filters={"business_profile": seller_profile, "is_active": 1},
         fields=["book"], limit_page_length=0)}
     published = {b.name: b for b in frappe.get_all("Book", filters={"publisher": seller_profile},
                                                    fields=["name", "title", "author"], limit_page_length=0)}

@@ -25,7 +25,7 @@ def audit_groups(profile_id):
     _assert_profile_access(profile_id, "stock.view")
     rows = frappe.db.sql("""
         select b.publisher as publisher, count(*) as cnt
-        from `tabBusinessCatalogItem` bci join `tabBook` b on b.name = bci.book
+        from `tabBusiness Catalog Item` bci join `tabBook` b on b.name = bci.book
         where bci.business_profile = %s and bci.is_active = 1
         group by b.publisher
     """, (profile_id,), as_dict=True)
@@ -49,7 +49,7 @@ def audit_books(profile_id, publisher=""):
     _assert_profile_access(profile_id, "stock.view")
     rows = frappe.db.sql("""
         select bci.book as book, b.title as title, b.publisher as publisher
-        from `tabBusinessCatalogItem` bci join `tabBook` b on b.name = bci.book
+        from `tabBusiness Catalog Item` bci join `tabBook` b on b.name = bci.book
         where bci.business_profile = %s and bci.is_active = 1
         order by b.title
     """, (profile_id,), as_dict=True)

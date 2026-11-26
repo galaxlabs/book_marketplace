@@ -17,7 +17,7 @@ def book_list(profile_id, text="", availability="all", published="all", limit=50
     offset = frappe.utils.cint(offset)
 
     catalog = {r.book: r for r in frappe.get_all(
-        "BusinessCatalogItem", filters={"business_profile": profile_id},
+        "Business Catalog Item", filters={"business_profile": profile_id},
         fields=["name", "book", "is_active"], limit_page_length=0)}
     names = set(catalog)
     names |= set(frappe.get_all("Book", filters={"publisher": profile_id}, pluck="name", limit_page_length=0))

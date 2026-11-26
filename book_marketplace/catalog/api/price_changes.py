@@ -42,7 +42,7 @@ def on_book_update(doc, method=None):
 
 def _tell_holders(books, publisher, title, what, old_price=0, new_price=0):
     """One price-change row per shop and book (highlighted in its catalogue) and one note per shop."""
-    holders = frappe.get_all("BusinessCatalogItem", filters={"book": ["in", books], "is_active": 1},
+    holders = frappe.get_all("Business Catalog Item", filters={"book": ["in", books], "is_active": 1},
                              fields=["business_profile", "book"], limit_page_length=0)
     from book_marketplace.trading.api.notifications import notify
     now = now_datetime()

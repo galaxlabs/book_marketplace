@@ -33,7 +33,7 @@ def month_purchases(shop, publisher, today=None):
 def covered_shops(publisher):
     """Shops that buy from or list this publisher's books (they are told about its policies)."""
     buyers = frappe.db.sql("select distinct buyer_profile from `tabPurchase Order Request` where seller_profile = %s", publisher)
-    holders = frappe.db.sql("""select distinct c.business_profile from `tabBusinessCatalogItem` c
+    holders = frappe.db.sql("""select distinct c.business_profile from `tabBusiness Catalog Item` c
         join `tabBook` b on b.name = c.book where b.publisher = %s and c.business_profile != %s""", (publisher, publisher))
     return sorted({r[0] for r in buyers + holders if r[0] and r[0] != publisher})
 

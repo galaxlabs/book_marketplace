@@ -22,7 +22,7 @@ def shop_publishers(profile_id):
     _assert_profile_access(profile_id, "catalog.view")
     rows = frappe.db.sql("""
         SELECT b.publisher AS publisher, COUNT(*) AS books
-        FROM `tabBusinessCatalogItem` bci
+        FROM `tabBusiness Catalog Item` bci
         INNER JOIN `tabBook` b ON b.name = bci.book
         WHERE bci.business_profile = %s AND bci.is_active = 1 AND IFNULL(b.publisher, '') != ''
         GROUP BY b.publisher
@@ -42,7 +42,7 @@ def publisher_stockists(profile_id):
         frappe.throw(_("Only a publisher sees its stockists."), frappe.PermissionError)
     rows = frappe.db.sql("""
         SELECT bci.business_profile AS shop, COUNT(*) AS books
-        FROM `tabBusinessCatalogItem` bci
+        FROM `tabBusiness Catalog Item` bci
         INNER JOIN `tabBook` b ON b.name = bci.book
         WHERE b.publisher = %s AND bci.business_profile != %s AND bci.is_active = 1
         GROUP BY bci.business_profile
@@ -63,10 +63,10 @@ def remove_publisher_books(profile_id, publisher):
     if publisher == profile_id:
         frappe.throw(_("A publisher cannot remove its own books from its list."))
     items = frappe.db.sql("""
-        SELECT bci.name FROM `tabBusinessCatalogItem` bci
+        SELECT bci.name FROM `tabBusiness Catalog Item` bci
         INNER JOIN `tabBook` b ON b.name = bci.book
         WHERE bci.business_profile = %s AND b.publisher = %s
     """, (profile_id, publisher), as_dict=True)
     for it in items:
-        frappe.delete_doc("BusinessCatalogItem", it.name, ignore_permissions=True)
+        frappe.delete_doc("Business Catalog Item", it.name, ignore_permissions=True)
     return {"removed": len(items)}

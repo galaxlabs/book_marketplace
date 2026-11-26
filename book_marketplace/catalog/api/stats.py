@@ -26,7 +26,7 @@ def get_dashboard_stats(profile_id):
     books = frappe.db.sql(
         "select count(*) from tabBook where publisher=%(p)s or owner_profile=%(p)s", {"p": profile_id}
     )[0][0]
-    catalog_items = frappe.db.count("BusinessCatalogItem", {"business_profile": profile_id, "is_active": 1})
+    catalog_items = frappe.db.count("Business Catalog Item", {"business_profile": profile_id, "is_active": 1})
     bank_accounts = frappe.db.count("BusinessBankAccount", {"business_profile": profile_id, "is_active": 1})
 
     # orders this business received: from other businesses, from the website, and older internal orders
