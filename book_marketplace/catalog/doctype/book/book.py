@@ -1,5 +1,6 @@
 import itertools
 import math
+import re
 
 import frappe
 import json
@@ -261,3 +262,29 @@ def create_multiple_variants(book, args):
     if added:
         doc.save()
     return added
+
+
+_DIACRITICS = re.compile("[ً-ٰٟۖ-ۭؐ-ؚ​-‏۔ـ]")
+_UNIFY = str.maketrans({"ي": "ی", "ى": "ی", "ك": "ک", "ۃ": "ہ", "ة": "ہ", "ۂ": "ہ", "ؒ": "", "ؓ": "", "۔": "."})
+
+
+def normalize_title(text):
+    """Spelling-insensitive key for matching titles: unifies Arabic and Urdu letter forms, drops harakat and
+    honorifics, and collapses spaces. 'صحیح البخاری' and 'صحیح بخاری' give different keys only if the letters differ."""
+    t = _DIACRITICS.sub("", (text or "").translate(_UNIFY))
+    t = re.sub(r"[()\[\]\-–—,،:;!?\"'«»]", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def find_book_by_alias(title):
+    """The original Book for a title that is its name or one of its aliases, else None."""
+    key = normalize_title(title)
+    if not key:
+        return None
+    for name in frappe.get_all("Book", pluck="name", limit_page_length=0):
+        if normalize_title(name) == key:
+            return name
+    for row in frappe.get_all("Book Alias", fields=["alias_name", "parent"], limit_page_length=0):
+        if normalize_title(row.alias_name) == key:
+            return row.parent
+    return None

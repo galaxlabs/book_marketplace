@@ -27,6 +27,7 @@
   "column_break_reee",
   "item_type",
   "title_ur",
+  "aliases",
   "author",
   "author_profile",
   "publisher",
@@ -100,6 +101,13 @@
    "fieldname": "title_ur",
    "fieldtype": "Data",
    "label": "Title (Urdu)"
+  },
+  {
+   "fieldname": "aliases",
+   "fieldtype": "Table",
+   "label": "عرف (Aliases) / Names used by publishers",
+   "options": "Book Alias",
+   "description": "Other names this book is known by. A publisher who types one of these names is linked to this book automatically."
   },
   {
    "fieldname": "author_en",

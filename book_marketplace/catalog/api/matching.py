@@ -99,6 +99,20 @@ def _log(entry, decision, status, chosen_work=None, chosen_edition=None, decided
 
 
 @frappe.whitelist()
+def _link_publisher_offer(profile_id, book_name, set_mrp=None, trade_price=None):
+    """The publisher's offer on an existing original book (no new Book is created)."""
+    if frappe.db.exists("Business Catalog Item", {"business_profile": profile_id, "book": book_name}):
+        return {"status": "exists", "book": book_name,
+                "message": _("This book is already in your list.")}
+    item = frappe.get_doc({
+        "doctype": "Business Catalog Item", "business_profile": profile_id, "book": book_name,
+        "selling_price": set_mrp or 0, "trade_price": trade_price or 0, "is_active": 1,
+        "added_on": now_datetime(),
+    }).insert(ignore_permissions=True)
+    return {"status": "linked", "book": book_name, "catalog_item": item.name,
+            "message": _("Linked to the original book automatically.")}
+
+
 def add_publisher_book(profile_id, title, author, book_type="Single Volume", language="Urdu", isbn=None,
                        set_mrp=None, trade_price=None, volumes=None, binding=None, page_count=None,
                        weight=None, colours=None, categories=None, is_bound=0, is_set=0,
@@ -114,6 +128,12 @@ def add_publisher_book(profile_id, title, author, book_type="Single Volume", lan
     author = (author or "").strip()
     if not title or not author:
         frappe.throw(_("Title and author are required."))
+
+    # A name that is an original's name or alias links the publisher to that original, automatically.
+    from book_marketplace.catalog.doctype.book.book import find_book_by_alias
+    original = find_book_by_alias(title)
+    if original:
+        return _link_publisher_offer(profile_id, original, set_mrp, trade_price)
 
     entry = Entry(title=title, author=author, publisher=profile_id, isbn=isbn,
                   volumes=int(volumes) if volumes else None, language=language)

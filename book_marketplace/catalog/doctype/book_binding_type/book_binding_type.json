@@ -1,0 +1,70 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:type_name",
+ "creation": "2026-11-26 18:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "type_name",
+  "type_name_ur",
+  "column_break_master",
+  "is_active",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "type_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Binding / بائنڈنگ (English)",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "type_name_ur",
+   "fieldtype": "Data",
+   "label": "اردو نام"
+  },
+  {
+   "fieldname": "column_break_master",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active / فعال"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description / تفصیل"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-26 18:00:00",
+ "modified_by": "Administrator",
+ "module": "Catalog",
+ "name": "Book Binding Type",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

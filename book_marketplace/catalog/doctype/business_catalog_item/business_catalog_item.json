@@ -8,6 +8,7 @@
  "field_order": [
   "business_profile",
   "book",
+  "article_code",
   "variant_name",
   "is_active",
   "is_advertised",
@@ -36,6 +37,12 @@
    "label": "Book",
    "options": "Book",
    "reqd": 1
+  },
+  {
+   "fieldname": "article_code",
+   "fieldtype": "Data",
+   "label": "Publisher Article Code / آرٹیکل نمبر",
+   "description": "The publisher's own code for this offer (for example H-19)"
   },
   {
    "fieldname": "variant_name",
